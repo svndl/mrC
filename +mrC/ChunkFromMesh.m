@@ -82,7 +82,7 @@ if nAreas > 0
             % double check, some ROIs use mode field others use type
             % so search the whole struct for the type
             % pretty clunkly, but also just a double check
-            findType = cell2mat(struct2cell(structfun(@(x) ~isempty(strfind(lower(x),lower(type))),curROI.ROI,'uni',false)));
+            findType = cell2mat(struct2cell(structfun(@(x) ~isempty(strfind(lower(x),lower(roiType))),curROI.ROI,'uni',false)));
             if sum(findType) == 0
                 continue
             else
