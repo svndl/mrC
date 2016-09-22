@@ -35,9 +35,15 @@ function RoiFromSuma(subId,varargin)
     else
     end
     
+    if strcmp(opt.Mode,'glasser')
+        opt.Mode = 'glass'; % ensure flexibility
+    else
+    end
+    
     %% GET ROI FILE
     if strcmp(opt.Mode,'benson')
-        targetFolder = [fsDir,'/bensonModel/*.niml.dset'];
+        roiNames = {'V1','V2','V3'};
+        targetFolder = [fsDir,'/benson_atlas/*.niml.dset'];
         eccMin = input('Minimum eccentricity? [default = 0] ');
         if isempty(eccMin)
             eccMin = 0;
@@ -51,7 +57,20 @@ function RoiFromSuma(subId,varargin)
         else
         end
     elseif strcmp(opt.Mode,'wangatlas')
-        targetFolder = [fsDir,'/WangAtlas/*ready.niml.dset'];
+        targetFolder = [fsDir,'/wang_atlas/*cluster.niml.dset'];
+        roiNames = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2',...
+                    'PHC1' 'PHC2','TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A',...  
+                    'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4''IPS5' 'SPL1' 'FEF'};
+        eccComment = 'atlas, generated based on Wang et al., 2014';
+    elseif strcmp(opt.Mode,'glass')
+        targetFolder = [fsDir,'/glass_atlas/*glass_atlas.niml.dset'];
+        roiNames = arrayfun(@(x) sprintf('roi%03d',x),1:180,'uni',false); 
+        % true names can be found on pgs. 81-85 of the supplementary material.
+        eccComment = 'atlas, generated based on Glasser et al., 2016';
+    elseif strcmp(opt.Mode,'kgs')
+        targetFolder = [fsDir,'/kgs_atlas/*kgs_atlas.niml.dset'];
+        roiNames = {'IOG','OTS','mFUS','pFUS','PPA','VWFA1','VWFA2'};
+        eccComment = 'atlas, generated based on Weiner & Grill-Spector (in press)';
     else
         targetFolder = ['/Volumes/Denali_4D2/kohler/localizers/',subId,'/*.niml.roi'];
     end
@@ -134,16 +153,22 @@ function RoiFromSuma(subId,varargin)
                 ROIs(iROI).type = opt.Mode;
                 ROIs(iROI).comment = [opt.Mode,': Converted from SUMA using mrC.ConvertROI'];
             end
-        elseif strcmp(opt.Mode,'wangatlas')
-            roiNames = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2' 'PHC1' 'PHC2',...
-                        'TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A' 'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4' ...
-                        'IPS5' 'SPL1' 'FEF'};
-            cmap = distinguishable_colors(30);
+        elseif strcmp(opt.Mode,'benson') % if it is not a proper ROI file, this is designed specifically for Noah Benson's ROI data
+            cmap = distinguishable_colors(10);
             colors = cmap(end-length(roiNames)-1:end,:);
             nimlStrct = afni_niml_readsimple(roiFile{z});
-            eccComment = 'atlas, generated based on Wang et al., 2014';
-            eccIndices = ones(length(nimlStrct.data),1);
-            eccMode = opt.Mode;
+            if eccMin == 0 && eccMax > 80 %% include everything
+                eccComment = 'V1-V3 with ecc: all';
+                eccIndices = ones(length(nimlStrct.data),1);
+                eccMode = [opt.Mode,'_all'];
+            else
+                eccFile{z} = roiFile{z};
+                eccFile{z}(strfind(roiFile{z},'areas'):strfind(roiFile{z},'areas')+4)='eccen';
+                eccStrct = afni_niml_readsimple(eccFile{z});
+                eccIndices = eccStrct.data>eccMin & eccStrct.data<eccMax;
+                eccComment = ['V1-V3 with ecc: ',num2str(eccMin),'-',num2str(eccMax)];
+                eccMode = [opt.Mode,num2str(eccMin),'-',num2str(eccMax)];
+            end
             for z=1:length(roiNames)
                 iROI =iROI + 1;
                 ROIs(iROI).name = [roiNames{z},'-',hemi]; %% add hemisphere to name
@@ -170,28 +195,17 @@ function RoiFromSuma(subId,varargin)
                 ROIs(iROI).comment = [opt.Mode,': Converted from SUMA using mrC.ConvertROI.',eccComment];
             end
             disp(eccComment);
-        else % if it is not a proper ROI file, this is designed specifically for Noah Benson's ROI data
-            roiNames = {'V1','V2','V3'};
-            cmap = distinguishable_colors(10);
-            colors = cmap(end-length(roiNames)-1:end,:);
+        else % wang, kgs or glasser
+            cmap = distinguishable_colors(length(roiNames)+1);
+            colors = cmap(2:end,:);
             nimlStrct = afni_niml_readsimple(roiFile{z});
-            if eccMin == 0 && eccMax > 80 %% include everything
-                eccComment = 'V1-V3 with ecc: all';
-                eccIndices = ones(length(nimlStrct.data),1);
-                eccMode = [opt.Mode,'_all'];
-            else
-                eccFile{z} = roiFile{z};
-                eccFile{z}(strfind(roiFile{z},'areas'):strfind(roiFile{z},'areas')+4)='eccen';
-                eccStrct = afni_niml_readsimple(eccFile{z});
-                eccIndices = eccStrct.data>eccMin & eccStrct.data<eccMax;
-                eccComment = ['V1-V3 with ecc: ',num2str(eccMin),'-',num2str(eccMax)];
-                eccMode = [opt.Mode,num2str(eccMin),'-',num2str(eccMax)];
-            end
+            eccIndices = ones(length(nimlStrct.data),1);
+            eccMode = opt.Mode;
             for z=1:length(roiNames)
                 iROI =iROI + 1;
                 ROIs(iROI).name = [roiNames{z},'-',hemi]; %% add hemisphere to name
                 ROIs(iROI).coords = [];
-                tempIndices = find(nimlStrct.data==z & eccIndices==1);
+                tempIndices = find(nimlStrct.data(:,1)==z & eccIndices==1);
                 if strcmp(hemi,'L')
                     nROI(1) = nROI(1)+1;
                     label = zeros(1,length(FSvL));
@@ -268,7 +282,12 @@ function RoiFromSuma(subId,varargin)
 
     function saveAnatROIs(varargin)
         in = guidata(gcf);
-        ROIdir = uigetdir(fileparts(in.CortexFile),'ROI output directory');
+        outDir = [fileparts(in.CortexFile),'/',in.ROIs(1).type,'_ROIs']; % default output directory 
+        if ~exist(outDir,'dir')
+            mkdir(outDir);
+        else
+        end
+        ROIdir = uigetdir(outDir,'ROI output directory');
         if ~isnumeric(ROIdir)
             for i = 1:length(in.ROIs)
                 ROI = in.ROIs(i);
