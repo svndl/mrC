@@ -28,32 +28,68 @@ function [outMtx,ctMtx] = Crosstalk(mrCpath,varargin)
     opt	= ParseArgsOpt(varargin,...
         'inverse'		, [], ...
         'roiList'		, []	, ...
-        'roiType'       ,'func', ...
+        'roiType'       , 'all', ...
         'drawFig'       , true ...
         );
     
-    switch(opt.roiType)
-        case{'func','functional'}
-            opt.roiType = 'func';
-        case{'wang','wangatlas'}
-            opt.roiType = 'wangatlas';
-        otherwise
-            error('unknown ROI type: %s',opt.roiType);
-    end
+    if ~strcmp(opt.roiType,'all')
+        switch(opt.roiType)
+            case{'func','functional'}
+                opt.roiType = 'func';
+            case{'wang','wangatlas'}
+                opt.roiType = 'wangatlas';
+            otherwise
+                error('unknown ROI type: %s',opt.roiType);
+        end
     
-    if isempty(opt.roiList)
-        if strcmp(opt.roiType,'func')
-            opt.roiList = {'V1d','V1v','V2d','V2v','V3d','V3v','V4','VO1','LOC','MT','V3ab','IPS0'};
+        if isempty(opt.roiList)
+            if strcmp(opt.roiType,'func')
+                opt.roiList = {'V1d','V1v','V2d','V2v','V3d','V3v','V4','VO1','LOC','MT','V3ab','IPS0'};
+            else
+                opt.roiList = {'V1d','V1v','V2d','V2v','V3d','V3v','hV4','VO1','LO1','LO2','TO1','TO2','V3A','V3B','IPS0'};
+            end
         else
-            opt.roiList = {'V1d','V1v','V2d','V2v','V3d','V3v','hV4','VO1','LO1','LO2','TO1','TO2','V3A','V3B','IPS0'};
+        end
+    
+        if isempty(strfind(opt.roiList{1},opt.roiType))
+            % add proper prefix
+            opt.roiList = cellfun(@(x) [opt.roiType,'_',x],opt.roiList,'uni',false);
+        else
         end
     else
-    end
-    
-    if isempty(strfind(opt.roiList{1},opt.roiType))
-        % add proper prefix
-        opt.roiList = cellfun(@(x) [opt.roiType,'_',x],opt.roiList,'uni',false);
-    else
+        % now check if ROIs have the right prefixes
+        topoROIs = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'V4','hV4' 'VO1' 'VO2' ...
+            'PHC1' 'PHC2' 'TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A' 'V3AB' ...
+            'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4' 'IPS5' 'SPL1' 'FEF'};
+        funcROIs = {'LOC' 'MT'};
+        kgsROIs = {'IOG','OTS','mFUS','pFUS','PPA','VWFA1','VWFA2'};
+        prefixList = {'wangatlas','func','kgs'};
+        % step through the list
+        for r = 1:length(opt.roiList)
+            if sum(cell2mat(cellfun(@(x) ~isempty(strfind(x,opt.roiList{r})),prefixList,'uni',false)))==0 % check if prefix already exists
+                if sum(cell2mat(cellfun(@(x) ~isempty(strfind(x,opt.roiList{r})),topoROIs,'uni',false)))>0
+                    % if topographically organized ROI found
+                    if ~exist('topoPrefix','var') % only ask for it the first time
+                        topoType = input('Topo ROI found? wang [0] or func [1]? [default = wang] ');
+                        if isempty(topoType) || topoType == 0
+                            topoPrefix = 'wangatlas';
+                        else
+                            topoPrefix = 'func';
+                        end
+                    else
+                    end
+                    opt.roiList{r} = [topoPrefix,'_',opt.roiList{r}];
+                elseif sum(cell2mat(cellfun(@(x) ~isempty(strfind(x,opt.roiList{r})),funcROIs,'uni',false)))>0
+                    % if functionally defined organized ROI found
+                    opt.roiList{r} = ['func_',opt.roiList{r}];
+                elseif sum(cell2mat(cellfun(@(x) ~isempty(strfind(x,opt.roiList{r})),kgsROIs,'uni',false)))>0
+                    opt.roiList{r} = ['kgs_',opt.roiList{r}];
+                else
+                    error('Could not discern type for ROI: %s',opt.roiList{r});
+                end
+            else
+            end
+        end
     end
     
     anatDir = getpref('mrCurrent','AnatomyFolder');
@@ -123,7 +159,7 @@ function [outMtx,ctMtx] = Crosstalk(mrCpath,varargin)
             outMtx(:,r,z) = outMtx(:,r,z) / outMtx(r,r,z); % make each element a fraction of the diagonal'
         end
         if opt.drawFig
-            fSize = 12;
+            fSize = 8;
             figure;
             imagesc(outMtx(:,:,z)); % resize to deal with interpolation problem
             colormap(jet); 
@@ -137,13 +173,15 @@ function [outMtx,ctMtx] = Crosstalk(mrCpath,varargin)
             arrayfun(@(x) text(x,length(masterList)+1.25,x,sprintf('%d',numROI(z,x)),...
                 'HorizontalAlignment','center','fontsize',fSize,'fontname','Arial'),1:length(masterList));
             xLabH = xlabel(sprintf('Seed ROI (%s)',opt.roiType),'fontsize',fSize,'fontname','Arial');
-            set(xLabH,'Position',get(xLabH,'Position') + [0 .25 0]);
+            set(xLabH,'Position',get(xLabH,'Position') + [0 -.1 0]);
             ylabel(sprintf('Receiving ROI (%s)',opt.roiType),'fontsize',fSize,'fontname','Arial');
             colorbar;
             caxis([0,1]);
             drawnow;
+            set(gcf, 'units', 'centimeters'); % make figure size units centimeters
             figPos = get(gcf,'pos');
-            figPos(3:4) = figPos(3:4)*1.25;
+            figPos(3) = size(opt.roiList,2)*2.0;
+            figPos(4) = size(opt.roiList,2)*1.5;
             set(gcf,'pos',figPos);
             export_fig(['/Users/kohler/Desktop/ctMtx_',opt.roiType,titleOpts{z},'.pdf'],'-transparent',gcf)
             hold off
