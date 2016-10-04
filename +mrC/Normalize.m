@@ -1,7 +1,7 @@
-function [scaleAve,regAve] = PlusMinusAverage(inData,varargin)
+function [scaleAve,regAve] = Normalize(inData,varargin)
     % Description:
     % 
-    % Syntax:	[outData,transMtx] = mrC.SourceBrain(PlusMinusAverage,varargin)
+    % Syntax:	[outData,transMtx] = mrC.Normalize(PlusMinusAverage,varargin)
     % In:
     %   inData - 
     %
@@ -9,11 +9,13 @@ function [scaleAve,regAve] = PlusMinusAverage(inData,varargin)
     %       aveTime: vector of time indices to avearge over 
     %                 if set to false, no time averaging will be done
     %       scaleMode: which type of scaling to do (['std']/'rms'/'freq')
-    
+    %
+    %		plusminus: do plus minus averaging on data, prior to computing std or rms (n/a for freq) (true/[false])
     % defaults    
     opt	= ParseArgs(varargin,...
             'aveTime', false, ...
-            'scaleMode'		, 'std'...
+            'normMode'		, 'std',...
+            'plusminus'    ,  false ...
             );
         
     numSubs = size(inData,2);
@@ -29,7 +31,17 @@ function [scaleAve,regAve] = PlusMinusAverage(inData,varargin)
             end
             noiseAve = cat(3,noiseAve,curData);
         end
-        if strcmp(opt.scaleMode,'freq') % frequency-based scaling
+        if opt.plusminus
+            numTrials = size(noiseAve,3);
+            minusIdx = logical(repmat(1:2,1,numTrials/2)-1);
+            noiseAve(:,:,minusIdx) = noiseAve(:,:,minusIdx)*-1;
+        else
+        end
+        if strcmp(opt.normMode,'freq') % frequency-based normalization
+            if opt.plusminus
+                error('Plus minus makes no sense with frequency-based normalization');
+            else
+            end
             M = size(noiseAve,1); % number of samples
             Fs = 420; % sample rate (in Hz)
             sInt = 1/Fs; % sample interval
@@ -38,23 +50,22 @@ function [scaleAve,regAve] = PlusMinusAverage(inData,varargin)
             freq = (0:(M-1))*Fs/M; % frequency vector
             fIdx = find(freq>0,1):find(freq==30,1); % skip zero, go out to 30
             Fsub(s,:) = nanmean(mean(abs(Y(fIdx,:,:)),1),3);
-        else
-            numTrials = size(noiseAve,3);
-            minusIdx = logical(repmat(1:2,1,numTrials/2)-1);
-            noiseAve(:,:,minusIdx) = noiseAve(:,:,minusIdx)*-1;
-            noiseAve = nanmean(noiseAve,3); % average over plus minus trials
-            if strcmp(opt.scaleMode,'rms')
-                scaleFactor = rms(noiseAve); % rms over time
-            elseif strcmp(opt.scaleMode,'std')
-                scaleFactor = std(noiseAve,0,1); % std over time
+        elseif ismember(opt.normMode,{'std','rms'})
+            noiseAve = nanmean(noiseAve,3);
+            if strcmp(opt.normMode,'std') 
+                % normalization by temporal std
+                scaleFactor = std(noiseAve,0,1); 
             else
-                error('scalemode "%s" unknown',opt.scaleMode);
+                % normalization by rms over time
+                scaleFactor = rms(noiseAve);
             end
             scaleFactor = repmat(scaleFactor,size(regAve{c,s},1),1);
-            scaleAve(:,s) = cellfun(@(x) x./scaleFactor,regAve(:,s),'uni',false);  
+            scaleAve(:,s) = cellfun(@(x) x./scaleFactor,regAve(:,s),'uni',false); 
+        else
+            error('normalization mode "%s" unknown',opt.normMode);
         end
     end
-    if strcmp(opt.scaleMode,'freq')
+    if strcmp(opt.normMode,'freq')
         for s=1:numSubs
             scaleFactor = repmat(mean(Fsub,1)./Fsub(s,:),size(regAve{c,s},1),1);
             scaleAve(:,s) = cellfun(@(x) x./scaleFactor,regAve(:,s),'uni',false);
