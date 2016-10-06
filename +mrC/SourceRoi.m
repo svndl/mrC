@@ -146,8 +146,18 @@ function [roiData,masterList] = SourceRoi(mrCPath,invPaths,varargin)
                     roiIdx = length(masterList);
                 else
                 end
+                clear biIdx;
                 if strfind(roiList{r},'-L')
                     lIdx = 1;
+                    % find index for other hemisphere
+                    otherIdx = find(cell2mat(cellfun(@(x) strcmp(x,[roiList{r}(1:end-6),'-R.mat']), roiList,'uni',false)));
+                    if length(otherIdx) == 1
+                        biIdx = [find(roiChunk(:,r));find(roiChunk(:,otherIdx))]; % combine indices from two hemispheres
+                        roiData{c,s}(:,roiIdx,3) = nanmean(srcData(:,biIdx),2); % bilateral data, average over ROI voxels
+                    elseif length(otherIdx) > 1
+                        error('multiple cross-hemispheres name matches');
+                    else
+                    end
                 else
                     lIdx = 2;
                 end
