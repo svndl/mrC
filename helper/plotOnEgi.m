@@ -86,7 +86,7 @@ colormap(jmaColors('coolhotcortex'));
 %colormap coolhot
 %colormap gray
 if showColorbar
-    colorbar
+    colorH = colorbar
 end
 if ~isempty(colorbarLimits)
     caxis(colorbarLimits);
@@ -94,4 +94,5 @@ end
 
 if nargout >= 1
 varargout{1} = handle;
+varargout{2} = colorH;
 end
