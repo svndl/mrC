@@ -1,4 +1,4 @@
-function varargout = plotOnEgi(data,colorbarLimits,showColorbar,sensorROI)
+function [plotH,roiH] = plotOnEgi(data,colorbarLimits,showColorbar,sensorROI,markerProps)
 %plotOnEgi - Plots data on a standarized EGI net mesh
 %function meshHandle = plotOnEgi(data)
 %
@@ -19,6 +19,10 @@ if nargin<3
 end
 if nargin<4
     sensorROI = 0;
+end
+if nargin<5
+    markerProps = {'facecolor','none','edgecolor','none','markersize',15,'marker','o','markerfacecolor','w','MarkerEdgeColor','k','LineWidth',.5};
+else
 end
 
 data = squeeze(data);
@@ -60,26 +64,30 @@ netList   = findobj(patchList,'UserData','plotOnEgi');
 
 
 if isempty(netList),    
-    handle = patch( 'Vertices', [ tEpos(1:nChan,1:2), zeros(nChan,1) ], ...
+    plotH = patch( 'Vertices', [ tEpos(1:nChan,1:2), zeros(nChan,1) ], ...
         'Faces', tEGIfaces,'EdgeColor', [ 0.5 0.5 0.5 ], ...
         'FaceColor', 'interp');
     axis equal;
     axis off;
 else
-    handle = netList;
+    plotH = netList;
 end
 
-set(handle,'facevertexCdata',data,'linewidth',0.5,'markersize',4,'marker','.');
-set(handle,'userdata','plotOnEgi');
+set(plotH,'facevertexCdata',data,'linewidth',0.5,'markersize',4,'marker','.');
+set(plotH,'userdata','plotOnEgi');
 
 if sensorROI ~= 0
-    vertexLoc = get(handle,'Vertices'); % vertex locations
+    vertexLoc = get(plotH,'Vertices'); % vertex locations
     roiLoc = vertexLoc(sensorROI,:);
     roiH = patch(roiLoc(:,1),roiLoc(:,2),roiLoc(:,3),'o');
-    set(roiH,'facecolor','none','edgecolor','none','markersize',5,'marker','o','markerfacecolor','none','MarkerEdgeColor','k','LineWidth',1);
+    set(roiH,markerProps{:});
+    roiX = get(roiH,'XData');
+    roiY = get(roiH,'YData');
+    roiZ = get(roiH,'ZData');
+    arrayfun(@(x) ...
+        text(roiX(x),roiY(x),roiZ(x), num2str(x),'fontsize',8,'fontname','Arial','horizontalAlignment','center')...
+        ,1:128,'uni',false);
 end
-
-    
 
 
 colormap(jmaColors('coolhotcortex'));
@@ -91,8 +99,4 @@ if showColorbar
 end
 if ~isempty(colorbarLimits)
     caxis(colorbarLimits);
-end
-
-if nargout >= 1
-varargout{1} = handle;
 end
