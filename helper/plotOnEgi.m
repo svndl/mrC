@@ -1,4 +1,4 @@
-function [plotH,roiH] = plotOnEgi(data,colorbarLimits,showColorbar,sensorROI,markerProps)
+function [plotH,colorH,roiH] = plotOnEgi(data,colorbarLimits,showColorbar,sensorROI,doText,markerProps)
 %plotOnEgi - Plots data on a standarized EGI net mesh
 %function meshHandle = plotOnEgi(data)
 %
@@ -21,7 +21,20 @@ if nargin<4
     sensorROI = 0;
 end
 if nargin<5
-    markerProps = {'facecolor','none','edgecolor','none','markersize',15,'marker','o','markerfacecolor','w','MarkerEdgeColor','k','LineWidth',.5};
+    doText = false;
+else
+end
+if nargin<6
+    if doText
+        markerProps = {'facecolor','none','edgecolor','none','markersize',15,'marker','o','markerfacecolor','w','MarkerEdgeColor','k','LineWidth',.5};
+    else
+        markerProps = {'facecolor','none','edgecolor','none','markersize',6,'marker','o','markerfacecolor','none','MarkerEdgeColor','k','LineWidth',1};
+    end
+else
+end
+
+if doText && sensorROI ==0
+    warning('no sensor ROI specified');
 else
 end
 
@@ -81,12 +94,15 @@ if sensorROI ~= 0
     roiLoc = vertexLoc(sensorROI,:);
     roiH = patch(roiLoc(:,1),roiLoc(:,2),roiLoc(:,3),'o');
     set(roiH,markerProps{:});
-    roiX = get(roiH,'XData');
-    roiY = get(roiH,'YData');
-    roiZ = get(roiH,'ZData');
-    arrayfun(@(x) ...
-        text(roiX(x),roiY(x),roiZ(x), num2str(x),'fontsize',8,'fontname','Arial','horizontalAlignment','center')...
-        ,1:128,'uni',false);
+    if doText
+        roiX = get(roiH,'XData');
+        roiY = get(roiH,'YData');
+        roiZ = get(roiH,'ZData');
+        arrayfun(@(x) ...
+            text(roiX(x),roiY(x),roiZ(x), num2str(x),'fontsize',8,'fontname','Arial','horizontalAlignment','center')...
+            ,1:length(sensorROI),'uni',false);
+    else
+    end
 end
 
 
@@ -95,7 +111,6 @@ colormap(jmaColors('coolhotcortex'));
 %colormap gray
 if showColorbar
     colorH = colorbar;
-    varargout{2} = colorH;
 end
 if ~isempty(colorbarLimits)
     caxis(colorbarLimits);
