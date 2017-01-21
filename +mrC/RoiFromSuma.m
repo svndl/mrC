@@ -11,7 +11,11 @@ function RoiFromSuma(subId,varargin)
     %               (['func']/'benson'/'wangatlas')
     %
     %       CortexFile: string specifying the full path to the mrMesh cortex file
-    %                        
+    %
+    %       MinMaxEcc: 2 integer vector designating the minimum and maximum eccentricity
+    %                  to use with Benson ROIs. Does nothing if other ROIs
+    %                  are used. Default: ask which eccentricities to use
+    %       
     % Out:
     
     mrC.SetPrefs; % make sure preferences are set
@@ -27,7 +31,8 @@ function RoiFromSuma(subId,varargin)
     %% SET DEFAULTS
     opt	= ParseArgsOpt(varargin,...
             'Mode'		 , 'wangatlas', ...
-            'CortexFile' , 	 fullfile(anatDir,'/Standard/meshes/defaultCortex.mat') ...
+            'CortexFile' , 	 fullfile(anatDir,'/Standard/meshes/defaultCortex.mat'), ...
+            'MinMaxEcc'  ,   [0,0] ...
             );
     
     if strcmp(opt.Mode,'wang')
@@ -42,54 +47,56 @@ function RoiFromSuma(subId,varargin)
     
     %% GET ROI FILE
     if strcmp(opt.Mode,'benson')
-        roiNames = {'V1','V2','V3'};
-        targetFolder = [fsDir,'/benson_atlas/*.niml.dset'];
-        eccMin = input('Minimum eccentricity? [default = 0] ');
-        if isempty(eccMin)
-            eccMin = 0;
+        roiNames = {'V3d','V2d','V1d','V1v','V2v','V3v'};
+        roiFile = subfiles(sprintf('%s/benson_atlas/*h.all.benson_atlas.niml.dset',fsDir),1);
+        if max(opt.MinMaxEcc) == 0
+            eccMin = input('Minimum eccentricity? [default = 0] ');
+            if isempty(eccMin)
+                eccMin = 0;
+            else
+            end
+            eccMax = input('Maximum eccentricity? [default = 10, >80 = include all] ');
+            if isempty(eccMax)
+                eccMax = 10;
+            elseif eccMax > 80 
+                eccMax = 100;
+            else
+            end
         else
-        end
-        eccMax = input('Maximum eccentricity? [default = 10, >80 = include all] ');
-        if isempty(eccMax)
-            eccMax = 10;
-        elseif eccMax > 80 
-            eccMax = 100;
-        else
+            eccMin = opt.MinMaxEcc(1);
+            eccMax = opt.MinMaxEcc(2);
         end
     elseif strcmp(opt.Mode,'wangatlas')
-        targetFolder = [fsDir,'/wang_atlas/*cluster.niml.dset'];
+        roiFile = subfiles(sprintf('%s/wang_atlas/*h.wang_atlas_cluster.niml.dset',fsDir),1);
         roiNames = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2',...
                     'PHC1' 'PHC2','TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A',...  
                     'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4''IPS5' 'SPL1' 'FEF'};
         eccComment = 'atlas, generated based on Wang et al., 2014';
     elseif strcmp(opt.Mode,'glass')
-        targetFolder = [fsDir,'/glass_atlas/*glass_atlas.niml.dset'];
+        roiFile = subfiles(sprintf('%s/glass_atlas/*h.glass_atlas.niml.dset',fsDir),1);
         roiNames = arrayfun(@(x) sprintf('roi%03d',x),1:180,'uni',false); 
         % true names can be found on pgs. 81-85 of the supplementary material.
         eccComment = 'atlas, generated based on Glasser et al., 2016';
     elseif strcmp(opt.Mode,'kgs')
-        targetFolder = [fsDir,'/kgs_atlas/*kgs_atlas.niml.dset'];
+        roiFile = subfiles(sprintf('%s/kgs_atlas/*h.kgs_atlas.niml.dset',fsDir),1);
         roiNames = {'IOG','OTS','mFUS','pFUS','PPA','VWFA1','VWFA2'};
         eccComment = 'atlas, generated based on Weiner & Grill-Spector (in press)';
     else
+         % if functionally defined ROIs, users have to specify files manually
         targetFolder = ['/Volumes/Denali_4D2/kohler/localizers/',subId,'/*.niml.roi'];
+        [roiFile,roiPath] = uigetfile(targetFolder,'SUMA NIML file?','MultiSelect','on');
+        if isnumeric(roiFile)
+            return
+        end
+        if iscell(roiFile)
+            roiFile = cellfun(@(x) [roiPath,x],roiFile,'uni',false);
+        else
+            tempFile = [roiPath,roiFile];
+            clear roiFile;
+            roiFile{1} = tempFile;
+        end
     end
-    
-    % currently users have to specify files manually - perhaps get rid of
-    % this, but on the other hand a good check that you know what you are
-    % doing ...
-    [roiFile,roiPath] = uigetfile(targetFolder,'SUMA NIML file?','MultiSelect','on');
-    if isnumeric(roiFile)
-        return
-    end
-    if iscell(roiFile)
-        roiFile = cellfun(@(x) [roiPath,x],roiFile,'uni',false);
-    else
-        tempFile = [roiPath,roiFile];
-        clear roiFile;
-        roiFile{1} = tempFile;
-    end
-    
+
     %% LOAD MRMESH CORTEX AND TRANSFORM TO MATCH FREESURFER
     load(opt.CortexFile);
     msh.nVertex = sum(msh.nVertexLR);
@@ -157,23 +164,29 @@ function RoiFromSuma(subId,varargin)
             cmap = distinguishable_colors(10);
             colors = cmap(end-length(roiNames)-1:end,:);
             nimlStrct = afni_niml_readsimple(roiFile{z});
+            roiData = nimlStrct.data(:,3); % roi data should be stored in 3rd sub-brick
+            eccData = nimlStrct.data(:,2); % eccentricity data should be stored in 2nd sub-brick
+            roiMapping = [-3,-2,-1,1,2,3]; % negative values are dorsal areas, positive values are ventral
+            if max(abs(roiData)) ~= 3
+                error('Expected max area idx = 3, was %.2f',max(roiData));
+            elseif max(eccData) > 100
+                error('Expected max eccentricity idx ~100, was %.2f',max(eccData));
+            else
+            end
             if eccMin == 0 && eccMax > 80 %% include everything
                 eccComment = 'V1-V3 with ecc: all';
-                eccIndices = ones(length(nimlStrct.data),1);
+                eccIndices = ones(size(roiData,1),1);
                 eccMode = [opt.Mode,'_all'];
             else
-                eccFile{z} = roiFile{z};
-                eccFile{z}(strfind(roiFile{z},'areas'):strfind(roiFile{z},'areas')+4)='eccen';
-                eccStrct = afni_niml_readsimple(eccFile{z});
-                eccIndices = eccStrct.data>eccMin & eccStrct.data<eccMax;
+                eccIndices = eccData>eccMin & eccData<eccMax;
                 eccComment = ['V1-V3 with ecc: ',num2str(eccMin),'-',num2str(eccMax)];
                 eccMode = [opt.Mode,num2str(eccMin),'-',num2str(eccMax)];
             end
-            for z=1:length(roiNames)
+            for z=1:length(roiMapping)
                 iROI =iROI + 1;
                 ROIs(iROI).name = [roiNames{z},'-',hemi]; %% add hemisphere to name
                 ROIs(iROI).coords = [];
-                tempIndices = find(nimlStrct.data==z & eccIndices==1);
+                tempIndices = find(roiData==roiMapping(z) & eccIndices==1);
                 if strcmp(hemi,'L')
                     nROI(1) = nROI(1)+1;
                     label = zeros(1,length(FSvL));
