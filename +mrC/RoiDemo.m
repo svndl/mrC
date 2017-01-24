@@ -16,7 +16,10 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
     %
     %       roiList: a 1 x n cell of strings, with each cell giving the ROI name
     %
-    %       roiType:    string specifying the roitype to use (['func']/'wang'/'all').
+    %       roiType:    string specifying the roitype to use. 
+    %                   'main' indicates that the main ROI folder
+    %                   /Volumes/svndl/anatomy/SUBJ/standard/meshes/ROIs
+    %                   is to be used. (['func']/'wang'/'glass','kgs','benson','main').
     %
     % Out:
     % 	roiData:    c x s cell matrix of output data, where each cell contains
@@ -34,27 +37,21 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
         'singleSubject' , 'nl-0014'...
         );
     
-    switch(opt.roiType)
-        case{'func','functional'}
-            opt.roiType = 'func';
-        case{'wang','wangatlas'}
-            opt.roiType = 'wangatlas';
-        otherwise
-            error('unknown ROI type: %s',opt.roiType);
-    end
-    
-    if isempty(opt.roiList)
-        if strcmp(opt.roiType,'func')
-            opt.roiList = {'V1d','V1v','V2d','V2v','V3d','V3v','V4','VO1','LOC','MT','V3ab','IPS0'};
-        else
-            opt.roiList = {'V1d','V1v','V2d','V2v','V3d','V3v','hV4','VO1','LO1','LO2','TO1','TO2','V3A','V3B','IPS0'};
+    if ~strcmp(opt.roiType,'main')
+        switch(opt.roiType)
+            case{'func','functional'}
+                opt.roiType = 'func';
+            case{'wang','wangatlas'}
+                opt.roiType = 'wangatlas';
+            case{'glass','glasser'}
+                opt.roiType = 'glass';
+            case{'kgs','kalanit'}
+                opt.roiType = 'kgs';
+            case{'benson'}
+                opt.roiType = 'benson';
+            otherwise
+                error('unknown ROI type: %s',opt.roiType);
         end
-    else
-    end
-    
-    if isempty(strfind(opt.roiList{1},opt.roiType))
-        % add proper prefix
-        opt.roiList = cellfun(@(x) [opt.roiType,'_',x],opt.roiList,'uni',false);
     else
     end
     
@@ -78,15 +75,25 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
         fwdStrct = mne_read_forward_solution(fwdPath);
         srcStrct = readDefaultSourceSpace(subIDs{s});
         fwdMatrix = makeForwardMatrixFromMne(fwdStrct ,srcStrct);
-        roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','ROIs');
+        if strcmp(opt.roiType,'main')
+            roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','ROIs');
+            roiPaths = subfiles(roiDir);
+        else
+            roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.roiType,'_ROIs']);
+            roiPaths = subfiles(roiDir);
+        end
         invPath = fullfile(mrCfolders{s},'Inverses',opt.inverse);
         invMatrix = mrC_readEMSEinvFile(invPath);
         if s==1
+            if isempty(opt.roiList)
+                 opt.roiList = unique(cellfun(@(x) x(1:end-6),roiPaths,'uni',false));
+            else
+            end
             masterList = opt.roiList;
             numROI = zeros(3,length(masterList));
         else
         end
-        seedData = mrC.SeedMtx(roiDir,opt.roiType,masterList,fwdMatrix);
+        seedData = mrC.SeedMtx(roiDir,masterList,fwdMatrix);
         sensorData(:,:,1,s) = cat(1,seedData{1,:});
         sensorData(:,:,3,s) = cat(1,seedData{2,:});
         sensorData(:,:,2,s) = sum(sensorData(:,:,[1,3],s),3); % make bilateral the center
@@ -109,7 +116,7 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
     readyData = reshape(tempData,size(tempData,1),[]);
     tempData = cat(3,sourceDataSingle{:});  % concatenate over ROIs
     readySingleData = reshape(tempData,size(tempData,1),[]);
-    roiLabels = repmat(masterList',1,3);
+    roiLabels = repmat(masterList,1,3);
     hemiLabels = repmat({'-L','-BL','-R'},size(sourceData,1),1);
     roiLabels = cellfun(@(x,y) [x,y],roiLabels,hemiLabels,'uni',false)';
     roiLabels = roiLabels(:);

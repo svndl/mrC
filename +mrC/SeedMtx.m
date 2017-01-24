@@ -1,11 +1,9 @@
-function [seedData,roiSet] = SeedMtx(roiDir,roiType,masterList,fwdMatrix)
+function [seedData,roiSet] = SeedMtx(roiDir,masterList,fwdMatrix)
     % Description:	Generate Crosstalk matrix from mrCurrent folder
     %
     % Syntax:	[roiData,masterList] = mrC.SeedMtx(mrCfolders,invPaths,varargin)
     % In:
     %   roiDir - string, path to ROI directory
-    %
-    %   roiType:    string specifying the roitype to use (['func']/'wang'/'all').
     %   
     %   masterList: a 1 x n cell of strings, indicating the ROIs to use
     %
@@ -16,7 +14,7 @@ function [seedData,roiSet] = SeedMtx(roiDir,roiType,masterList,fwdMatrix)
     %
     %	roiSet: a 1 x nROIs cell of node indices
     
-    [roiChunk, tempList] = mrC.ChunkFromMesh(roiDir,size(fwdMatrix,2),roiType);
+    [roiChunk, tempList] = mrC.ChunkFromMesh(roiDir,size(fwdMatrix,2));
     shortList = cellfun(@(x) x(1:end-6),tempList,'uni',false);
     seedData = repmat({NaN(1,128)},2,length(masterList));
     roiSet = repmat({NaN},2,length(masterList));

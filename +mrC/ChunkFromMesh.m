@@ -1,4 +1,4 @@
-function [chunks roiList roiInfo] = ChunkFromMesh(roiDir,nTotalVert,roiType,blRoiOnly)
+function [chunks roiList roiInfo] = ChunkFromMesh(roiDir,nTotalVert,blRoiOnly)
 % function [chunker] = mrC.ChunkFromMesh(roiDir,nTotalVert)
 % The chunker matrix maps the full(~128 x nTotalVert) forward/inverse matrix
 % onto onto a chunked 128xnMeshRois
@@ -40,11 +40,6 @@ function [chunks roiList roiInfo] = ChunkFromMesh(roiDir,nTotalVert,roiType,blRo
 % Revision 1.1  2008/05/05 17:26:24  ales
 % Added new createChunkerFromMeshROI().
 
-if ~exist('roiType','var') || isempty(roiType)
-    roiType = 'all';
-else
-end
-
 if ~exist('blRoiOnly','var') || isempty(blRoiOnly)
     blRoiOnly = false;
 else
@@ -62,13 +57,7 @@ if blRoiOnly
     nameList = nameList(uniIdx);
 else
 end
-        
-if ~strcmp(roiType,'all')
-    roiIdx = cell2mat(cellfun(@(x) ~isempty(strfind(x,roiType)),nameList,'uni',false));
-    dirList = dirList(roiIdx);
-    nameList = nameList(roiIdx);
-else
-end
+
 nAreas = length(dirList);
 
 %The chunker matrix maps the full A on 128x20k to 128xnAreas
@@ -78,17 +67,6 @@ roiIdx = 0;
 if nAreas > 0
     for r = 1:nAreas
         curROI = load(dirList{r});
-        if ~strcmp(roiType,'all') % if type was set
-            % double check, some ROIs use mode field others use type
-            % so search the whole struct for the type
-            % pretty clunkly, but also just a double check
-            findType = cell2mat(struct2cell(structfun(@(x) ~isempty(strfind(lower(x),lower(roiType))),curROI.ROI,'uni',false)));
-            if sum(findType) == 0
-                continue
-            else
-            end
-        else
-        end
         roiIdx = roiIdx+1;
         curVertices = curROI.ROI.meshIndices(curROI.ROI.meshIndices>0);
         ctxList = sparse(zeros(nTotalVert,1));

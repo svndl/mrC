@@ -176,15 +176,15 @@ function RoiFromSuma(subId,varargin)
             if eccMin == 0 && eccMax > 80 %% include everything
                 eccComment = 'V1-V3 with ecc: all';
                 eccIndices = ones(size(roiData,1),1);
-                eccMode = [opt.Mode,'_all'];
+                bensonSuffix = 'all';
             else
-                eccIndices = eccData>eccMin & eccData<eccMax;
                 eccComment = ['V1-V3 with ecc: ',num2str(eccMin),'-',num2str(eccMax)];
-                eccMode = [opt.Mode,num2str(eccMin),'-',num2str(eccMax)];
+                eccIndices = eccData>eccMin & eccData<eccMax;
+                bensonSuffix = [num2str(eccMin),'-',num2str(eccMax)];
             end
             for z=1:length(roiMapping)
                 iROI =iROI + 1;
-                ROIs(iROI).name = [roiNames{z},'-',hemi]; %% add hemisphere to name
+                ROIs(iROI).name = [roiNames{z},'_',bensonSuffix,'-',hemi]; %% add hemisphere to name
                 ROIs(iROI).coords = [];
                 tempIndices = find(roiData==roiMapping(z) & eccIndices==1);
                 if strcmp(hemi,'L')
@@ -204,7 +204,7 @@ function RoiFromSuma(subId,varargin)
                 ROIs(iROI).color = colors(z,:);
                 ROIs(iROI).ViewType = 'Gray';
                 ROIs(iROI).date = creationTime;
-                ROIs(iROI).type = eccMode;
+                ROIs(iROI).type = opt.Mode;
                 ROIs(iROI).comment = [opt.Mode,': Converted from SUMA using mrC.ConvertROI.',eccComment];
             end
             disp(eccComment);
@@ -213,7 +213,6 @@ function RoiFromSuma(subId,varargin)
             colors = cmap(2:end,:);
             nimlStrct = afni_niml_readsimple(roiFile{z});
             eccIndices = ones(length(nimlStrct.data),1);
-            eccMode = opt.Mode;
             for z=1:length(roiNames)
                 iROI =iROI + 1;
                 ROIs(iROI).name = [roiNames{z},'-',hemi]; %% add hemisphere to name
@@ -236,7 +235,7 @@ function RoiFromSuma(subId,varargin)
                 ROIs(iROI).color = colors(z,:);
                 ROIs(iROI).ViewType = 'Gray';
                 ROIs(iROI).date = creationTime;
-                ROIs(iROI).type = eccMode;
+                ROIs(iROI).type = opt.Mode;
                 ROIs(iROI).comment = [opt.Mode,': Converted from SUMA using mrC.ConvertROI.',eccComment];
             end
             disp(eccComment);
