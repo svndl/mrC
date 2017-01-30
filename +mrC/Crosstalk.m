@@ -1,4 +1,4 @@
-function [outMtx,ctMtx] = Crosstalk(mrCpath,varargin)
+function [outMtx,ctMtx,masterList] = Crosstalk(mrCpath,varargin)
     % Description:	Generate Crosstalk matrix from mrCurrent folder
     %
     % Syntax:	[roiData,masterList] = mrC.Crosstalk(mrCPath,invPaths,varargin)
