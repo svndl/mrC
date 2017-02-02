@@ -1,11 +1,11 @@
 function [plotH,colorH,roiH] = plotOnEgi(data,colorbarLimits,showColorbar,sensorROI,doText,markerProps)
-%plotOnEgi - Plots data on a standarized EGI net mesh
-%function meshHandle = plotOnEgi(data)
+% mrC.plotOnEgi - Plots data on a standarized EGI net mesh
+% function meshHandle = mrC.plotOnEgi(data)
 %
-%This function will plot data on the standardized EGI mesh with the
-%arizona colormap.
+% This function will plot data on the standardized EGI mesh with the
+% arizona colormap.
 %
-%Data must be a 128 dimensional vector, but can have singleton dimensions,
+% Data must be a 128 dimensional vector, but can have singleton dimensions,
 %
 %
 
@@ -49,7 +49,7 @@ if size(data,1) == 128
     tEpos = load('defaultFlatNet.mat');
     tEpos = [ tEpos.xy, zeros(128,1) ];
     
-    tEGIfaces = mrC_EGInetFaces( false );
+    tEGIfaces = mrC.EGInetFaces( false );
     
     nChan = 128;
 elseif size(data,1) == 256
@@ -57,13 +57,13 @@ elseif size(data,1) == 256
     tEpos = load('defaultFlatNet256.mat');
     tEpos = [ tEpos.xy, zeros(256,1) ];
     
-    tEGIfaces = mrC_EGInetFaces256( false );
+    tEGIfaces = mrC.EGInetFaces256( false );
     nChan = 256;
 elseif size(data,1) == 32
     tEpos = load('defaultFlatNet32.mat');
     tEpos = [ tEpos.xy, zeros(32,1) ];
     
-    tEGIfaces = mrC_EGInetFaces( false );
+    tEGIfaces = mrC.EGInetFaces32( false );
     
     nChan = 32;
     

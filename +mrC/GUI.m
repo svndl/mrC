@@ -1449,7 +1449,7 @@ function GUI(initPath)
 
 			tCndNms = GetChartSelx( 'Cnds' );
 			tNCnds = numel( tCndNms );
-			tEGIfaces = mrC_EGInetFaces( false );
+			tEGIfaces = mrC.EGInetFaces( false );
 			if IsOptSel( 'TopoMap', 'Standard' )
 				tEpos = load('defaultFlatNet.mat');
 				tEpos = [ tEpos.xy, zeros(128,1) ];
@@ -4456,7 +4456,7 @@ function GUI(initPath)
 
 		axes(ax(1))
 		Pflat = load('defaultFlatNet.mat');		% 128x2 variable xy
-		tHpatch = patch(	'Vertices',[Pflat.xy,zeros(128,1)], 'Faces',mrC_EGInetFaces(false),...
+		tHpatch = patch(	'Vertices',[Pflat.xy,zeros(128,1)], 'Faces',mrC.EGInetFaces(false),...
 								'FaceVertexCData',Y(iX,:)', 'FaceColor','interp', 'CDataMapping','scaled',...
 								'EdgeColor','k', 'LineWidth',1, 'Marker','.', 'MarkerSize',16, 'UIContextMenu', uiCM );
 		set(ax(1),'CLim',tYLim)

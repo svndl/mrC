@@ -1,7 +1,7 @@
-function F = mrC_EGInetFaces(includeRef)
+function F = EGInetFaces(includeRef)
 % handpicked rather than delaunayed Faces matrix for 128-electrode EGI net
 %
-% F = mrC_EGInetFaces(includeRef)
+% F = mrC.EGInetFaces(includeRef)
 % if includeRef = true, uses reference electrode Cz at vertex 129
 %            otherwise, builds mesh only from 128 electrodes
 
