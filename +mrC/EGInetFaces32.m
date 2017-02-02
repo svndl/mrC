@@ -1,5 +1,7 @@
-function F = mrC_EGInetFaces32(includeRef)
+function F = EGInetFaces32(includeRef)
 % handpicked rather than delaunayed Faces matrix for 32-electrode EGI net
+% 
+% F = mrC.EGInetFaces32(includeRef)
 %
 % if includeRef = true, uses reference electrode Cz at vertex 33
 %            otherwise, builds mesh only from 32 electrodes

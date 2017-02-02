@@ -1,11 +1,11 @@
 function [plotH,colorH,roiH] = plotOnEgi(data,colorbarLimits,showColorbar,sensorROI,doText,markerProps)
-%plotOnEgi - Plots data on a standarized EGI net mesh
-%function meshHandle = plotOnEgi(data)
+% mrC.plotOnEgi - Plots data on a standarized EGI net mesh
+% function meshHandle = mrC.plotOnEgi(data)
 %
-%This function will plot data on the standardized EGI mesh with the
-%arizona colormap.
+% This function will plot data on the standardized EGI mesh with the
+% arizona colormap.
 %
-%Data must be a 128 dimensional vector, but can have singleton dimensions,
+% Data must be a 128 dimensional vector, but can have singleton dimensions,
 %
 %
 
