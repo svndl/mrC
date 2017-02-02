@@ -26,7 +26,10 @@ function [roiData,masterList] = SourceRoi(mrCPath,invPaths,varargin)
     %       subIDs: 1 x s cell matrix, where each cell is a string
     %               specifying the subject ID
     %       
-    %       roiType:    string specifying the roitype to use (['func']/'wang'/'all').
+    %       roiType:    string specifying the roitype to use. 
+    %                   'main' indicates that the main ROI folder
+    %                   /Volumes/svndl/anatomy/SUBJ/standard/meshes/ROIs
+    %                   is to be used. (['func']/'wang'/'glass','kgs','benson','main').
     %       
     %       blRoiOnly:  exclude non-bilateral ROIs (true/[false])
     %
@@ -110,14 +113,37 @@ function [roiData,masterList] = SourceRoi(mrCPath,invPaths,varargin)
     nConds = size(opt.dataIn,1);    
     anatDir = getpref('mrCurrent','AnatomyFolder');
     
+    if ~strcmp(opt.roiType,'main')
+        switch(opt.roiType)
+            case{'func','functional'}
+                opt.roiType = 'func';
+            case{'wang','wangatlas'}
+                opt.roiType = 'wangatlas';
+            case{'glass','glasser'}
+                opt.roiType = 'glass';
+            case{'kgs','kalanit'}
+                opt.roiType = 'kgs';
+            case{'benson'}
+                opt.roiType = 'benson';
+            otherwise
+                error('unknown ROI type: %s',opt.roiType);
+        end
+    else
+    end
+        
+    
     %% RUN IT
 
     for s = 1:nSubs
         % get inverse
         curInv = mrC_readEMSEinvFile(invPaths{s});
         % get ROI chunks
-        curROIdir = fullfile(anatDir,opt.subIDs{s},'Standard','meshes','ROIs');
-        [roiChunk, roiList] = mrC.ChunkFromMesh(curROIdir,size(curInv,2),opt.roiType,opt.blRoiOnly);
+        if strcmp(opt.roiType,'main')
+            curROIdir = fullfile(anatDir,opt.subIDs{s},'Standard','meshes','ROIs');
+        else
+            curROIdir = fullfile(anatDir,opt.subIDs{s},'Standard','meshes',[opt.roiType,'_ROIs']);
+        end
+        [roiChunk, roiList] = mrC.ChunkFromMesh(curROIdir,size(curInv,2),opt.blRoiOnly);
         shortList = cellfun(@(x) x(1:end-6),roiList,'uni',false);
         if s==1
             masterList = unique(shortList);
