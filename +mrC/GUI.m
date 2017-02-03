@@ -4490,8 +4490,8 @@ function GUI(initPath)
 		uimenu(uiM,'label','MakeMovie','Callback',@TopoMovie)
 		function TopoMovie(varargin)
 			
-			aviOpts = inputdlg( {'Start (ms)','Stop (ms)',sprintf('Step (# %0.3fms samples)',tCndInfo.dTms),'fps','compression','quality [1,100]'},...
-				'TopoGUI', 1, {num2str(ceil(tX(1))),num2str(floor(tX(tNT))),'10','4','None','100'} );
+			aviOpts = inputdlg( {'Start (ms)','Stop (ms)',sprintf('Step (# %0.3fms samples)',tCndInfo.dTms),'fps','quality [1,100]'},...
+				'TopoGUI', 1, {num2str(ceil(tX(1))),num2str(floor(tX(tNT))),'10','4','100'} );
 			if isempty(aviOpts)
 				return
 			end
@@ -4508,7 +4508,7 @@ function GUI(initPath)
 				error('No backward movie support')
 			end
 			AVIfps = eval( aviOpts{4} );
-			AVIquality = round( eval( aviOpts{6} ) );
+			AVIquality = round( eval( aviOpts{5} ) );
 			if AVIquality<1 || AVIquality>100
 				error('AVI quality out of range')
 			end
@@ -4518,7 +4518,10 @@ function GUI(initPath)
 			[aviName,aviPath] = uiputfile(fullfile(gProjPN,'*.avi'),'Save AVI file');
 			saveAVI = ischar(aviName);
 			if saveAVI
-				avi = avifile([aviPath,aviName],'colormap',get(fig,'colormap'),'fps',AVIfps,'compression',aviOpts{5},'quality',AVIquality);	%,'videoname','xxx');
+                % colormap',get(fig,'colormap')
+				avi = VideoWriter([aviPath,aviName]);
+                set(avi,'FrameRate',AVIfps,'Quality',AVIquality);	%,'videoname','xxx');
+                open(avi);
 			end
 
 			disp('Press key to start.  Don''t cover any part of the figure window while building an avi-file.')
@@ -4535,12 +4538,12 @@ function GUI(initPath)
 				set(tHpatch,'facevertexcdata',Y(iX,:)')
 				drawnow
 				if saveAVI
-					avi = addframe( avi, getframe(fig) );
+					writeVideo( avi, getframe(fig) );
 				end
 			end
 			if saveAVI
 				set( fig, 'Name', '' )
-				avi = close(avi);
+				close(avi);
 			end
 		end
 
