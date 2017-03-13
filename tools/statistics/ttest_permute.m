@@ -1,4 +1,27 @@
-function [realT,realP,corrT,critVal,clustDistrib]= ttest_permute(inData,maxPerms,timeMask,permMatrix,deletePool,tParams )
+function [realT,realP,corrT,critVal,clustDistrib]= ttest_permute( inData,maxPerms,timeMask,permMatrix,deletePool,tParams )
+        % [realT,realP,corrT,critVal,clustDistrib]= ttest_permute( inData,maxPerms,timeMask,permMatrix,deletePool,tParams )
+        % 
+        % input:
+        %   inData: the difference waveform to test against zero, as a t x s matrix, where t is time and s is subjects.
+        % 
+        % optional:
+        %   maxPerms (scalar): number of permutations to run, if not given every possible permutation will be run
+        %   timeMask (1xt logical): true indicates timepoints that should be included in the test, 
+        %                           default is to include everything.
+        %   permMatrix: matrix of permutations to run, 
+        %               useful if multiple tests will be run on the same set of subjects.
+        %   deletePool (logical true/[false]): if true, the parallel pool object used to run the tests will be deleted afterwards. Useful if you know you are running the last instance of the function.
+        %   tParams (cell): t-test parameters, default is {'dim',2,'alpha',0.05}.
+        % 
+        % output:
+        %   realT (1xt logical): significance of ordinary t-test
+        %   realP (1xt double): p-values of ordinary t-test
+        %   corrt (1xt logical): significance of corrected t-test
+        %   critVal (scalar): critical number of significant time-points
+        %                     required for surviving correction
+        %   clustDistrib: distribution of significance run lengths for
+        %                 permuted data.
+        
         numSubs = size(inData,2);
         numPerms = 2 ^ numSubs;
         if nargin < 6 || isempty(tParams)
