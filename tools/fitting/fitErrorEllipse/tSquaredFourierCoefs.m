@@ -1,4 +1,4 @@
-function [results] = tSquaredFourierCoefs(xyData,testMu,alphaVal)
+function [results] = tSquaredFourierCoefs(xyData1,xyData2,testMu,alphaVal,pdStyle)
 % [results] = tSquaredFourierCoefs(xyData,testMu,alphaVal)
 %
 % Returns the results of running Hotelling's t-squared test that the mean
@@ -19,7 +19,23 @@ function [results] = tSquaredFourierCoefs(xyData,testMu,alphaVal)
 % Based on Anderson (1984) An Introduction to Multivariate Statistical 
 % Analysis, Wiley
 
-dims = size(xyData);
+if nargin<5 || isempty(alphaVal)
+    pdStyle = false;
+end
+
+if nargin<4 || isempty(alphaVal)
+    alphaVal = 0.05;
+end
+if nargin<3 || isempty(testMu)
+    testMu = [0,0];
+else
+end
+if nargin<2 || isempty(testMu)
+    xyData2 = zeros(size(xyData1));
+else
+end
+
+dims = size(xyData1);
 N = dims(1);
 if dims(2) ~= 2
     error('input data must be a matrix of 2D row samples');
@@ -28,22 +44,21 @@ if N < 2
     error('input data must contain at least 2 samples');
 end
 
-if nargin<2 || isempty(testMu)
-    testMu = [0,0];
-end
-if nargin<3
-    alphaVal = 0.05;
-end
-
 if length(testMu) ~= 2
     error('testMu should be a 2D vector');
 end
-    
+
+xyData = xyData1 - xyData2;
 
 try
     [sampMu,sampCovMat] = eigFourierCoefs(xyData);
 catch
     fprintf('The covariance matrix of xyData could not be calculated, probably your data do not contain >1 sample.');
+end
+
+if pdStyle
+    sampCovMat = eye(2);
+else
 end
 
 results.alpha = alphaVal;
@@ -57,8 +72,8 @@ try
     % Eqn. 2 of Sec. 5.1 of Anderson (1984):
     tSqrd = N * (sampMu - testMu) * invSampCovMat * (sampMu - testMu)'; 
     
-    tSqrdF = (N-2)/((N-1)*2) * tSqrd; 
-    pVal = 1 - fcdf(tSqrdF, 2, N-2);
+    tSqrdF = (N-2)/((N-1)*2) * tSqrd; % F approximation 
+    pVal = 1 - fcdf(tSqrdF, 2, N-2);  % compute p-value
     
     results.tSqrd = tSqrd;
     results.pVal = pVal;
