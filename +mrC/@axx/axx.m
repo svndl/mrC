@@ -49,11 +49,19 @@ classdef axx
                 obj.Cos = cosVal(1:obj.nFr,:);
                 sinVal = mean(cat(3,axxStrct.Sin),3);
                 obj.Sin = sinVal(1:obj.nFr,:);
-                specpVal = mean(cat(3,axxStrct.SpecPValue),3);
-                obj.SpecPValue = specpVal(1:obj.nFr,:);
-                specstdVal = mean(cat(3,axxStrct.SpecStdErr),3);
-                obj.SpecStdErr = specstdVal(1:obj.nFr,:);
                 obj.Cov = mean(cat(3,axxStrct.Cov),3);
+                if isfield(axxStrct, 'SpecPValue')
+                    specpVal = mean(cat(3,axxStrct.SpecPValue),3);
+                    obj.SpecPValue = specpVal(1:obj.nFr,:);
+                else
+                    obj.SpecPValue = [];
+                end
+                if isfield(axxStrct, 'SpecStdErr')
+                    specstdVal = mean(cat(3,axxStrct.SpecStdErr),3);
+                    obj.SpecStdErr = specstdVal(1:obj.nFr,:);
+                else
+                    obj.SpecStdErr = [];
+                end
                 else
             end
         end 
@@ -63,9 +71,9 @@ classdef axx
         function value = get.nCh(obj)
             value = size(obj.Wave,2);
         end    
-        function value = get.nFr(obj)
-            value = floor(obj.nT/8);
-        end
+        %function value = get.nFr(obj)
+        %    value = floor(obj.nT/8);
+        %end
             
         function identify(thisAxx)
             if isempty(thisAxx.Wave)
