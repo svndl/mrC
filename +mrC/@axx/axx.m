@@ -40,6 +40,7 @@ classdef axx
                 obj.DataUnitStr = axxStrct(1).DataUnitStr;
                 obj.cndNmb = axxStrct(1).cndNmb;
                 obj.nTrl = axxStrct(1).nTrl;
+                obj.nFr = axxStrct(1).nFr;
 
                 % average together the following values Wave, Amp, Cos, Sin, Cov, SpecPValue, SpecStdErr
                 obj.Wave = mean(cat(3,axxStrct.Wave),3);
@@ -49,7 +50,6 @@ classdef axx
                 obj.Cos = cosVal(1:obj.nFr,:);
                 sinVal = mean(cat(3,axxStrct.Sin),3);
                 obj.Sin = sinVal(1:obj.nFr,:);
-                obj.Cov = mean(cat(3,axxStrct.Cov),3);
                 if isfield(axxStrct, 'SpecPValue')
                     specpVal = mean(cat(3,axxStrct.SpecPValue),3);
                     obj.SpecPValue = specpVal(1:obj.nFr,:);
@@ -62,7 +62,6 @@ classdef axx
                 else
                     obj.SpecStdErr = [];
                 end
-                else
             end
         end 
         function value = get.nT(obj)
@@ -70,10 +69,7 @@ classdef axx
         end
         function value = get.nCh(obj)
             value = size(obj.Wave,2);
-        end    
-        %function value = get.nFr(obj)
-        %    value = floor(obj.nT/8);
-        %end
+        end
             
         function identify(thisAxx)
             if isempty(thisAxx.Wave)
