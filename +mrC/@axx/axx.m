@@ -9,13 +9,13 @@ classdef axx
     
     properties (Dependent)
         nT   % how many time points
-        nFr  % how many frequencies
         nCh  % how many channels
     end
     
     properties
         dTms % time resolution
         dFHz % frequency resolution
+        nFr  % how many frequencies
         i1F1 % 
         i1F2 %
         DataUnitStr
