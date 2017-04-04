@@ -62,6 +62,11 @@ classdef axx
                 else
                     obj.SpecStdErr = [];
                 end
+                if isfield(axxStrct, 'Cov')
+                    obj.Cov = mean(cat(3,axxStrct.Cov),3);
+                else
+                    obj.SpecStdErr = [];
+                end
             end
         end 
         function value = get.nT(obj)
