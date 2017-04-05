@@ -22,7 +22,11 @@ function [realT,realP,corrT,critVal,clustDistrib]= ttest_permute( inData,maxPerm
         %   clustDistrib: distribution of significance run lengths for
         %                 permuted data.
         
+        % take out NaN data and count subjects
+        notNaN = sum(isnan(inData),1)==0;
+        inData = inData(:,notNaN);
         numSubs = size(inData,2);
+        
         numPerms = 2 ^ numSubs;
         if nargin < 6 || isempty(tParams)
             tParams = {'dim',2,'alpha',0.05};
