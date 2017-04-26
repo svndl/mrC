@@ -122,10 +122,10 @@ if numel(h) == 1 % Assume it is a figure window
   bits = hardcopy(h,'-dzbuffer',['-r' num2str(dpi)]);
 
   % % Try a different approach using a temporary file - use this if having probs
-  %tn = [ tempname '.tif' ];
-  %print( '-dtiff', [ '-r' num2str(dpi) ], tn )
-  %bits = uint8( imread( tn, 'TIFF' ) );
-  %delete(tn)
+  % tn = [ tempname '.tif' ];
+  % print( '-dtiff', [ '-r' num2str(dpi) ], tn )
+  % bits = uint8( imread( tn, 'TIFF' ) );
+  % delete(tn)
   
   set(h,'paperpositionmode',oldppmode);
   set(h,'color',oldcolor);
