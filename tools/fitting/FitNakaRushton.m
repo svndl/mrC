@@ -17,9 +17,9 @@ function [ pOpt, R2, Range, hModel ] = FitNakaRushton( x, y , SupplyGradient)
     %   SupplyGradient - [true]/false, indicates whether or not to a
     %                    gradient should be supplied to fmincon
     % Out:
-    % 	pOpt           - 4 x m x q matrix, containing fit parameters, 
+    % 	pOpt           - 4 x m x q x ... matrix, containing fit parameters, 
     %                   first dimension is [ c50, exponent, rMax, baseline ]
-    %                   additional dimensions correspond to additional data sets
+    %                   any additional dimensions correspond to additional data sets
     % 
     %   Range          - 1 x m x q matrix, the data range (min-max) for the fitted function,
     %                    same logic as pOpt.
@@ -96,15 +96,15 @@ function [pOpt,R2,Range] = doFit(x,y,xMin,xMax,pLB,pUB,Aie,bie,nx,opts)
         % set initial values
         SST = sum( ( y - mean( y, 1 ) ).^2 );
         % try full range of x
-        [ R2Set(1), pInitSet(:,1) ] = setParsForXRange( x, y, SST, xMin, xMax, pLB );
+        [ SSEset(1), pInitSet(:,1) ] = setParsForXRange( x, y, SST, xMin, xMax, pLB );
         % right half of x range
-        [ R2Set(2), pInitSet(:,2) ] = setParsForXRange( x, y, SST, (xMin + xMax ) / 2, xMax, pLB );
+        [ SSEset(2), pInitSet(:,2) ] = setParsForXRange( x, y, SST, (xMin + xMax ) / 2, xMax, pLB );
         % left half of x range
-        [ R2Set(3), pInitSet(:,3) ] = setParsForXRange( x, y, SST, xMin, ( xMin + xMax ) / 2, pLB );
+        [ SSEset(3), pInitSet(:,3) ] = setParsForXRange( x, y, SST, xMin, ( xMin + xMax ) / 2, pLB );
         % middle half of xrange
-        [ R2Set(4), pInitSet(:,4) ] = setParsForXRange( x, y, SST, 0.75 * xMin + 0.25 * xMax, 0.25 * xMin + 0.75 * xMax, pLB );
-        % find best value
-        [~, bestIdx ] = min(R2Set);
+        [ SSEset(4), pInitSet(:,4) ] = setParsForXRange( x, y, SST, 0.75 * xMin + 0.25 * xMax, 0.25 * xMin + 0.75 * xMax, pLB );
+        % find best value, as smallest sum-of-squared errors
+        [~, bestIdx ] = min(SSEset);
         pInit = pInitSet(:,bestIdx);
         % optimize
         pOpt = fmincon( @(p)NRobjFcn(p,x,y,opts), pInit, Aie, bie, [], [], pLB, pUB, @(p)NRconFcn(p,xMin,xMax,nx), opts );
@@ -115,11 +115,11 @@ function [pOpt,R2,Range] = doFit(x,y,xMin,xMax,pLB,pUB,Aie,bie,nx,opts)
         end
         % get actual excursion of data range
         Range = NRmodel( xMax, pOpt ) - NRmodel( xMin, pOpt );
-        % goodness of fit
+        % goodness of fit: 1-SSE/SST
         R2 = 1 - sum( ( y - NRmodel( x, pOpt ) ).^2 ) / SST;
 end
 
-function [ R2init,pInit ] = setParsForXRange( x, y, SST, xLow, xHigh, pLB )
+function [ SSEinit,pInit ] = setParsForXRange( x, y, SST, xLow, xHigh, pLB )
     Fcrit = [ 0.01; 0.99 ];			% actual criterion range of delta-y
     Fcrit(:) = 1./Fcrit - 1;		% transform to values used in equation
     % set c50 & exponent so NRmodel( [xLow;xHigh], [c50;exp;1;0] ) == Fcrit
@@ -131,7 +131,7 @@ function [ R2init,pInit ] = setParsForXRange( x, y, SST, xLow, xHigh, pLB )
     else
         pInit(3:4) = lsqnonneg( [ NRmodel( x, [ pInit(1:2)'; 1; 0 ] ), ones(size(x)) ], y, optimset( 'Display', 'notify' ) );
     end
-    R2init = 1 - sum( ( y - NRmodel( x, pInit ) ).^2 ) / SST;
+    SSEinit = sum( ( y - NRmodel( x, pInit ) ).^2 );
 end
 
 function y = NRmodel( x, p )
