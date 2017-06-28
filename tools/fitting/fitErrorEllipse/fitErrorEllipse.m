@@ -1,4 +1,4 @@
-function [amplBounds,errorEllipse] = fitErrorEllipse(xyData,ellipseType,makePlot)
+function [amplBounds,zSNR,errorEllipse] = fitErrorEllipse(xyData,ellipseType,makePlot)
 %[amplBounds,errorEllipse] = fitErrorEllipse(xyData,[withinSubj],[ellipseType],[makePlot])
 %   user provides xyData, an Nx2 matrix of 2D data of N samples
 %   opt. input ellipseType can be 'SEM' '95CI' or a string specifying
@@ -117,6 +117,7 @@ else
     amplBounds = ellipseExtremes;
 end
 
+zSNR = norm(meanXy)/mean([norm(meanXy)-minNorm,maxNorm-norm(meanXy)]);
 
 if makePlot
     figure;
