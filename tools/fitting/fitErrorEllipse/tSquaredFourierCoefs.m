@@ -60,7 +60,10 @@ function [results] = tSquaredFourierCoefs(xyData,varargin)
     end
 
     xyData = xyData(:,:,1) - xyData(:,:,2);
-
+    
+    % remove NaNs
+    xyData = xyData(~any(isnan(xyData),2),:);
+    
     try
         [sampMu,sampCovMat] = eigFourierCoefs(xyData);
     catch
