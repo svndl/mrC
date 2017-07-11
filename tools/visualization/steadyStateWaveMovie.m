@@ -85,7 +85,7 @@ function steadyStateWaveMovie(varargin)
         sinFig = figure;
         figPos = get(sinFig,'pos');
         figPos(4) = figPos(4)*1.5;
-        figPos(3) = figPos(3)*1.5;
+        figPos(3) = figPos(4)*3;
         set(sinFig,'pos',figPos);
         hold on
         for z = 1:numSamples
@@ -114,6 +114,7 @@ function steadyStateWaveMovie(varargin)
     movieMap(2:numFreq+1,:) = opt.colors(1:numFreq,:);
     movieFrames = squeeze(max(movieFrames,[],3));
     
+    imwrite(movieFrames(:,:,end),movieMap,[opt.filename,'_lastframe.gif'],'transparentColor',0);
     if strcmp(opt.outFormat,'gif')
         if exist([opt.filename,'gif'],'file')
             delete([opt.filename,'gif']);
@@ -139,6 +140,6 @@ function steadyStateWaveMovie(varargin)
            writeVideo(vidObj,movieFrames(:,:,k));
         end
         close(vidObj);
-    end    
+    end
     warning('on','all')
 end
