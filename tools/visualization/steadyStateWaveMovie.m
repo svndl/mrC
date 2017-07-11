@@ -34,7 +34,7 @@ function steadyStateWaveMovie(varargin)
             'freq', [5,6,1], ...
             'colors', [], ...
             'slowdown', 10, ...
-            'sampleRate', 10, ...
+            'sampleRate', 20, ...
             'outFormat', 'gif', ...
             'filename',  '~/Desktop/test' ...
             );
@@ -46,8 +46,10 @@ function steadyStateWaveMovie(varargin)
     end
     
     % movie duration in seconds, 
-    % one cycle of smallest frequency multiplied by the slowdown factor
-    movieDur = 1/min(opt.freq); 
+    % x cycles of smallest frequency multiplied by the slowdown factor
+    movieDur = (1:10)./min(opt.freq);
+    % at least one second long
+    movieDur = min(movieDur(movieDur>1));
     
     % total number of samples
     numSamples = movieDur * opt.slowdown * opt.sampleRate;  
@@ -76,7 +78,7 @@ function steadyStateWaveMovie(varargin)
     end
     
     % draw it
-    lWidth = 10;
+    lWidth = 6;
     gcaOpts = {'tickdir','out','ticklength',[0.0,0.0],'box','off','linewidth',lWidth};
 
     for f = 1:numFreq
@@ -113,8 +115,8 @@ function steadyStateWaveMovie(varargin)
     movieFrames = squeeze(max(movieFrames,[],3));
     
     if strcmp(opt.outFormat,'gif')
-        if exist([outName,'gif'],'file')
-            delete([outName,'gif']);
+        if exist([opt.filename,'gif'],'file')
+            delete([opt.filename,'gif']);
         end
         for k = 1:numSamples
             if k==1
@@ -122,13 +124,13 @@ function steadyStateWaveMovie(varargin)
             else
                 gifOpts = {'WriteMode','append'};
             end
-            imwrite(movieFrames(:,:,k),movieMap,[outName,'.gif'],'gif','DelayTime',1/opt.sampleRate,gifOpts{:},'transparentColor',0);
+            imwrite(movieFrames(:,:,k),movieMap,[opt.filename,'.gif'],'gif','DelayTime',1/opt.sampleRate,gifOpts{:},'transparentColor',0);
         end
     else
-        if exist([outName,'avi'],'file')
-            delete([outName,'avi']);
+        if exist([opt.filename,'avi'],'file')
+            delete([opt.filename,'avi']);
         end
-        vidObj = VideoWriter([outName,'.avi'],'Indexed AVI');
+        vidObj = VideoWriter([opt.filename,'.avi'],'Indexed AVI');
         vidObj.FrameRate = opt.sampleRate; % frames per second
         vidObj.Colormap = movieMap;
         open(vidObj);
