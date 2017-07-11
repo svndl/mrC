@@ -14,21 +14,20 @@ function steadyStateWaveMovie(varargin)
     % 
     % Syntax:	steadyStateWaveMovie(<options>)
     % <options>
-    %   freq    - logical indicating whether to run the full ROI
-    %                   analysis (true), or load prior data ([false])
+    %   freq    - 1 x n array of doubles indicating the frequencies to plot
     %    
-    %   colors    - logical indicating whether to run the ring ROI
-    %                   analysis (true), or load prior data ([false])
+    %   colors    -  n x 3 array of doubles indicating the colors to use
+    % 
+    %   slowdown    - scalar indicating how much to slow down the movie
+    %                   t means t x slower [10]
     %
-    %   slowdown    - logical indicating whether to run the fovea ROI
-    %                   analysis (true), or load prior data ([false])
+    %   sampleRate    - scalar indicating temporal sampling rate of movie [10 Hz]
     %
-    %   numSamples    - logical indicating whether to run the process the ROI
-    %                   analysis (true), or load prior data ([false])
+    %   outFormat    - string indicating whether to output gif (['gif']) or
+    %                  avi movie ('avi')
     %
-    %   outFormat    - logical indicating whether or not to plot 
-    %                   single ROI data [false]
-    %   text         - display time as text on graph ([true]/false)
+    %   filename    - string indicating the output path and filename of the
+    %                saved file
     
     %% PARSE ARGS
     opt	= ParseArgs(varargin,...
@@ -36,7 +35,8 @@ function steadyStateWaveMovie(varargin)
             'colors', [], ...
             'slowdown', 10, ...
             'sampleRate', 10, ...
-            'outFormat', 'gif' ...
+            'outFormat', 'gif', ...
+            'filename',  '~/Desktop/test' ...
             );
     
     if isempty(opt.colors)
@@ -56,7 +56,13 @@ function steadyStateWaveMovie(varargin)
         error('unknown format %s',opt.outFormat);
     else
     end
-        
+    
+    % get rid of suffix, if user added it
+    if strcmp(opt.filename(end-3:end),['.',opt.outFormat])
+        opt.filename = opt.filename(1:end-4);
+    else
+    end
+    
     % compute the sine waves
     numFreq = length(opt.freq);
     amp = 1;
@@ -72,7 +78,6 @@ function steadyStateWaveMovie(varargin)
     % draw it
     lWidth = 10;
     gcaOpts = {'tickdir','out','ticklength',[0.0,0.0],'box','off','linewidth',lWidth};
-    outName = '/Users/kohler/Desktop/test';
 
     for f = 1:numFreq
         sinFig = figure;
