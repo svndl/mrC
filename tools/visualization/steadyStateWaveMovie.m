@@ -20,7 +20,7 @@ function steadyStateWaveMovie(varargin)
     %   colors    - logical indicating whether to run the ring ROI
     %                   analysis (true), or load prior data ([false])
     %
-    %   movieDur    - logical indicating whether to run the fovea ROI
+    %   slowdown    - logical indicating whether to run the fovea ROI
     %                   analysis (true), or load prior data ([false])
     %
     %   numSamples    - logical indicating whether to run the process the ROI
@@ -34,8 +34,8 @@ function steadyStateWaveMovie(varargin)
     opt	= ParseArgs(varargin,...
             'freq', [5,6,1], ...
             'colors', [], ...
-            'movieDur', 10, ...
-            'numSamples', [], ...
+            'slowdown', 10, ...
+            'sampleRate', 10, ...
             'outFormat', 'gif' ...
             );
     
@@ -45,10 +45,12 @@ function steadyStateWaveMovie(varargin)
     else
     end
     
-    if isempty(opt.numSamples)
-        opt.numSamples = opt.movieDur*30; % 30 Hz
-    else
-    end
+    % movie duration in seconds, 
+    % one cycle of smallest frequency multiplied by the slowdown factor
+    movieDur = 1/min(opt.freq); 
+    
+    % total number of samples
+    numSamples = movieDur * opt.slowdown * opt.sampleRate;  
     
     if ~ismember(opt.outFormat,{'gif','avi'})
         error('unknown format %s',opt.outFormat);
@@ -58,10 +60,10 @@ function steadyStateWaveMovie(varargin)
     % compute the sine waves
     numFreq = length(opt.freq);
     amp = 1;
-    deltaT = 1/opt.numSamples;
-    T = 0:deltaT:1;
-    T = T(1:opt.numSamples);
-    sinFxn = zeros(opt.numSamples,numFreq);
+    deltaT = movieDur/numSamples;
+    T = 0:deltaT:movieDur;
+    T = T(1:numSamples);
+    sinFxn = zeros(numSamples,numFreq);
     for f = 1:numFreq
         circFreq = 2*pi*opt.freq(f);
         sinFxn(:,f) = amp.*sin(circFreq.*T);
@@ -79,11 +81,11 @@ function steadyStateWaveMovie(varargin)
         figPos(3) = figPos(3)*1.5;
         set(sinFig,'pos',figPos);
         hold on
-        for z = 1:opt.numSamples
-            plot(T(1:z),sinFxn(1:z,f),'color','k','linewidth',lWidth);
+        for z = 1:numSamples
+            plotH = plot(T(1:z),sinFxn(1:z,f),'color','k','linewidth',lWidth);
             set(gca,gcaOpts{:},'xtick',[],'ytick',[], 'visible', 'off','Color',[1 1 1]);
             warning('off','all')
-            xlim([-.05,1]);
+            xlim([-.05,movieDur+.05]);
             ylim([-1.05,1.05]);
             drawnow
             pause(.1);
@@ -96,6 +98,7 @@ function steadyStateWaveMovie(varargin)
             curA = uint8(zeros( size(A) ));
             curA(  A == lineIdx ) = f;
             movieFrames(:,:,f,z) = curA;
+            delete(plotH);
         end
         close(sinFig);
     end
@@ -108,20 +111,20 @@ function steadyStateWaveMovie(varargin)
         if exist([outName,'gif'],'file')
             delete([outName,'gif']);
         end
-        for k = 1:opt.numSamples
+        for k = 1:numSamples
             if k==1
                 gifOpts = {'LoopCount',Inf};
             else
                 gifOpts = {'WriteMode','append'};
             end
-            imwrite(movieFrames(:,:,k),movieMap,[outName,'.gif'],'gif','DelayTime',opt.movieDur/opt.numSamples,gifOpts{:},'transparentColor',0);
+            imwrite(movieFrames(:,:,k),movieMap,[outName,'.gif'],'gif','DelayTime',1/opt.sampleRate,gifOpts{:},'transparentColor',0);
         end
     else
         if exist([outName,'avi'],'file')
             delete([outName,'avi']);
         end
         vidObj = VideoWriter([outName,'.avi'],'Indexed AVI');
-        vidObj.FrameRate = opt.numSamples/opt.movieDur; % frames per second
+        vidObj.FrameRate = opt.sampleRate; % frames per second
         vidObj.Colormap = movieMap;
         open(vidObj);
         for k = 1:size(movieFrames, 3)
