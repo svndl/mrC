@@ -136,10 +136,10 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
             for h = 1:3
                 subplot(2,3,(z-1)*3+h);
                 if z==1
-                    plotH(r,h,z) = plotOnEgi(sensorData(r,:,h,subIdx),roiColorBar);
+                    plotH(r,h,z) = mrC.plotOnEgi(sensorData(r,:,h,subIdx),roiColorBar);
                     titleStr = sprintf('%s: %s',masterList{r},subIDs{subIdx});
                 else
-                    plotH(r,h,z) = plotOnEgi(meanSensorData(r,:,h),roiColorBar);
+                    plotH(r,h,z) = mrC.plotOnEgi(meanSensorData(r,:,h),roiColorBar);
                     titleStr = sprintf('%s: average over %d subjects',masterList{r},size(subIDs,2));
                 end
                 if h==1
