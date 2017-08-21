@@ -111,6 +111,8 @@ colormap(jmaColors('coolhotcortex'));
 %colormap gray
 if showColorbar
     colorH = colorbar;
+else
+    colorH = NaN;
 end
 if ~isempty(colorbarLimits)
     caxis(colorbarLimits);
