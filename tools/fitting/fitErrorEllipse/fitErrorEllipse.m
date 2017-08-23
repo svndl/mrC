@@ -29,10 +29,7 @@ function [ampDiff,phaseDiff,zSNR,errorEllipse] = fitErrorEllipse(xyData,ellipseT
 %   from the mean amplitude and mean phase (mean - lower, upper - mean).
 %
 %   DEPENDENCY: eigFourierCoefs.m which is part of the GitHub repository
-%   sweepAnalysis/ in functions/helper/
-% 
-%   To download this repository go to:
-%   https://github.com/hgerhard/sweepAnalysis
+%   mrC in tools/fitting/fitErrorEllipse
 
 xyData = double(xyData); 
 
