@@ -1,13 +1,15 @@
-function [amplBounds,zSNR,errorEllipse] = fitErrorEllipse(xyData,ellipseType,makePlot)
-%[amplBounds,errorEllipse] = fitErrorEllipse(xyData,[withinSubj],[ellipseType],[makePlot])
+function [ampDiff,phaseDiff,zSNR,errorEllipse] = fitErrorEllipse(xyData,ellipseType,makePlot,returnRad)
+%   [ampDiff,phaseDiff,zSNR,errorEllipse] = fitErrorEllipse(xyData,[ellipseType],[makePlot])
 %   user provides xyData, an Nx2 matrix of 2D data of N samples
 %   opt. input ellipseType can be 'SEM' '95CI' or a string specifying
-
 %       a different percentage CI formated following: '%.1fCI'. Default is
 %       'SEM'.
 %   opt. input makePlot is a logical specifying whether or not to
 %       generate a plot of the data & ellipse & eigen vectors (draw at
-%       length of 1 std dev, i.e. sqrt(corresponding eigenvalue))
+%       length of 1 std dev, i.e. sqrt(corresponding eigenvalue)). Default
+%       is false.
+%   opt. input returnRad is a logical specifying whether to return values
+%       in radians or degrees. Default is false (degrees).
 %
 %   *NOTE: For EEG measurements in the Fourier domain, xyData rows should
 %   be: [real,imag].
@@ -23,7 +25,11 @@ function [amplBounds,zSNR,errorEllipse] = fitErrorEllipse(xyData,ellipseType,mak
 %   Chapter 5 of Johnson & Wickern (2007) Applied Multivariate Statistical
 %   Analysis, Pearson Prentice Hall.
 %
-%   Dependency: eigFourierCoefs.m which is also in functions/helper/
+%   ampDiff and phaseDiff are the differences of the lower and uper bounds
+%   from the mean amplitude and mean phase (mean - lower, upper - mean).
+%
+%   DEPENDENCY: eigFourierCoefs.m which is part of the GitHub repository
+%   mrC in tools/fitting/fitErrorEllipse
 
 xyData = double(xyData); 
 
@@ -32,6 +38,9 @@ if nargin<2 || isempty(ellipseType)
 end
 if nargin<3
     makePlot = false;
+end
+if nargin<4
+    returnRad = false;
 end
 
 dims = size(xyData);
@@ -106,19 +115,49 @@ norms = nan(1,length(errorEllipse));
 for pt = 1:length(errorEllipse)
     norms(pt) = norm(errorEllipse(pt,:));
 end
-[minNorm,minNormIx] = min(norms);
-[maxNorm,maxNormIx] = max(norms);
-ellipseExtremes = [minNorm,maxNorm];
+[ampMinNorm,ampMinNormIx] = min(norms);
+[ampMaxNorm,ampMaxNormIx] = max(norms);
+ampEllipseExtremes = [ampMinNorm,ampMaxNorm];
+ampDiff = [norm(meanXy) - ampEllipseExtremes(1), ampEllipseExtremes(2) - norm(meanXy)];
 
-if (sign(max(errorEllipse(:,1))) ~= sign(min(errorEllipse(:,1)))) && (sign(max(errorEllipse(:,2))) ~= sign(min(errorEllipse(:,2))))
-    % the ellipse overlaps with the origin
-    amplBounds = [0, maxNorm];
+% calculate phase angles & find maximum pairwise difference to determine phase bounds
+phaseAngles = atan2(errorEllipse(:,2),errorEllipse(:,1));
+pairs = combnk(phaseAngles,2); % find all 2-element subsets
+diffPhase = abs(pairs(:,2) - pairs(:,1)); % find the absolute difference of each pair
+diffPhase(diffPhase > pi) = 2*pi - diffPhase(diffPhase > pi); % unwrap the difference
+[~,maxDiffIdx] = max(diffPhase);
+anglesOI = pairs(maxDiffIdx,:);
+phaseMinIx = find(phaseAngles == anglesOI(1),1);
+phaseMaxIx = find(phaseAngles == anglesOI(2),1);
+
+% convert to deg (if necessary) & find difference between (max bound and mean phase) and (mean phase and min bound)
+% note: everything converted from [-pi, pi] to [0, 2*pi] for unambiguous calculation
+convFactor = [180/pi, 1];
+unwrapFactor = [360, 2*pi];
+phaseEllipseExtremes = [phaseAngles(phaseMinIx),phaseAngles(phaseMaxIx)]*convFactor(returnRad+1);
+phaseEllipseExtremes(phaseEllipseExtremes<0) = phaseEllipseExtremes(phaseEllipseExtremes<0)+unwrapFactor(returnRad+1);
+phaseBounds = [min(phaseEllipseExtremes), max(phaseEllipseExtremes)];
+meanPhase = atan2(meanXy(2),meanXy(1))*convFactor(returnRad+1);
+meanPhase(meanPhase < 0) = meanPhase(meanPhase < 0) + unwrapFactor(returnRad+1);
+
+% if the ellipse overlaps with the origin, defined by whether the phase angles are in all 4 quadrants
+phaseAngles(phaseAngles < 0) = phaseAngles(phaseAngles < 0)+2*pi;
+if ~isempty(phaseAngles(phaseAngles > 0 & phaseAngles < pi/2)) && ~isempty(phaseAngles(phaseAngles > pi/2 & phaseAngles < pi)) ...
+        && ~isempty(phaseAngles(phaseAngles > pi/2 & phaseAngles < 3*pi/2)) && ~isempty(phaseAngles(phaseAngles > 3*pi/2 & phaseAngles < 2*pi))   
+    amplBounds = [0, ampMaxNorm];
+    maxVals = [360, 2*pi];
+    phaseBounds = [0, maxVals(returnRad+1)];
+    phaseDiff = [abs(phaseBounds(1) - meanPhase), abs(phaseBounds(2) - meanPhase)];
 else
-    amplBounds = ellipseExtremes;
+    amplBounds = ampEllipseExtremes;
+    phaseDiff = [abs(phaseBounds(1) - meanPhase), abs(phaseBounds(2) - meanPhase)];
+    % unwrap phase diff for any ellipse that overlaps with positive x axis
+    phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2) = unwrapFactor(returnRad+1) - phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2);
 end
 
 zSNR = norm(meanXy)/mean([norm(meanXy)-minNorm,maxNorm-norm(meanXy)]);
 
+%% PLOT DATA
 if makePlot
     figure;
     subplot(1,2,1);
@@ -126,7 +165,7 @@ if makePlot
     plot(xyData(:,srIx),xyData(:,siIx),'ko','MarkerFaceColor','k') 
     axis equal;
     line([0 meanXy(1)],[0 meanXy(2)],'Color','k','LineWidth',1);    
-    plot(errorEllipse(:,1), errorEllipse(:,2),'b-','LineWidth',1);   
+    plot(errorEllipse(:,1), errorEllipse(:,2),'b-','LineWidth',1); 
     hold on;
     plot([meanXy(1) sqrt(smaller_eigenval).*smaller_eigenvec(1)+meanXy(1)],[meanXy(2) sqrt(smaller_eigenval).*smaller_eigenvec(2)+meanXy(2)],'g-','LineWidth',1); 
     plot([meanXy(1) sqrt(larger_eigenval).*larger_eigenvec(1)+meanXy(1)],[meanXy(2) sqrt(larger_eigenval).*larger_eigenvec(2)+meanXy(2)],'m-','LineWidth',1); 
@@ -140,9 +179,11 @@ if makePlot
     hold on;
     axis equal; 
     
-    plot(errorEllipse(:,1), errorEllipse(:,2),'k-','LineWidth',1)
-    plot([0 errorEllipse(minNormIx,1)],[0 errorEllipse(minNormIx,2)],'r:','LineWidth',1);
-    plot([0 errorEllipse(maxNormIx,1)],[0 errorEllipse(maxNormIx,2)],'r:','LineWidth',1);
+    plot(errorEllipse(:,1), errorEllipse(:,2),'k-','LineWidth',1) 
+    plot([0 errorEllipse(ampMinNormIx,1)],[0 errorEllipse(ampMinNormIx,2)],'r:','LineWidth',1);
+    plot([0 errorEllipse(ampMaxNormIx,1)],[0 errorEllipse(ampMaxNormIx,2)],'r:','LineWidth',1);
+    plot([0 errorEllipse(phaseMinIx,1)],[0 errorEllipse(phaseMinIx,2)],'b:','LineWidth',1);
+    plot([0 errorEllipse(phaseMaxIx,1)],[0 errorEllipse(phaseMaxIx,2)],'b:','LineWidth',1);
     
     line([0 meanXy(1)],[0 meanXy(2)],'Color','k','LineWidth',1); % mean vector 
     
@@ -151,25 +192,16 @@ if makePlot
     plot([meanXy(1) b.*smaller_eigenvec(1)+meanXy(1)],[meanXy(2) b.*smaller_eigenvec(2)+meanXy(2)],'g-','LineWidth',1) % half minor axis (1)
     plot([meanXy(1) -b.*smaller_eigenvec(1)+meanXy(1)],[meanXy(2) -b.*smaller_eigenvec(2)+meanXy(2)],'g-','LineWidth',1) % half minor axis (2)
     
-    text(errorEllipse(minNormIx,1),errorEllipse(minNormIx,2),sprintf('%.2f',minNorm),'FontSize',18,'Color','r')
-    text(errorEllipse(maxNormIx,1),errorEllipse(maxNormIx,2),sprintf('%.2f',maxNorm),'FontSize',18,'Color','r')
-    
+    text(errorEllipse(ampMinNormIx,1),errorEllipse(ampMinNormIx,2),sprintf('%.2f',ampMinNorm),'FontSize',18,'Color','r')
+    text(errorEllipse(ampMaxNormIx,1),errorEllipse(ampMaxNormIx,2),sprintf('%.2f',ampMaxNorm),'FontSize',18,'Color','r')
+    text(errorEllipse(phaseMinIx,1),errorEllipse(phaseMinIx,2),sprintf('%.2f',phaseEllipseExtremes(1)),'FontSize',18,'Color','b')
+    text(errorEllipse(phaseMaxIx,1),errorEllipse(phaseMaxIx,2),sprintf('%.2f',phaseEllipseExtremes(2)),'FontSize',18,'Color','b')
+  
     text(meanXy(1),meanXy(2),sprintf('%.2f',norm(meanXy)),'FontSize',18)
-    text(.9*min(xlim),.7*min(ylim),'bounds','FontSize',14,'Color','r');
-    text(.9*min(xlim),.6*min(ylim),'mean ampl.','FontSize',14,'Color','k');
+    text(.9*min(xlim),.7*min(ylim),'ampl. bounds','FontSize',14,'Color','r');
+    text(.9*min(xlim),.6*min(ylim),'phase. bounds','FontSize',14,'Color','b');
+    text(.9*min(xlim),.5*min(ylim),'mean ampl.','FontSize',14,'Color','k');
 
     line([0 0],[min(ylim) max(ylim)],'Color','k','LineWidth',1)
     line([min(xlim) max(xlim)],[0 0],'Color','k','LineWidth',1)    
 end
-
-
-
-
-
-
-
-
-
-
-
-
