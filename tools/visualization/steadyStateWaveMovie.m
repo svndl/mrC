@@ -1,15 +1,4 @@
-function steadyStateWaveMovie(varargin)
-    % add libraries
-    if ~exist('codeFolder','var')
-        codeFolder = '/Users/kohler/code';
-        rcaCodePath = sprintf('%s/git/rcaBase',codeFolder);
-        addpath(genpath(rcaCodePath));
-        addpath(genpath(sprintf('%s/git/mrC',codeFolder)));
-        addpath(genpath(sprintf('%s/git/schlegel/matlab_lib',codeFolder)));
-    else
-    end
-    setenv('DYLD_LIBRARY_PATH','')
-    
+function steadyStateWaveMovie(varargin)    
     % Description:	generate steady-state waveform movies
     % 
     % Syntax:	steadyStateWaveMovie(<options>)
@@ -29,6 +18,8 @@ function steadyStateWaveMovie(varargin)
     %   filename    - string indicating the output path and filename of the
     %                saved file
     
+    setenv('DYLD_LIBRARY_PATH','')
+
     %% PARSE ARGS
     opt	= ParseArgs(varargin,...
             'freq', [5,6,1], ...
