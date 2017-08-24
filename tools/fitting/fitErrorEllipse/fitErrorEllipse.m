@@ -155,7 +155,7 @@ else
     phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2) = unwrapFactor(returnRad+1) - phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2);
 end
 
-zSNR = norm(meanXy)/mean([norm(meanXy)-minNorm,maxNorm-norm(meanXy)]);
+zSNR = norm(meanXy)/mean([norm(meanXy)-ampMinNorm,ampMaxNorm-norm(meanXy)]);
 
 %% PLOT DATA
 if makePlot
