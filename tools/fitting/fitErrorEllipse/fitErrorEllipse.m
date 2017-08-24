@@ -151,10 +151,11 @@ if ~isempty(phaseAngles(phaseAngles > 0 & phaseAngles < pi/2)) && ~isempty(phase
 else
     amplBounds = ampEllipseExtremes;
     phaseDiff = [abs(phaseBounds(1) - meanPhase), abs(phaseBounds(2) - meanPhase)];
-    % unwrap phase diff for any ellipse that overlaps with positive x axis
-    phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2) = unwrapFactor(returnRad+1) - phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2);
 end
 
+% unwrap phase diff for any ellipse that overlaps with positive x axis
+phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2) = unwrapFactor(returnRad+1) - phaseDiff(phaseDiff > unwrapFactor(returnRad+1)/2);
+    
 zSNR = norm(meanXy)/mean([norm(meanXy)-ampMinNorm,ampMaxNorm-norm(meanXy)]);
 
 %% PLOT DATA
