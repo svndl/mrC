@@ -1,7 +1,8 @@
-function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
-    % Description:	Stimulate ROI activity
+function [sensorData,masterList,subIDs] = RoiDemo(mrCpath,varargin)
+    % Description:	Simulate ROI activity
     %
-    % Syntax:	[roiData,masterList] = mrC.RoiDemo(mrCPath,invPaths,varargin)
+    % Syntax:	[sensorData,masterList,subIDs] = mrC.RoiDemo(mrCPath,invPaths,varargin)
+    % 
     % In:
     %   mrCpath - string, path to mrCurrent folder.
     %              If this is a string,subIds and dataIn will be ignored ("mrCurrent mode").
@@ -11,30 +12,54 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
     %   note that in direct mode, dataIn and subIds are required!
     %
     %   <options>:
-    %       inverse: a string specifying the inverse name to use
-    %                default is using the latest inverse
+    %       inverse:        a string specifying the inverse name to use
+    %                       [latest inverse]
     %
-    %       roiList: a 1 x n cell of strings, with each cell giving the ROI name
+    %       roiType:        string specifying the roitype to use. 
+    %                       'main' indicates that the main ROI folder
+    %                       /Volumes/svndl/anatomy/SUBJ/standard/meshes/ROIs
+    %                       is to be used. (['func']/'wang'/'glass','kgs','benson','main').
     %
-    %       roiType:    string specifying the roitype to use. 
-    %                   'main' indicates that the main ROI folder
-    %                   /Volumes/svndl/anatomy/SUBJ/standard/meshes/ROIs
-    %                   is to be used. (['func']/'wang'/'glass','kgs','benson','main').
+    %       roiList:        a 1 x n cell of strings, with names of ROIs to simulate. 
+    %                       [all ROIs of the specified type]
+    %       
+    %       sensorFig:      logical indicating whether to draw topo plots of
+    %                       the simulated ROI data in sensor space. [true]/false
+    %
+    %       doSource:       logical indicating whether to use the inverse to push
+    %                       the simulated ROI data back into source space
+    %                       [true]/false
+    %
+    %       roiType:        string specifying folder in which to save sensor
+    %                       figs. [Users' Desktop]
+    %
+    %       exampleSubj:    string specifying subject to use for example
+    %                       single subject data and for plotting source
+    %                       data. [first subject]
+    %
     %
     % Out:
-    % 	roiData:    c x s cell matrix of output data, where each cell contains
-    %               a 3-d matrix with time x ROIs x laterality.
+    %       sensorData:     r x e x 3 x s matrix of output data in sensor space, 
+    %                       where r is the number of ROIs, 
+    %                       e is the number of electrodes (usually 128),
+    %                       and s is the number of subjects.
+    %                       The 3rd dimension contains data from
+    %                       left hemisphere, bilateral 
+    %                       and right hemisphere, in that order.
     %
-    %	masterList: a 1 x nROIs cell of strings, indicating ROI names
+    %       masterList:     a 1 x r cell of strings, indicating ROI names
+    %
+    %       subIDs:         a 1 x s cell of strings, indicating subjects IDs
 
-    % defaults
+    % set up defaults
     opt	= ParseArgs(varargin,...
         'inverse'		, [], ...
-        'roiList'		, []	, ...
         'roiType'       ,'func', ...
-        'drawFig'       , true, ...
-        'figFolder'     , '/Users/kohler/Desktop/',...
-        'singleSubject' , 'nl-0014'...
+        'roiList'		, []	, ...        
+        'sensorFig'       , true, ...
+        'doSource'       , true, ...
+        'figFolder'     , [],...
+        'exampleSubj' , [] ...
         );
     
     if ~strcmp(opt.roiType,'main')
@@ -42,7 +67,7 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
             case{'func','functional'}
                 opt.roiType = 'func';
             case{'wang','wangatlas'}
-                opt.roiType = 'wangatlas';
+                opt.roiType = 'wang';
             case{'glass','glasser'}
                 opt.roiType = 'glass';
             case{'kgs','kalanit'}
@@ -56,6 +81,12 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
     end
     
     anatDir = getpref('mrCurrent','AnatomyFolder');
+    if ~isempty(strfind(upper(anatDir),'HEADLESS')) || isempty(anatDir)
+        anatDir = '/Volumes/svndl/anatomy';
+        setpref('mrCurrent','AnatomyFolder',anatDir);
+    else
+    end
+    
     mrCfolders = subfolders(mrCpath,1);
     
     if isempty(opt.inverse)
@@ -67,6 +98,16 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
             opt.inverse = opt.inverse{1};
         else
         end
+    end
+    
+    if isempty(opt.figFolder)
+        if ispc
+            home = [getenv('HOMEDRIVE') getenv('HOMEPATH')];
+        else
+            home = getenv('HOME');
+        end
+        opt.figFolder = [home,'/Desktop'];
+    else
     end
     
     for s=1:length(mrCfolders)
@@ -81,6 +122,10 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
         else
             roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.roiType,'_ROIs']);
             roiPaths = subfiles(roiDir);
+        end
+        if ~exist(roiDir,'dir')
+            error('selected roi directory does not exist: %s', roiDir);
+        else
         end
         invPath = fullfile(mrCfolders{s},'Inverses',opt.inverse);
         invMatrix = mrC_readEMSEinvFile(invPath);
@@ -105,74 +150,84 @@ function [outMtx,ctMtx] = RoiDemo(mrCpath,varargin)
         readyInverse{s} = invPath;    
     end
     meanSensorData = nanmean(sensorData,4);
-    subIdx = find(ismember(subIDs,opt.singleSubject));
-   
-    % source localized seed data
-    sourceData = mrC.SourceBrain(false,readyInverse,'template','nl-0014','dataIn',readyData,'subIDs',subIDs);
-    sourceDataSingle = mrC.SourceBrain(false,readyInverse(subIdx),'template',false,'dataIn',readyData(:,subIdx),'subIDs',subIDs(subIdx));
-    
-    tempData = arrayfun(@(x) nanmean(cat(3,sourceData{x,:}),3),1:size(sourceData,1),'uni',false); % average over subjects
-    tempData = cat(3,tempData{:}); % concatenate over ROIs
-    readyData = reshape(tempData,size(tempData,1),[]);
-    tempData = cat(3,sourceDataSingle{:});  % concatenate over ROIs
-    readySingleData = reshape(tempData,size(tempData,1),[]);
-    roiLabels = repmat(masterList,1,3);
-    hemiLabels = repmat({'-L','-BL','-R'},size(sourceData,1),1);
-    roiLabels = cellfun(@(x,y) [x,y],roiLabels,hemiLabels,'uni',false)';
-    roiLabels = roiLabels(:);
-    
-    mrC.WriteNiml('nl-0014',readyData,'outpath',fullfile(opt.figFolder,'roiDemoAverage.niml.dset'),'labels',roiLabels,'std_surf',false);
-    mrC.WriteNiml('nl-0014',readySingleData,'outpath',fullfile(opt.figFolder,'roiDemoSingle.niml.dset'),'labels',roiLabels,'std_surf',false,'doSmooth',false);
-    
-    % draw figures
-    colorData = meanSensorData(:);
-    cRange = prctile(abs(colorData),95);
-    cRange = round(cRange/1000)*1000;
-    roiColorBar = [-cRange,cRange];
-    hemiLabels = {'LH','BL','RH'};
-    for r=1:size(sensorData,1);
-        figure;
-        for z=1:2
-            for h = 1:3
-                subplot(2,3,(z-1)*3+h);
-                if z==1
-                    plotH(r,h,z) = mrC.plotOnEgi(sensorData(r,:,h,subIdx),roiColorBar);
-                    titleStr = sprintf('%s: %s',masterList{r},subIDs{subIdx});
-                else
-                    plotH(r,h,z) = mrC.plotOnEgi(meanSensorData(r,:,h),roiColorBar);
-                    titleStr = sprintf('%s: average over %d subjects',masterList{r},size(subIDs,2));
-                end
-                if h==1
-                    oldPos = get(get(plotH(r,h,z),'parent'),'position');
-                    betterPos = oldPos;
-                    %betterPos(3:4) = betterPos(3:4)*1.2;
-                else
-                end
-                if z==1 && h==3
-                    curPos = get(get(plotH(r,h,z),'parent'),'position');
-                    colorbar('location','SouthOutside','fontsize',12,'fontname','Arial');
-                    set(get(plotH(r,h,z),'parent'),'position',curPos);
-                else
-                end
-                curPos = get(get(plotH(r,h,z),'parent'),'position');
-                curPos(3:4) = betterPos(3:4);
-                set(get(plotH(r,h,z),'parent'),'position',curPos)
-                if h~=2
-                    titleStr='';
-                else
-                end
-                title({titleStr;hemiLabels{h}},'interpreter','none','fontsize',12,'fontname','Arial');
-            end   
-        end
-        drawnow;
-        figPos = get(gcf,'pos');
-        figPos(3) = figPos(3)*1.5;
-        figPos(4) = figPos(4)*1.5;
-        set(gcf,'pos',figPos);
-        figName =  sprintf('%s/%s_sensorDemo.pdf',opt.figFolder,masterList{r});
-        export_fig(figName,'-pdf','-transparent',gcf);
+    if isempty(opt.exampleSubj)
+        subIdx = 1;
+    else
+        subIdx = find(ismember(subIDs,opt.exampleSubj));
     end
-    close all;
+   
+    % draw figures
+    if opt.sensorFig
+        colorData = meanSensorData(:);
+        cRange = prctile(abs(colorData),95);
+        cRange = round(cRange/1000)*1000;
+        roiColorBar = [-cRange,cRange];
+        hemiLabels = {'LH','BL','RH'};
+        for r=1:size(sensorData,1);
+            figure;
+            for z=1:2
+                for h = 1:3
+                    subplot(2,3,(z-1)*3+h);
+                    if z==1
+                        plotH(r,h,z) = mrC.plotOnEgi(sensorData(r,:,h,subIdx),roiColorBar);
+                        titleStr = sprintf('%s: %s',masterList{r},subIDs{subIdx});
+                    else
+                        plotH(r,h,z) = mrC.plotOnEgi(meanSensorData(r,:,h),roiColorBar);
+                        titleStr = sprintf('%s: average over %d subjects',masterList{r},size(subIDs,2));
+                    end
+                    if h==1
+                        oldPos = get(get(plotH(r,h,z),'parent'),'position');
+                        betterPos = oldPos;
+                        %betterPos(3:4) = betterPos(3:4)*1.2;
+                    else
+                    end
+                    if z==1 && h==3
+                        curPos = get(get(plotH(r,h,z),'parent'),'position');
+                        colorbar('location','SouthOutside','fontsize',12,'fontname','Arial');
+                        set(get(plotH(r,h,z),'parent'),'position',curPos);
+                    else
+                    end
+                    curPos = get(get(plotH(r,h,z),'parent'),'position');
+                    curPos(3:4) = betterPos(3:4);
+                    set(get(plotH(r,h,z),'parent'),'position',curPos)
+                    if h~=2
+                        titleStr='';
+                    else
+                    end
+                    title({titleStr;hemiLabels{h}},'interpreter','none','fontsize',12,'fontname','Arial');
+                end   
+            end
+            drawnow;
+            figPos = get(gcf,'pos');
+            figPos(3) = figPos(3)*1.5;
+            figPos(4) = figPos(4)*1.5;
+            set(gcf,'pos',figPos);
+            figName =  sprintf('%s/%s_sensorDemo.pdf',opt.figFolder,masterList{r});
+            export_fig(figName,'-pdf','-transparent',gcf);
+        end
+        close all;
+    else
+    end
     
+    if opt.doSource
+        % source localized seed data
+        sourceData = mrC.SourceBrain(false,readyInverse,'template','nl-0014','dataIn',readyData,'subIDs',subIDs);
+        sourceDataSingle = mrC.SourceBrain(false,readyInverse(subIdx),'template',false,'dataIn',readyData(:,subIdx),'subIDs',subIDs(subIdx));
+
+        tempData = arrayfun(@(x) nanmean(cat(3,sourceData{x,:}),3),1:size(sourceData,1),'uni',false); % average over subjects
+        tempData = cat(3,tempData{:}); % concatenate over ROIs
+        readyData = reshape(tempData,size(tempData,1),[]);
+        tempData = cat(3,sourceDataSingle{:});  % concatenate over ROIs
+        readySingleData = reshape(tempData,size(tempData,1),[]);
+        roiLabels = repmat(masterList,1,3);
+        hemiLabels = repmat({'-L','-BL','-R'},size(sourceData,1),1);
+        roiLabels = cellfun(@(x,y) [x,y],roiLabels,hemiLabels,'uni',false)';
+        roiLabels = roiLabels(:);
+
+        mrC.WriteNiml('nl-0014',readyData,'outpath',fullfile(opt.figFolder,'roiDemoAverage.niml.dset'),'labels',roiLabels,'std_surf',false);
+        mrC.WriteNiml('nl-0014',readySingleData,'outpath',fullfile(opt.figFolder,'roiDemoSingle.niml.dset'),'labels',roiLabels,'std_surf',false,'doSmooth',false);
+    else
+    end
+
     
 end
