@@ -1,6 +1,6 @@
 function [plotH,colorH,roiH] = plotOnEgi(data,colorbarLimits,showColorbar,sensorROI,doText,markerProps)
 % mrC.plotOnEgi - Plots data on a standarized EGI net mesh
-% function meshHandle = mrC.plotOnEgi(data)
+% function meshHandle = mrC.plotOnEgi(data,[colorbarLimits,showColorbar,sensorROI,doText,markerProps])
 %
 % This function will plot data on the standardized EGI mesh with the
 % arizona colormap.
