@@ -20,7 +20,7 @@ function SystemSetup
     if ~ispref('freesurfer','SUBJECTS_DIR')
         fsDir = '/Volumes/svndl/anatomy/FREESURFER_SUBS';
         if ~exist(fsDir,'dir')
-            fsDir = uigetdir(fsDir,'Anatomy directory?');
+            fsDir = uigetdir(fsDir,'Freesurfer directory?');
         else
         end
         setpref('freesurfer','SUBJECTS_DIR',fsDir)
