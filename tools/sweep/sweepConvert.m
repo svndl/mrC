@@ -35,6 +35,7 @@ function [sweepValue,respTimes] = sweepConvert( coreDuration,sweepBounds,respTim
     % and the values
     sweepValue = sweepBounds(1) + sweepFraction * ( sweepBounds(2) - sweepBounds(1) );
     if strcmp( sweepType , 'log' )
+        % convert back to non-log value
         sweepValue = sweepSign * exp( sweepValue); % restore sign for negative log sweep
     else
     end
