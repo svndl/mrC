@@ -9,18 +9,18 @@ function [plotH,colorH,roiH] = plotOnEgi(data,colorbarLimits,showColorbar,sensor
 %
 %
 
-if nargin<2
+if nargin<2 || isempty(colorbarLimits)
     colorbarLimits = [min(data(:)),max(data(:))];    
     newExtreme = max(abs(colorbarLimits));
     colorbarLimits = [-newExtreme,newExtreme];
 end
-if nargin<3
+if nargin<3 || isempty(showColorbar)
     showColorbar = false;
 end
-if nargin<4
-    sensorROI = 0;
+if nargin<4 || isempty(sensorROI)
+    sensorROI{1} = 0;
 end
-if nargin<5
+if nargin<5 || isempty(doText)
     doText = false;
 else
 end
@@ -33,7 +33,12 @@ if nargin<6
 else
 end
 
-if doText && sensorROI ==0
+if ~iscell(sensorROI)
+    sensorROI = {sensorROI};
+else
+end
+
+if doText && all( sensorROI{1} == 0 )
     warning('no sensor ROI specified');
 else
 end
@@ -89,19 +94,21 @@ end
 set(plotH,'facevertexCdata',data,'linewidth',0.5,'markersize',4,'marker','.');
 set(plotH,'userdata','plotOnEgi');
 
-if sensorROI ~= 0
-    vertexLoc = get(plotH,'Vertices'); % vertex locations
-    roiLoc = vertexLoc(sensorROI,:);
-    roiH = patch(roiLoc(:,1),roiLoc(:,2),roiLoc(:,3),'o');
-    set(roiH,markerProps{:});
-    if doText
-        roiX = get(roiH,'XData');
-        roiY = get(roiH,'YData');
-        roiZ = get(roiH,'ZData');
-        arrayfun(@(x) ...
-            text(roiX(x),roiY(x),roiZ(x), num2str(x),'fontsize',8,'fontname','Arial','horizontalAlignment','center')...
-            ,1:length(sensorROI),'uni',false);
-    else
+if sensorROI{1} ~= 0 
+    for t = 1:length(sensorROI)
+        vertexLoc = get(plotH,'Vertices'); % vertex locations
+        roiLoc = vertexLoc(sensorROI{t},:);
+        roiH = patch(roiLoc(:,1),roiLoc(:,2),roiLoc(:,3),'o');
+        set(roiH,markerProps{t}{:});
+        if doText
+            roiX = get(roiH,'XData');
+            roiY = get(roiH,'YData');
+            roiZ = get(roiH,'ZData');
+            arrayfun(@(x) ...
+                text(roiX(x),roiY(x),roiZ(x), num2str(x),'fontsize',8,'fontname','Arial','horizontalAlignment','center')...
+                ,1:length(sensorROI{t}),'uni',false);
+        else
+        end
     end
 end
 
