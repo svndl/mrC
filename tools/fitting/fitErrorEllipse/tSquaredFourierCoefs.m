@@ -40,14 +40,12 @@ function [results] = tSquaredFourierCoefs(xyData,varargin)
         );
 
     dims = size(xyData);
-    N = dims(1);
+    if dims(1) < 2
+        error('input data must contain at least 2 samples');
+    end
     if dims(2) ~= 2
         error('input data must be a matrix of 2D row samples');
     end
-    if N < 2
-        error('input data must contain at least 2 samples');
-    end
-    
     if length(dims) < 3 % if no third dimension
         xyData(:,:,2) = zeros(size(xyData));
     elseif dims(3) > 2
@@ -63,6 +61,8 @@ function [results] = tSquaredFourierCoefs(xyData,varargin)
     
     % remove NaNs
     xyData = xyData(~any(isnan(xyData),2),:);
+    
+    N = size(xyData,1);
     
     try
         [sampMu,sampCovMat] = eigFourierCoefs(xyData);
@@ -80,18 +80,24 @@ function [results] = tSquaredFourierCoefs(xyData,varargin)
     % Eqn. 2 in Sec. 5.3 of Anderson (1984):
     t0Sqrd = ((N-1)*2)/(N-2) * finv( 1-opt.alphaVal, 2, N - 2 ); 
     results.tSqrdCritical = t0Sqrd;
-
+    
+    p = 2; % number of variables
+    df1 = p;  %Numerator degrees of freedom.
+    df2 = N-p;  %Denominator degrees of freedom.
     try
         invSampCovMat = inv(sampCovMat);    
         % Eqn. 2 of Sec. 5.1 of Anderson (1984):
         tSqrd = N * (sampMu - opt.testMu) * invSampCovMat * (sampMu - opt.testMu)'; 
 
-        tSqrdF = (N-2)/((N-1)*2) * tSqrd; % F approximation 
-        pVal = 1 - fcdf(tSqrdF, 2, N-2);  % compute p-value
+        tSqrdF = (N-p)/(p*(N-1)) * tSqrd; % F approximation 
+        pVal = 1 - fcdf(tSqrdF, df1, df2);  % compute p-value
 
         results.tSqrd = tSqrd;
         results.pVal = pVal;
-        results.H = tSqrd >= t0Sqrd;
+        results.H = tSqrd >= results.tSqrdCritical;
+        results.df1 = df1;
+        results.df2 = df2;
+        results.testAmp = abs(complex(sampMu(1),sampMu(2)));
     catch
         fprintf('inverse of the sample covariance matrix could not be computed.')
     end
