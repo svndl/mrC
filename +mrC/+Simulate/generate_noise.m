@@ -18,7 +18,7 @@ function noise = generate_noise(f_sampling, n_samples, n_nodes, mu, alpha_nodes,
     %% generate alpha noise
     %  
     alpha_noise = zeros(n_samples,n_nodes);
-    alpha_noise(:,alpha_nodes)  = repmat(get_alpha_activity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
+    alpha_noise(:,alpha_nodes)  = repmat(mrC.Simulate.get_alpha_activity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
     
     if strcmp(spatial_normalization_type,'active_nodes')
         n_active_nodes_alpha = sum(sum(abs(alpha_noise))~=0) ;
@@ -32,7 +32,7 @@ function noise = generate_noise(f_sampling, n_samples, n_nodes, mu, alpha_nodes,
     
     
     %% generate pink noise
-    pink_noise = get_pink_noise(n_samples, n_nodes );
+    pink_noise = mrC.Simulate.get_pink_noise(n_samples, n_nodes );
 
     % impose coherence on pink noise
     if strcmp(noise_mixing_data.mixing_type,'coh') % just in case we want to add other mixing mechanisms
