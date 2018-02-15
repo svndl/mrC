@@ -1,4 +1,4 @@
-function [ pOpt, R2, Range, hModel ] = FitNakaRushton( x, y , SupplyGradient)
+function [ pOpt, R2, Range, hModel ] = FitNakaRushton( x, y , noise,SupplyGradient)
     % Written by Spero Nicholas and adapted by Peter J. Kohler, 2017
     % 
     % Description:	Fit Naka-Rushton function to Sweep data: 
@@ -31,6 +31,11 @@ function [ pOpt, R2, Range, hModel ] = FitNakaRushton( x, y , SupplyGradient)
     %                    same for all data sets
     
     if nargin < 3
+        noise = zeros(size(y));
+    else
+    end
+    
+    if nargin < 4
         SupplyGradient = true;
     else
     end
@@ -86,8 +91,13 @@ function [ pOpt, R2, Range, hModel ] = FitNakaRushton( x, y , SupplyGradient)
         parpool;
     end
     % loop over the different datasets
-    parfor iCurve = 1:nCurve
-        [ pOpt(:,iCurve), R2(iCurve), Range(iCurve) ] = doFit(x,y(:,iCurve),xMin,xMax,pLB,pUB,Aie,bie,nx,opts)
+    for iCurve = 1:nCurve
+        if all(noise(:,iCurve) > 0)
+            pLB(4) = min(noise(:,iCurve));
+            pUB(4) = max(noise(:,iCurve));
+        else
+        end
+        [ pOpt(:,iCurve), R2(iCurve), Range(iCurve) ] = doFit(x,y(:,iCurve),xMin,xMax,pLB,pUB,Aie,bie,nx,opts);
     end
     hModel = @(x,p) NRmodel(x,p);
 end
