@@ -66,7 +66,7 @@ function noise = generate_noise(f_sampling, n_samples, n_nodes, mu, alpha_nodes,
     noise = sqrt(mu/(1+mu))*pink_noise + sqrt(1/(1+mu))*alpha_noise ;
     noise = noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum
     %% show resulting noise
-    if true % just to take a look at the noise components
+    if false % just to take a look at the noise components
         f = [-0.5:1/n_samples:0.5-1/n_samples]*f_sampling; % frequncy range
         t = [0:n_samples-1]/f_sampling ;
         subplot(3,2,1)
