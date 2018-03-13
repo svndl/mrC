@@ -87,7 +87,6 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     %
     %       subIDs:         a 1 x s cell of strings, indicating subjects IDs     SHOULD BE UPDATED LATER
     %
-    
 
  % The function was originally written by Peter Kohler, ...
  % Latest modification: Elham Barzegaran, 03.07.2018
@@ -221,7 +220,7 @@ for s=1:length(projectPath)
     if ~any(strcmp(Noisefield,'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
     if ~any(strcmp(Noisefield,'lamda')),Noise.lambda = 1/NS;end % power distribution between signal and 'total noise' (SNR)
     if ~any(strcmp(Noisefield,'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% ['active_nodes', 'all_nodes']
-    if ~any(strcmp(Noisefield, 'distanceType')),Noise.distanceType = 'Euclidean';end
+    if ~any(strcmp(Noisefield, 'distanceType')),Noise.distanceType = 'Geodesic';end %'Euclidean' 
     if ~any(strcmp(Noisefield, 'Noise.mixing_type_pink_noise')), Noise.mixing_type_pink_noise = 'coh' ;end % coherent mixing of pink noise
     if ~any(strcmp(Noisefield, 'alpha_nodes')), Noise.alpha_nodes = 'all';end % for now I set it to all visual areas, later I can define ROIs for it
 
@@ -233,17 +232,39 @@ for s=1:length(projectPath)
     
     % Calculate source distance matrix
     load(fullfile(anatDir,subIDs{s}(1:7),'Standard','meshes','defaultCortex.mat'));
+    MDATA = msh.data; clear msh;
+    Euc_dist = squareform(pdist(MDATA.vertices')) ;
     if strcmp(Noise.distanceType,'Euclidean')
-        coords = msh.data.vertices'; clear msh;% For now we are using Euclidean distance, later should be geodesic
-        spat_dists = squareform(pdist(coords)) ; %assuming euclidian distances (can be changed later)
-    
-    elseif strcmp(opt.noiseParams.distanceType,'Geodesic')
-        error ('Geodesic distance is not implemented yet... Please use Eudlidean distance for now'); %%%%%%% SHOULD BE IMPLEMENTED
+        spat_dists =  Euc_dist;%assuming euclidian distances (can be changed later)
+    elseif strcmp(Noise.distanceType,'Geodesic')
+        faces = MDATA.triangles'; vertex = MDATA.vertices';
+        [c, ~] = tess_vertices_connectivity( struct( 'faces',faces + 1, 'vertices',vertex ) ); 
+        % although using graph-based shortest path algorithm, we can estimate surface distances: But this will overestimate the real
+        % distances...
+        if exist('graph')~=2
+            G = c.*Euc_dist;
+            spat_dists = distances(graph(G));
+            clear G c;
+        else 
+            % I recieve memory error... think what can be done...
+            %error ('Geodesic distance is not implemented yet... Please use Eudlidean distance for now'); %%%%%%% SHOULD BE IMPLEMENTED
+            spat_dists = inf(size(c));
+            hWait = waitbar(0,'Calculating Geodesic distances ... ');
+            for s = 1:length(c)
+                if mod(s,10)==0
+                    waitbar(s/length(c));
+                    disp(['calculating distance...' num2str(sound((s/length(c))*100)) ' %']);
+                end
+                spat_dists(s,s:length(c)) = dijkstra(c,Euc_dist,s,s:length(c),0);% complexity of this algorithm is O(|V^2|), where V is number of nodes
+            end
+            close hWait;
+            spat_dists = min(spat_dists,spat_dists');
+        end
     end   
     
     % This part calculate mixing matrix for coherent noise
     if strcmp(Noise.mixing_type_pink_noise,'coh')
-        mixDir = fullfile(anatDir,subIDs{s}(1:7),'Standard','meshes','noise_mixing_data.mat');
+        mixDir = fullfile(anatDir,subIDs{s}(1:7),'Standard','meshes',['noise_mixing_data_' Noise.distanceType '.mat']);
         if ~exist(mixDir,'file')% if the mixing data is not calculated already
             noise_mixing_data = mrC.Simulate.Generate_mixing_data(spat_dists);
             save(mixDir,'noise_mixing_data');
