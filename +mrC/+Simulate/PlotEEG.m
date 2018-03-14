@@ -84,7 +84,7 @@ while(1)
     % update location
     switch SPI
         case '1'
-            EOI = findclosestelect(x,y);
+            EOI = FindClosestElect(x,y);
         case '2'
             [~,FOI] = min(abs(repmat(x,[1 size(ASDEEG,1)])-Freq));
     end

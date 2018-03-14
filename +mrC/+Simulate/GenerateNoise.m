@@ -1,4 +1,4 @@
-function noise = generate_noise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
+function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
 % GENERATE_NOISE Returns noise of unit variance as a combination of alpha
 % activity (bandpass filtered white noise) and spatially coherent pink
 % noise (spectrally shaped white noise)
@@ -14,11 +14,13 @@ function noise = generate_noise(f_sampling, n_samples, n_nodes, mu, alpha_nodes,
 %                               'all_nodes': normalize to total number of nodes
 %                               'active_nodes': normalize only to nodes where a specific noise has any activity
 % returns a matrix of size [n_samples,n_nodes]
-    
-    %% generate alpha noise
+
+% Author: Sebastian Bosse
+
+%% ---------------------------- generate alpha noise------------------------
     %  
     alpha_noise = zeros(n_samples,n_nodes);
-    alpha_noise(:,alpha_nodes)  = repmat(mrC.Simulate.get_alpha_activity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
+    alpha_noise(:,alpha_nodes)  = repmat(mrC.Simulate.GetAlphaActivity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
     
     if strcmp(spatial_normalization_type,'active_nodes')
         n_active_nodes_alpha = sum(sum(abs(alpha_noise))~=0) ;
@@ -31,8 +33,8 @@ function noise = generate_noise(f_sampling, n_samples, n_nodes, mu, alpha_nodes,
     
     
     
-    %% generate pink noise
-    pink_noise = mrC.Simulate.get_pink_noise(n_samples, n_nodes );
+%% -----------------------------generate pink noise------------------------
+    pink_noise = mrC.Simulate.GetPinkNoise(n_samples, n_nodes );
 
     % impose coherence on pink noise
     if strcmp(noise_mixing_data.mixing_type,'coh') % just in case we want to add other mixing mechanisms
@@ -62,10 +64,10 @@ function noise = generate_noise(f_sampling, n_samples, n_nodes, mu, alpha_nodes,
     else
         error('%s is not implemented as spatial normalization method', spatial_normalization_type)
     end
-    %% combine different types of noise
+%% --------------------combine different types of noise--------------------
     noise = sqrt(mu/(1+mu))*pink_noise + sqrt(1/(1+mu))*alpha_noise ;
     noise = noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum
-    %% show resulting noise
+%% ---------------------------show resulting noise-------------------------
     if false % just to take a look at the noise components
         f = [-0.5:1/n_samples:0.5-1/n_samples]*f_sampling; % frequncy range
         t = [0:n_samples-1]/f_sampling ;

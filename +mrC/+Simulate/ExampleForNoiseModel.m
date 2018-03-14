@@ -7,8 +7,7 @@ f_sampling      = 100 ;            % sampling frequency [Hz]
 n_samples       = 10*f_sampling ; % number of temporal samples
 n_nodes         = 1300 ;
 
-load('coordsForSB') % What is the unit of positions? Decay of spatial coherence assumes mm...
-coords=coords.all;
+load('coordsExample') % What is the unit of positions? Decay of spatial coherence assumes mm...
 if n_nodes < 1 % all nodes from coords
     n_nodes = size(coords,1) ;
 else% reduce number of nodes for testing
@@ -80,7 +79,7 @@ if strcmp(mixing_type_pink_noise,'coh') % just in case we want to add other mixi
     end
 end
 
-noise = mrC.Simulate.generate_noise(f_sampling, n_samples,n_nodes, mu, alpha_nodes, mixing_data,spatial_normalization_type); 
+noise = mrC.Simulate.GenerateNoise(f_sampling, n_samples,n_nodes, mu, alpha_nodes, mixing_data,spatial_normalization_type); 
 
 if strcmp(spatial_normalization_type,'active_nodes')
     n_active_nodes_signal = sum(sum(abs(signal))~=0) ;

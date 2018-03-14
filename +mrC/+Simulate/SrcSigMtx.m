@@ -51,8 +51,11 @@ if ~isempty(roiChunk)
         % place source array in source space
         sourceTemp = zeros(size(noise));
         for s = 1: size(signalArray,2)% place the signal for each source
+            % HERE: There should be a weight for putting the sources
+            % STEP 1: Find the center of ROI
+            
             sourceTemp(:,find(roiChunk(:,RoiIdx(s)))) = sourceTemp(:,find(roiChunk(:,RoiIdx(s)))) + repmat (signalArray(:,s),[1 numel(find(roiChunk(:,RoiIdx(s))))]);
-        end       
+        end
         
         % Normalize the source signal
         if strcmp(spatial_normalization_type,'active_nodes')

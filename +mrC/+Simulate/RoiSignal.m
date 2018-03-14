@@ -240,7 +240,7 @@ for s=1:length(projectPath)
     if strcmp(Noise.mixing_type_pink_noise,'coh')
         mixDir = fullfile(anatDir,subIDs{s}(1:7),'Standard','meshes',['noise_mixing_data_' Noise.distanceType '.mat']);
         if ~exist(mixDir,'file')% if the mixing data is not calculated already
-            noise_mixing_data = mrC.Simulate.Generate_mixing_data(spat_dists);
+            noise_mixing_data = mrC.Simulate.GenerateMixingData(spat_dists);
             save(mixDir,'noise_mixing_data');
         else
             load(mixDir);
@@ -248,13 +248,12 @@ for s=1:length(projectPath)
     end
     
     % ----- Generate noise-----
-    noiseSignal = mrC.Simulate.generate_noise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
-    
+    noiseSignal = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+    % 
 %------------------------PLACE SIGNAL IN THE ROIs--------------------------
     warning('on');
     display('Generating EEG signal ...')
     % Put an option to get the ROIs either from input of function or from command line
-    
     
     % In the following function size(opt.signalArray,2) should be equal to size of masterList) 
     if numel(masterList)~=srcNum

@@ -1,9 +1,9 @@
-%% 
+function y = GetAlphaActivity(n_samples,sampling_freq,freq_band)
+
 % generate alpha activity as band-pass filtered white noise
 % returns a matrix of size [n_samples,n_nodes]
 % Author: Sebastian Bosse 03/2017
-
-function y = alpha_activity(n_samples,sampling_freq,freq_band)
+%--------------------------------------------------------------------------
 
 if nargin <3
     n_trials = 1 ;

@@ -41,19 +41,36 @@ function spat_dists = CalculateSourceDistance(MDATA,distanceType)
         %-----------Otherwise use Dijkstra function: very slow ------------
         % There are still some problem with this part....
             spat_dists = inf(size(c));
-            warning ('If the matlab version you are using is older than 2015b, calculation of Geodesic distances might take a while. SUGGESTION: Use Euclidean distance instead');
+            warning ('If the matlab version you are using is older than 2015b, calculation of Geodesic distances might take a several hours. SUGGESTION: Use Euclidean distance instead');
+            
+            % this input gives an option to the user to switch to Euclidean if Geodesic is taking too much time
+            cond = 1;
+            while cond==1 
+                inp = input('Do you want to continue with Euclidean distance? \n Enter yes to continue with Euclidean distance \n Enter no to continue with Geodesic distance',s);
+                if strcmp(inp,'yes') 
+                    spat_dists =  Euc_dist;
+                    return
+                elseif strcmp(inp,'no')
+                    cond = 0;    
+                end
+            end
+            %----------------------SLOW SHORTEST PATH----------------------
             hWait = waitbar(0,'Calculating Geodesic distances ... ');
             j = 0;% counter for waitbar
-
             for s = 1:length(c)
                 if mod(s,20)==0, waitbar(j/length(c)); end
-                sidx = find(Euc_dist(s,:)<35); % Put a threshold for distance: select a subset of sources
-                if sum(sidx>s)
+                if s<=MDATA.VertexLR{1} % Separate left and right hemispheres
+                    sidx = 1:MDATA.VertexLR{1};
+                else
+                    sidx = 1+MDATA.VertexLR{1}:sum(MDATA.VertexLR);
+                end
+                
+                if sum(sidx>s) % Apply diskstra algorithm to the hemisphere
                     spat_dists(s,sidx(sidx>=s)) = dijkstra(c(sidx,sidx),Euc_dist(sidx,sidx),find(sidx==s),find(sidx>=s),0);% complexity of this algorithm is O(|V^2|), where V is number of nodes
                 end
                 j = j+1;
+ 
             end
-
             spat_dists = min(spat_dists,spat_dists');
             close(hWait);
         end

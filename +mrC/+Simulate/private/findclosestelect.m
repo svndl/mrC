@@ -1,4 +1,4 @@
-function EOI = findclosestelect(x,y)
+function EOI = FindClosestElect(x,y)
 % This function find the closest electrode to x,y position
 
 

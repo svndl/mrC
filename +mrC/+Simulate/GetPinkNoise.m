@@ -1,7 +1,9 @@
-function pink_noise = get_pink_noise(n_samples,n_nodes)
+function pink_noise = GetPinkNoise(n_samples,n_nodes)
+
 % generate pink noise by shaping white noise
 % returns a matrix of size [n_samples,n_nodes]
 % Author: Sebastian Bosse 01/2018
+%--------------------------------------------------------------------------
 
     M = n_samples + rem(n_samples,2) ;
     n = 1:M ;
