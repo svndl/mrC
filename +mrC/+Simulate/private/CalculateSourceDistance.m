@@ -46,7 +46,7 @@ function spat_dists = CalculateSourceDistance(MDATA,distanceType)
             % this input gives an option to the user to switch to Euclidean if Geodesic is taking too much time
             cond = 1;
             while cond==1 
-                inp = input('Do you want to continue with Euclidean distance? \n Enter yes to continue with Euclidean distance \n Enter no to continue with Geodesic distance',s);
+                inp = input('Do you want to continue with Euclidean distance? \n Enter yes to continue with Euclidean distance \n Enter no to continue with Geodesic distance\n','s');
                 if strcmp(inp,'yes') 
                     spat_dists =  Euc_dist;
                     return
@@ -59,10 +59,10 @@ function spat_dists = CalculateSourceDistance(MDATA,distanceType)
             j = 0;% counter for waitbar
             for s = 1:length(c)
                 if mod(s,20)==0, waitbar(j/length(c)); end
-                if s<=MDATA.VertexLR{1} % Separate left and right hemispheres
-                    sidx = 1:MDATA.VertexLR{1};
+                if s<=MDATA.VertexLR(1) % Separate left and right hemispheres
+                    sidx = 1:MDATA.VertexLR(1);
                 else
-                    sidx = 1+MDATA.VertexLR{1}:sum(MDATA.VertexLR);
+                    sidx = 1+MDATA.VertexLR(1):sum(MDATA.VertexLR);
                 end
                 
                 if sum(sidx>s) % Apply diskstra algorithm to the hemisphere
