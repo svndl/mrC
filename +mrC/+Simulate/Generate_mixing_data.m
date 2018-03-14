@@ -9,6 +9,8 @@ function noise_mixing_data = Generate_mixing_data(spat_dists)
     noise_mixing_data.band_freqs = band_freqs ;
     noise_mixing_data.mixing_type = 'coh' ;
 
+    hWait = waitbar(0,'Calculating mixing matrices ... ');
+       
     for freq_band_idx = 1:length(band_freqs)
         this_spatial_decay_model = best_model.(band_names{freq_band_idx}) ;
         this_coh = this_spatial_decay_model.fun(this_spatial_decay_model.model_params,spat_dists);
@@ -16,7 +18,8 @@ function noise_mixing_data = Generate_mixing_data(spat_dists)
         mixing_data =  chol(this_coh) ; % this matrix should become sparse, to be saved
         %make the matrix sparse for saving
         noise_mixing_data.matrices{freq_band_idx} = sparse(mixing_data .* (mixing_data>0.01));
-        display ([num2str(freq_band_idx/length(band_freqs)*100) '%']);
+        % display ([num2str(freq_band_idx/length(band_freqs)*100) '%']);
+        waitbar(freq_band_idx/length(band_freqs));
     end       
-    
+    close(hWait);
 end
