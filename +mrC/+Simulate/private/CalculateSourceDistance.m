@@ -1,4 +1,4 @@
-function spat_dists = CalculateSourceDistance(MDATA,distanceType)
+function [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
 
 % This function calculates the distances between the sources using the
 % distanceType method
@@ -33,14 +33,14 @@ function spat_dists = CalculateSourceDistance(MDATA,distanceType)
         % distances...
         
         %---Using in-built matlab function:requires matlab 2015b ornewer---
-        if exist('graph')==2
+        if exist('graph')~=2
             G = c.*Euc_dist;
             spat_dists = distances(graph(G));
             clear G c;
         else 
         %-----------Otherwise use Dijkstra function: very slow ------------
         % There are still some problem with this part....
-            spat_dists = inf(size(c));
+            spat_dists = Euc_dist;%ones(size(c))*max(Euc_dist(:));
             warning ('If the matlab version you are using is older than 2015b, calculation of Geodesic distances might take a several hours. SUGGESTION: Use Euclidean distance instead');
             
             % this input gives an option to the user to switch to Euclidean if Geodesic is taking too much time
@@ -65,6 +65,7 @@ function spat_dists = CalculateSourceDistance(MDATA,distanceType)
                     sidx = 1+MDATA.VertexLR(1):sum(MDATA.VertexLR);
                 end
                 
+                sidx = find(Euc_dist(s,:)<25);% or put a threshold
                 if sum(sidx>s) % Apply diskstra algorithm to the hemisphere
                     spat_dists(s,sidx(sidx>=s)) = dijkstra(c(sidx,sidx),Euc_dist(sidx,sidx),find(sidx==s),find(sidx>=s),0);% complexity of this algorithm is O(|V^2|), where V is number of nodes
                 end

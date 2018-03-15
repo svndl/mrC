@@ -170,7 +170,7 @@ for s=1:length(projectPath)
     fwdPath = fullfile(projectPath{s},'_MNE_',[subIDs{s} '-fwd.fif']);
     fwdStrct = mne_read_forward_solution(fwdPath); % Read forward structure
     % Checks if freesurfer folder path exist
-    if ~ispref('freesurfer','SUBJECTS_DIR')
+    if ~ispref('freesurfer','SUBJECTS_DIR') || ~exist(getpref('freesurfer','SUBJECTS_DIR'),'dir')
         %temporary set this pref for the example subject
         setpref('freesurfer','SUBJECTS_DIR',fullfile(anatDir,'FREESURFER_SUBS'));% check
     end
@@ -211,7 +211,7 @@ for s=1:length(projectPath)
  
 %-------------------Generate noise: from Sebastian's code------------------
     
-    % -----Noise default values-----
+    % -----Noise default parameters-----
     NS = size(opt.signalArray,1); % number of time samples
     srcNum = size(opt.signalArray,2); % number of seed sources
     Noise = opt.noiseParams;
