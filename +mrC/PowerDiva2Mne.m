@@ -1,4 +1,4 @@
-function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
+function PowerDiva2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
     % Description:	Function written by Justin Ales 
     % 
     % Syntax:       mrC.powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doreg )
@@ -55,7 +55,8 @@ function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
     data.info.meas_id.secs     = data.info.file_id.secs;
     data.info.meas_id.usecs    = data.info.file_id.usecs;
     data.info.meas_date = [];
-
+    
+    %% read in electrode locations (can be either elp or elc format)
     if ~isempty(strfind(elpfile,'elp')) % if elp format
         % read the elp file
         if exist('readelp')==2,
@@ -83,29 +84,25 @@ function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
     end
 
     if ~elcFormat
-
-        elp.lpa = [eloc(2).X eloc(2).Y eloc(2).Z]; 
-        elp.rpa = [eloc(3).X eloc(3).Y eloc(3).Z]; 
-        elp.nasion = [eloc(1).X eloc(1).Y eloc(1).Z]; 
-
-        %Lx = eloc(2).X;
-        %Ly = eloc(2).Y;
-
-        %Nx = eloc(1).X; % distance from the ctf origin to nasion
-
-        %cs = - Lx / sqrt( Lx*Lx + Ly*Ly );
-        %sn =   Ly / sqrt( Lx*Lx + Ly*Ly );
-
-        for i=5:length(eloc);
-
-            elp.x(i-4) = eloc(i).X;
-            elp.y(i-4) = eloc(i).Y;
-            elp.z(i-4) = eloc(i).Z;
-
-        end
+        % elp format
+        labels = cat(2,{eloc.labels});
+        fiduIdx = [find(cellfun(@(x) strcmpi(x,'lpa'),labels)),...
+                   find(cellfun(@(x) strcmpi(x,'rpa'),labels)),...
+                   find(cellfun(@(x) strcmpi(x,'nz'),labels))];
+        if numel(fiduIdx) < 3
+            msg = '\nnot all fiducials could be found in elp file\n';
+            error(msg);
+        else
+        end 
+            
+        elp.lpa = [eloc(fiduIdx(1)).X eloc(fiduIdx(1)).Y eloc(fiduIdx(1)).Z]; 
+        elp.rpa = [eloc(fiduIdx(2)).X eloc(fiduIdx(2)).Y eloc(fiduIdx(2)).Z]; 
+        elp.nasion = [eloc(fiduIdx(3)).X eloc(fiduIdx(3)).Y eloc(fiduIdx(3)).Z]; 
+        
+        elp.x = cat(2,eloc(5:end).X);
+        elp.y = cat(2,eloc(5:end).Y);
+        elp.z = cat(2,eloc(5:end).Z);
         elp.sensorN = length(elp.x)+1;
-
-        %elp = elec_emse2matlab( elpfile ); % read the elp file
 
         Lx = elp.lpa( 1 );
         Ly = elp.lpa( 2 );
@@ -119,36 +116,26 @@ function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
         scf.y = elp.x * sn + elp.y * cs;
         scf.z = elp.z;
     else
+        % elc format
         for i=1:length(eloc);
-
             scf.x(i) = eloc(i).X;
             scf.y(i) = eloc(i).Y;
             scf.z(i) = eloc(i).Z;
-
         end
     end
     
+    % check if head shape is digitized
     [pathstr name] = fileparts(elpfile);
-
-    hspFile = dir(fullfile(pathstr,'*.hsp'))
-
-    validNames = ~strncmp({hspFile(:).name},'.',1);
-    hspFile=hspFile(validNames);
-
+    hspFile = subfiles(fullfile(pathstr,'*.hsp'));
     headShapeDigitized = false;
-    if ~isempty(hspFile),
-
-        hspFullFile = fullfile(pathstr,hspFile(1).name);
-
+    if hspFile{1} ~= 0
+        hspFullFile = fullfile(pathstr,hspFile{1});
         [headShapePoints] = readhsp(hspFullFile);
         headShapeDigitized = true;
-
         hsp.x = headShapePoints(:,1) * cs - headShapePoints(:,2) * sn - Nx * cs;
         hsp.y = headShapePoints(:,1) * sn + headShapePoints(:,2) * cs;
         hsp.z = headShapePoints(:,3);
-
         headShapePoints = [hsp.x,hsp.y,hsp.z];
-
     end
 
     % read the EEG data text file
@@ -291,7 +278,6 @@ function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
     ntrave = pdExport.nTrl;
     data.evoked.nave  = ntrave * sfreq; % number of time averages in noise cov calculation
 
-
     npretrigger = 0;
     data.evoked.first = -npretrigger;
 
@@ -342,136 +328,85 @@ function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
     mne_write_cov_file( covName, cov );
     fprintf( 'Wrote %s and %s\n', fname, covName);
     
-    % Start of registration code.
+    %% Start of registration code.
   
     if (exist('fiducialFile','var'))
         if (~isempty(fiducialFile)),
 
             display('Coregistering fiducials')
             mriFiducials = load(fiducialFile);
-
-            elecFiducials = 1000*[ lpa.x, lpa.y, lpa.z; ...
-                rpa.x, rpa.y, rpa.z; ...
-                nas.x, nas.y, nas.z];
-
-            elecFiducials2 = 1000*[ 2*lpa.x, lpa.y-nas.y, lpa.z; ...
-                2*rpa.x, rpa.y-nas.y, rpa.z; ...
-                nas.x, nas.y, nas.z];
-
-            %Reording the points to make the nasion first
-            %Doing this since the coreg script locks the 1st points together
-            %And we like the nasion.
-
-            %trans = fiducial_coregister(elecFiducials([3 2 1],:),mriFiducials([3 2 1],:))';
-
-            [tOrig rOrig] = alignFiducials(elecFiducials,mriFiducials);
-            %SOme versions of locator scale fiducials by a factor of 2.
-            %THis sucks, so do a kludgy check if a scaling fits the mri better
-            [tScaled rScaled] = alignFiducials(elecFiducials2,mriFiducials);
-
-            transScaled = [ rScaled, tScaled'; 0 0 0 1];
-            transOrig = [ rOrig, tOrig'; 0 0 0 1];
-
-
-            transFid = transScaled*[elecFiducials2, [1; 1; 1;]]';
-            transFidScaled = [transFid(1:3,:)]';
-
-            transFid = transOrig*[elecFiducials, [1; 1; 1;]]';
-            transFidOrig = [transFid(1:3,:)]';
-
-            sseScaled = sum((transFidScaled(:)-mriFiducials(:)).^2)
-            sseOrig = sum((transFidOrig(:)-mriFiducials(:)).^2)
-
-
-            %Check for smaller sum square error when scaled;
-            if sseScaled<sseOrig 
-                t = tScaled;
-                r = rScaled;
-                disp('Detected improper fiducial scaling, scaling fiducials up by 2');
-                elecFiducials = elecFiducials2;
-            else %Don't do anything if the orig fits better
-                t = tOrig;
-                r = rOrig;
+            
+            sseCurrent = inf;
+            for z = 1:2
+                if z == 1
+                    tempFiducials = 1000*[ lpa.x, lpa.y, lpa.z; ...
+                        rpa.x, rpa.y, rpa.z; ...
+                        nas.x, nas.y, nas.z];
+                else
+                    % Some versions of locator scale fiducials by a factor of 2.
+                    % This sucks, so do a kludgy check if a scaling fits the mri better
+                    tempFiducials = 1000*[ 2*lpa.x, lpa.y-nas.y, lpa.z; ...
+                        2*rpa.x, rpa.y-nas.y, rpa.z; ...
+                        nas.x, nas.y, nas.z];
+                end
+                [tAlign, rAlign] = alignFiducials(tempFiducials,mriFiducials);
+                transMat = [ rAlign, tAlign'; 0 0 0 1];
+                transFid = transMat*[tempFiducials, [1; 1; 1;]]';
+                transFid = transFid(1:3,:)';
+                sseOrig = sum((transFid(:)-mriFiducials(:)).^2);
+                if sseOrig < sseCurrent
+                    sseCurrent = sseOrig;
+                    t = tAlign;
+                    r = rAlign;
+                    elecFiducials = tempFiducials;
+                else
+                end
             end
-
-
             if doReg
-
                 trans = [ r, t'; 0 0 0 1];
+                [pathstr name] = fileparts(fiducialFile);
+                headSurfFile = dir(fullfile(pathstr,'*_fs4-head.fif'))
+                headSurfFullFile = fullfile(pathstr,headSurfFile(1).name);
+                surf =  mne_read_bem_surfaces(headSurfFullFile);
+                
+                transFid = trans*[elecFiducials, [1; 1; 1;]]';
+                transFid = transFid(1:3,:)';
+                elecCoord = [1000*scf.x', 1000*scf.y', 1000*scf.z', ones(length(scf.x),1)];
+                transElec = trans*elecCoord';
+                transElec = transElec(1:3,:)';
+                surf.rr = surf.rr*1000;
 
-                if (headShapeDigitized),
-
-                    [pathstr name] = fileparts(fiducialFile);
-
-                    headSurfFile = dir(fullfile(pathstr,'*_fs4-head.fif'))
-
-                    if ~isempty(hspFile),
-
-                        headSurfFullFile = fullfile(pathstr,headSurfFile(1).name);
-                        surf =  mne_read_bem_surfaces(headSurfFullFile);
-
+                % map digitized head shape onto hi-res scalp
+                if headShapeDigitized
+                    if ~isempty(hspFile)
                         headShapePoints = [1000*headShapePoints, ones(size(headShapePoints,1),1)];
-
                         transHsp = trans*headShapePoints';
+                        transHsp = transHsp(1:3,:)';
                         % headShapePoints, surf.rr
 
                         %Silly transposes:
                         %  [nT fitHsp] = fitScatteredPoints(1000*surf.rr,transHsp(1:3,:)');
 
-
                         %Fiducials, electrodes and Headshape points translated to
                         %initial conditions.
-                        transFid = trans*[elecFiducials, [1; 1; 1;]]';
-                        transFid = [transFid(1:3,:)]';
-                        elecCoord = [1000*scf.x', 1000*scf.y', 1000*scf.z', ones(length(scf.x),1)];
-                        transElec = trans*elecCoord';
-                        transElec = [transElec(1:3,:)]';
-                        surf.rr = surf.rr*1000;
-
-
-                        [nT fitHsp] = fitPointsToScalp(surf,transFid,transElec,transHsp(1:3,:)');
-
-                        trans = nT*trans;
                     else
                         warning('Found headshape digitization, but cannot find hires scalp')
                     end
                 else
-                    [pathstr name] = fileparts(fiducialFile);
-
-                    headSurfFile = dir(fullfile(pathstr,'*_fs4-head.fif'))
-
-                    headSurfFullFile = fullfile(pathstr,headSurfFile(1).name);
-                    surf =  mne_read_bem_surfaces(headSurfFullFile);
-                    transFid = trans*[elecFiducials, [1; 1; 1;]]';
-                    %            transFid = [transFid(1:3,:)/1000]';
-                    elecCoord = [1000*scf.x', 1000*scf.y', 1000*scf.z', ones(length(scf.x),1)];
-                    transElec = trans*elecCoord';
-                    %transElec = [transElec(1:3,:)/1000]';
-                    transFid = [transFid(1:3,:)]';
-                    transElec = [transElec(1:3,:)]';
-                    surf.rr = surf.rr*1000;
-
-                    [nT] = fitPointsToScalp(surf,transFid,transElec,[]);
-                    trans = nT*trans;
+                    transHsp = [];
                 end
-
-                trans
-                %        [tmp transName] = fileparts(elpfile);
+                [nT, fitHsp] = mrC.FitPointsToScalp(surf,transFid,transElec,transHsp);
+                trans = nT*trans;
                 transFile = fullfile(outputDir,'elp2mri.tran');
                 fid = fopen(transFile,'w');
                 fprintf(fid,'%d %d %d %d\n',trans');
-
                 fclose(fid);
-                % save(transFile,'trans','-ascii')
             else
                 % just read in the previously made reg file
-
                 transFile = fullfile(outputDir,'elp2mri.tran');
-
                 if ~exist(transFile,'file')
                     error(['Cannot find file: ' transFile ' Something is weird this should have been made already'])
                 end
-
                 trans = load(fullfile(outputDir,'elp2mri.tran'));
             end
 
@@ -520,7 +455,7 @@ function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
     %          scatter3( transElec(:,1), transElec(:,2),transElec(:,3), 60, 'k', 'filled' ),
 
 
-            if exist('fitHsp')
+            if ~isempty(fitHsp)
                 scatter3( fitHsp(:,1)/1000, fitHsp(:,2)/1000,fitHsp(:,3)/1000, 60, 'y', 'filled' ),
            %     legend('MRI defined fiducials','Electrode Fiducials','NOSE','Electrodes')
             else
@@ -566,6 +501,50 @@ function powerDivaExp2Mne( elpfile, datafile, fiducialFile, outputDir, doReg )
         rotate3d on;
        % set( dcm_obj, 'UpdateFcn', { @myupdatefcn, scf, snr } );
     end
+end
+
+function [trans, rot, elecPts] = alignFiducials(elecPts, volPts)
+    %[trans, rot] = alignFiducials(inpts, volpts)	
+    %	returns alignment matrix given elecPts and elecPts as corresponding points
+    %	rot rotates elecPts into volPts coordinate frame.
+    %	trans is a vector containing scalings of the x,y,and z axes 
+    %		such that elecPts*trans is at the same scale as volPts
+    
+    % subtracting the mean, centering on zero
+    orig_elecPts = elecPts;
+    orig_volPts = volPts;
+    volPts = volPts - (mean(volPts)'*ones(1,length(volPts)))';
+    elecPts = elecPts - (mean(elecPts)'*ones(1,length(elecPts)))';
+    
+    H = elecPts' * volPts;
+    [U,S,V] = svd(H);
+
+    mirrorFixer = [ 1 0 0; 0 1 0; 0 0 det(U*V);];
+
+    rot = V*mirrorFixer*(U');
+
+    if det(rot)< 0
+        disp('Warning: rotation matrix has -1 determinant, This should not have happened. Hmmm.');
+    end
+    
+    % apply transformation to original matrices
+    elecPts = (rot*(orig_elecPts'))';
+    trans = mean(orig_volPts) - mean(elecPts);
+end
+
+function isGood = isElpFileGood(elpfile)
+    %function isGood = isElpFileGood(elpfile)
+
+    V = mrC_readELPfile(elpfile,true,[-2 1 3]);
+
+    F = mrC.EGInetFaces(false);
+
+    V(:,1:2) = mrC.FlattenZ(V);
+    V(:,3) = 0;
+
+    [isIntersect badPoint ua ub] = mrC.FindMeshSelfIntersections(V(1:128,1:2),F);
+
+    isGood = ~isIntersect;
 end
 
 %%%%%%%%%%%%%%%%%%%%%% utility functions %%%%%%%%%%%%%%%%%%%%%%%%
