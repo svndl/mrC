@@ -11,22 +11,20 @@
 clear;clc
 
 %% Add latest mrC
-mrCpath = 'C:\Users\Elhamkhanom\Documents\Codes\Git\mrC'; % mrcpath
-CurrentFolder = pwd; 
-addpath(genpath(mrCpath));
+codeFolder = '/Users/kohler/code/git';
+addpath(genpath(sprintf('%s/mrC',codeFolder)));
+
+%% SSVEP signal can be simulated using ModelSourceSignal with defined parameters, otherwise Roisignal function will generate a default two source SSVEP signal 
+% a sample SSVEP signal...
+[outSignal, FundFreq, SF]= mrC.Simulate.ModelSeedSignal('srcType','SSVEP','srcFreq',[2 3.5 5],'srcHarmonic',{[2,0,1],[0,1,0,2],[2, 2]},'srcPhase',{[.1,0,.2],[0,.3,0,.4],[.2,.5]});
 
 %% One subject mrC project and anatomy paths
 ProjectPath{1} = fullfile(CurrentFolder,'Example','nl-0014_ssn2'); % example folder...
 AnatomyPath = fullfile(CurrentFolder,'Example','anatomy');
-%% SSVEP signal can be simulated using ModelSourceSignal with defined parameters, otherwise Roisignal function will generate a default two source SSVEP signal 
-% a sample SSVEP signal...
-[ROIsig, FundFreq, SF]= mrC.Simulate.ModelSourceSignal('srcType','SSVEP','srcFreq',[2 3.5 5],'srcHarmonic',{[2,0,1],[0,1,0,2],[2, 2]},'srcPhase',{[.1,0,.2],[0,.3,0,.4],[.2,.5]});
-
-
 %% simulation functions
 noise.mu=3;
 noise.distanceType = 'Geodesic';
 [sensorData,masterList,subIDs] = mrC.Simulate.RoiSignal(ProjectPath,'anatomyPath',AnatomyPath,'noiseParams',noise);
-%[sensorData,masterList,subIDs] = mrC.Simulate.RoiSignal(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',ROIsig,'mu',noise.mu);
+%[sensorData,masterList,subIDs] = mrC.Simulate.RoiSignal(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'mu',noise.mu);
 
 
