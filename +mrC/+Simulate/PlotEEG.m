@@ -27,6 +27,7 @@ FS=14;%font size
 Fmax = numel(Freq);
 EOI = 83; % electrode used in the plot
 FOI = FF(1); % frequency bin used in the plot
+load('Electrodeposition.mat'); tEpos =tEpos.xy;% electrode poritions used for plots
 
 h=figure;
 set(h,'units','centimeters')
@@ -35,7 +36,7 @@ set(h, 'position',[1 1 25 12]);
 subplot(2,2,4),axis off;% Show simulated signal information
 nrs = max(numel(masterList),3);
 for i= 1:numel(masterList)
-    if ~isempty(signalFF),
+    if ~isempty(signalFF)
         text (.1,.9-((1/nrs)*(i)),['Source' num2str(i) ': f' num2str(i) ' = ' num2str(signalFF(i)) ' Hz,  ' strrep(masterList{i},'_','-')],'fontsize',FS-2);
     else
         text (.1,.9-((1/nrs)*(i)),['Source' num2str(i) ': ' strrep(masterList{i},'_','-')],'fontsize',FS-2);
@@ -84,8 +85,12 @@ while(1)
     % update location
     switch SPI
         case '1'
-            EOI = FindClosestElect(x,y);
+            Epos2= repmat([x y],[128 1]);
+            dis = sqrt(sum((tEpos-Epos2).^2,2));
+            [~,EOI] = min(dis);
+           
         case '2'
             [~,FOI] = min(abs(repmat(x,[1 size(ASDEEG,1)])-Freq));
     end
+end
 end

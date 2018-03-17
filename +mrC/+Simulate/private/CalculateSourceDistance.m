@@ -33,7 +33,7 @@ function [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
         % distances...
         
         %---Using in-built matlab function:requires matlab 2015b ornewer---
-        if exist('graph')~=2
+        if exist('graph')==2
             G = c.*Euc_dist;
             spat_dists = distances(graph(G));
             clear G c;
