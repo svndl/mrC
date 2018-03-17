@@ -115,11 +115,9 @@ rotationMtx = makeRotMtx(params);
 [kE,dE] = nearpoints(movedElec', stationaryPoints');
 
 signedDist = dot(  (movedElec - stationaryPoints(kE,:))', N(:,kE));
-mean(signedDist)
-
 elec2plot = 1:size(electrodes,1); 1:128;[17 75];
 
-CI = nlparci(X,RESIDUAL,'jacobian',.5*JACOBIAN)
+CI = nlparci(X,RESIDUAL,'jacobian',.5*JACOBIAN);
 nP=10;
 idx = 1;
 fig = gcf;
