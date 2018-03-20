@@ -42,7 +42,7 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     %                       projectPath points to. It should have ROI forders, default
     %                       cortex file, ..
     
-  % (Noise Parameters), all this parameters are defined inside "noiseParam." structure
+  % (Noise Parameters), all this parameters are defined inside "NoiseParam." structure
     %
     %       mu: This number determines the ratio of pink noise to alpha noise
     %
@@ -99,7 +99,7 @@ opt	= ParseArgs(varargin,...
     'roiType'       , 'func',...
     'roiList'		, [],...
     'signalArray'   , [],...
-    'signalsf'      , 100 ,... %?????? Check what is the best
+    'signalsf'      , 100 ,... 
     'noiseParams'   , struct,...
     'sensorFig'     , true,...
     'doSource'      , false,...
@@ -152,7 +152,7 @@ end
 %------------------set anatomy data paths (For ROIs)-----------------------
 if isempty(opt.anatomyPath)
     anatDir = getpref('mrCurrent','AnatomyFolder');
-    if ~isempty(strfind(upper(anatDir),'HEADLESS')) || isempty(anatDir)
+    if contains(upper(anatDir),'HEADLESS') || isempty(anatDir) %~isempty(strfind(upper(anatDir),'HEADLESS'))
         anatDir = '/Volumes/svndl/anatomy';
         setpref('mrCurrent','AnatomyFolder',anatDir);
     else
@@ -168,20 +168,28 @@ for s=1:length(projectPath)
     % Read forward
     [~,subIDs{s}]=fileparts(projectPath{s});
     fwdPath = fullfile(projectPath{s},'_MNE_',[subIDs{s} '-fwd.fif']);
+    
+    % remove the session number from subjec ID
+    SI = strfind(subIDs{s},'ssn');
+    if ~isempty(SI)
+        subIDs{s} = subIDs{s}(1:SI-2);% -2 because there is a _ before session number
+    end
+    
     fwdStrct = mne_read_forward_solution(fwdPath); % Read forward structure
     % Checks if freesurfer folder path exist
     if ~ispref('freesurfer','SUBJECTS_DIR') || ~exist(getpref('freesurfer','SUBJECTS_DIR'),'dir')
         %temporary set this pref for the example subject
         setpref('freesurfer','SUBJECTS_DIR',fullfile(anatDir,'FREESURFER_SUBS'));% check
     end
-    srcStrct = readDefaultSourceSpace(subIDs{s}(1:7)); % Read source structure from freesurfer
+    srcStrct = readDefaultSourceSpace(subIDs{s}); % Read source structure from freesurfer
     fwdMatrix = makeForwardMatrixFromMne(fwdStrct ,srcStrct); % Generate Forward matrix
+    
     % Set ROI folder
     if strcmp(opt.roiType,'main')
         roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','ROIs');
         roiPaths = subfiles(roiDir);
     else
-        roiDir = fullfile(anatDir,subIDs{s}(1:7),'Standard','meshes',[opt.roiType,'_ROIs']);
+        roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.roiType,'_ROIs']);
         roiPaths = subfiles(roiDir);
     end
     if ~exist(roiDir,'dir')
@@ -204,7 +212,7 @@ for s=1:length(projectPath)
     tempList = unique(cellfun(@(x) x(1:end-4),tempList,'uni',false));
     % Generate signal of interest
     if isempty(opt.signalArray) 
-        [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSourceSignal(); % default signal (can be compatible with the number of ROIs, can be improved later )
+        [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal(); % default signal (can be compatible with the number of ROIs, can be improved later )
         opt.roiList = tempList([33 34]);
         masterList = opt.roiList;
     end   
@@ -231,14 +239,14 @@ for s=1:length(projectPath)
     disp ('Generating noise signal ...');
     
     % -----Calculate source distance matrix-----
-    load(fullfile(anatDir,subIDs{s}(1:7),'Standard','meshes','defaultCortex.mat'));
+    load(fullfile(anatDir,subIDs{s},'Standard','meshes','defaultCortex.mat'));
     MDATA = msh.data; MDATA.VertexLR = msh.nVertexLR;
     clear msh;
     spat_dists = CalculateSourceDistance(MDATA,Noise.distanceType);
     
     % -----This part calculate mixing matrix for coherent noise-----
     if strcmp(Noise.mixing_type_pink_noise,'coh')
-        mixDir = fullfile(anatDir,subIDs{s}(1:7),'Standard','meshes',['noise_mixing_data_' Noise.distanceType '.mat']);
+        mixDir = fullfile(anatDir,subIDs{s},'Standard','meshes',['noise_mixing_data_' Noise.distanceType '.mat']);
         if ~exist(mixDir,'file')% if the mixing data is not calculated already
             noise_mixing_data = mrC.Simulate.GenerateMixingData(spat_dists);
             save(mixDir,'noise_mixing_data');
@@ -260,7 +268,9 @@ for s=1:length(projectPath)
         ROIcorr = false;
         while ROIcorr==false
             warning(['Number of ROIs does not match the number of input signals. Please select ' num2str(srcNum) ' ROIs among the list below:']);
-            if strcmp(opt.roiType,'wang'), tempList = cellfun(@(x) x(11:end),tempList,'uni',false);end
+            if strcmp(opt.roiType,'wang')
+                tempList = cellfun(@(x) x(11:end),tempList,'uni',false);
+            end
             List = strcat(sprintfc('%d',1:numel(tempList)),{' - '},tempList);
             display(List);
             ROIidx = unique(input(['Please enter ' num2str(srcNum) ' ROIs: (example: [1 10])\n']));
@@ -273,7 +283,7 @@ for s=1:length(projectPath)
         end     
     end
     
-    [EEGData,sourceDataOrigin] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % NoiseParams
+    [EEGData,sourceDataOrigin] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % noiseParams
     
 %--------------Adjust structure for output and plots-----------------------
     invPath = fullfile(projectPath{s},'Inverses',opt.inverse);
