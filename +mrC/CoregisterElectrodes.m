@@ -127,40 +127,36 @@ function [scf,fidError] = CoregisterElectrodes( elpFile, fiducialFile, outputDir
     sseCurrent = inf;
     for z = 1:2
         if z == 1
-            tempFiducials = 1000*[ lpa.x, lpa.y, lpa.z; ...
+            tempFiducials = [ lpa.x, lpa.y, lpa.z; ...
                 rpa.x, rpa.y, rpa.z; ...
                 nas.x, nas.y, nas.z];
         else
-            tempFiducials = 1000*[ 2*lpa.x, lpa.y-nas.y, lpa.z; ...
+            tempFiducials = [ 2*lpa.x, lpa.y-nas.y, lpa.z; ...
                 2*rpa.x, rpa.y-nas.y, rpa.z; ...
                 nas.x, nas.y, nas.z];
         end
-        [tAlign, rAlign] = alignFiducials(tempFiducials,mriFiducials);
-        transMat = [ rAlign, tAlign'; 0 0 0 1];
-        transFid = transMat*[tempFiducials, [1; 1; 1;]]';
-        transFid = transFid(1:3,:)';
-        sseOrig = sum((transFid(:)-mriFiducials(:)).^2);
-        if sseOrig < sseCurrent
-            sseCurrent = sseOrig;
+        tempFiducials = tempFiducials * 1000;
+        [tAlign, rAlign, transFid, sse] = alignFiducials(tempFiducials,mriFiducials);
+        if sse < sseCurrent
+            sseCurrent = sse;
             t = tAlign;
             r = rAlign;
+            transFiducials = transFid;
             elecFiducials = tempFiducials;
         else
         end
     end
 
-    trans = [ r, t'; 0 0 0 1];
     pathstr = fileparts(fiducialFile);
     headSurfFile = dir(fullfile(pathstr,'*_fs4-head.fif'));
     headSurfFullFile = fullfile(pathstr,headSurfFile(1).name);
     surf =  mne_read_bem_surfaces(headSurfFullFile);
-
-    transFid = trans*[elecFiducials, [1; 1; 1;]]';
-    transFid = transFid(1:3,:)';
-    elecCoord = [1000*scf.x', 1000*scf.y', 1000*scf.z', ones(length(scf.x),1)];
-    transElec = trans*elecCoord';
-    transElec = transElec(1:3,:)';
     surf.rr = surf.rr*1000;
+
+    trans = [ r, t'; 0 0 0 1];
+    elecCoord = [1000*scf.x', 1000*scf.y', 1000*scf.z', ones(length(scf.x),1)];
+    transElectrodes = trans*elecCoord';
+    transElectrodes = transElectrodes(1:3,:)';
 
     % map digitized head shape onto hi-res scalp
     if headShapeDigitized
@@ -174,12 +170,24 @@ function [scf,fidError] = CoregisterElectrodes( elpFile, fiducialFile, outputDir
     else
         transHsp = [];
     end
-    [nT, fitHsp] = mrC.FitPointsToScalp(surf,transFid,transElec,transHsp);
+    %[nT, fitHsp] = mrC.FitPointsToScalp_orig(surf,transFid,transElectrodes,transHsp);
+    [nT, fitHsp] = mrC.FitPointsToScalp(surf,transElectrodes,transHsp);
+    % update translation according to electrode fits
     trans = nT*trans;
     transFile = fullfile(outputDir,'elp2mri.tran');
     fid = fopen(transFile,'w');
     fprintf(fid,'%d %d %d %d\n',trans');
     fclose(fid);
+    
+    applyElectodeFits = true;
+    % recompute fiducial and electrode locations, according to new trans file
+    if applyElectodeFits
+        transFiducials = trans * [elecFiducials, ones(length(elecFiducials),1)]';
+        transFiducials = transFiducials(1:3,:)';
+        transElectrodes = trans*elecCoord';
+        transElectrodes = transElectrodes(1:3,:)';
+    else
+    end
     
     %% DISPLAY THE ELECTRODE LOCATIONS
     if display == 1
@@ -190,30 +198,21 @@ function [scf,fidError] = CoregisterElectrodes( elpFile, fiducialFile, outputDir
             end
         else
         end
-        elecFiducials = [elecFiducials, [1; 1; 1;]];
-        transFid = trans*elecFiducials';
-        transFid = [transFid(1:3,:)/1000]';
-
-        elecCoord = [1000*scf.x', 1000*scf.y', 1000*scf.z', ones(length(scf.x),1)];
-
-        transElec = trans*elecCoord';
-        transElec = (transElec(1:3,:)/1000)';
-        
         fidMriH = scatter3( mriFiducials(:,1)/1000, mriFiducials(:,2)/1000,mriFiducials(:,3)/1000, 100, 'g', 'filled' );
         hold on;
-        fidElecH = scatter3( transFid(:,1), transFid(:,2),transFid(:,3), 120, 'r', 'filled' );
+        fidElecH = scatter3( transFiducials(:,1)/1000, transFiducials(:,2)/1000,transFiducials(:,3)/1000, 100, 'r', 'filled' );
         scatter3( mriFiducials(3,1)/1000,mriFiducials(3,2)/1000,mriFiducials(3,3)/1000,1200,'kx');
-        elecH = scatter3( transElec(:,1), transElec(:,2),transElec(:,3), 20, 'k', 'filled' );
+        elecH = scatter3( transElectrodes(:,1)/1000, transElectrodes(:,2)/1000,transElectrodes(:,3)/1000, 50,[1 1 0], 'filled' );
 
         if ~isempty(fitHsp)
-            hspH = scatter3( fitHsp(:,1)/1000, fitHsp(:,2)/1000,fitHsp(:,3)/1000, 60, 'y', 'filled' );
+            hspH = scatter3( fitHsp(:,1)/1000, fitHsp(:,2)/1000,fitHsp(:,3)/1000, 50, 'color', [.8 .4 0], 'filled' );
             %legend([fidMriH,fidElecH,elecH,hspH],'MRI defined fiducials','Electrode Fiducials','NOSE','Electrodes','Headshape Points')
         else
             %legend([fidMriH,fidElecH,elecH],'MRI defined fiducials','Electrode Fiducials','NOSE','Electrodes','Headshape Points')
         end
         
         % compute error
-        fidDiff = (1000*transFid-mriFiducials);
+        fidDiff = (transFiducials-mriFiducials);
         fidError = (sqrt(sum(fidDiff.^2,2)));
         
         % add some gui functionality
@@ -223,7 +222,7 @@ function [scf,fidError] = CoregisterElectrodes( elpFile, fiducialFile, outputDir
     end
 end
 
-function [trans, rot, elecPts] = alignFiducials(elecPts, volPts)
+function [trans, rot, transPts, sse] = alignFiducials(elecPts, mriPts)
     %[trans, rot] = alignFiducials(inpts, volpts)	
     %	returns alignment matrix given elecPts and elecPts as corresponding points
     %	rot rotates elecPts into volPts coordinate frame.
@@ -232,11 +231,11 @@ function [trans, rot, elecPts] = alignFiducials(elecPts, volPts)
     
     % subtracting the mean, centering on zero
     orig_elecPts = elecPts;
-    orig_volPts = volPts;
-    volPts = volPts - (mean(volPts)'*ones(1,length(volPts)))';
+    orig_mriPts = mriPts;
+    mriPts = mriPts - (mean(mriPts)'*ones(1,length(mriPts)))';
     elecPts = elecPts - (mean(elecPts)'*ones(1,length(elecPts)))';
     
-    H = elecPts' * volPts;
+    H = elecPts' * mriPts;
     [U,S,V] = svd(H);
 
     mirrorFixer = [ 1 0 0; 0 1 0; 0 0 det(U*V);];
@@ -249,7 +248,13 @@ function [trans, rot, elecPts] = alignFiducials(elecPts, volPts)
     
     % apply transformation to original matrices
     elecPts = (rot*(orig_elecPts'))';
-    trans = mean(orig_volPts) - mean(elecPts);
+    trans = mean(orig_mriPts) - mean(elecPts);
+    transMat = [ rot, trans'; 0 0 0 1];
+    transPts = transMat*[orig_elecPts, [1; 1; 1;]]';
+    transPts = transPts(1:3,:)';
+    
+    % compute the error
+    sse = sum((transPts(:)-orig_mriPts(:)).^2);
 end
 
 function isGood = isElpFileGood(elpFile)

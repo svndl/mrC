@@ -1,6 +1,6 @@
-function movedPoints = RigidRotate(params,movablePoints)
+function [transMat,movedPoints] = RigidRotate(params,moveablePoints)
 % mrC.RigidRotate - performs a rigid body transformation
-% movedPoints = mrC.RigidRotate(params,movablePoints)
+% [movedPoints,rotMtx] = RigidRotate(params,movablePoints)
 
 %   This function that performs a rigid body transformation on movablePoints
 %   that is specified as follows:
@@ -13,6 +13,11 @@ function movedPoints = RigidRotate(params,movablePoints)
 %	Rx   = params(4); rotation around x axis
 %	Ry   = params(5); rotation around y
 %	Rz   = params(6); rotation around z
+    
+    if nargin < 2
+        moveablePoints = [];
+    else
+    end
 
 	xShift = params(1);
 	yShift = params(2);
@@ -20,17 +25,28 @@ function movedPoints = RigidRotate(params,movablePoints)
 	ang1   = params(4);
 	ang2   = params(5);
 	ang3   = params(6);
-
-	movedPoints =  rotate(movablePoints,ang1,'x');
- 	movedPoints =  rotate(movedPoints,ang2,'y');
- 	movedPoints =  rotate(movedPoints,ang3,'z');
-
-    movedPoints = 	[movedPoints(:,1)+xShift, ...
- 					 movedPoints(:,2)+yShift, ...
-					 movedPoints(:,3)+zShift];
+    
+    Xmat =  rotate(ang1,'x');
+    Ymat =  rotate(ang2,'y');
+    Zmat =  rotate(ang3,'z');
+    rotMat = Xmat*Ymat*Zmat;
+    transMat = [rotMat, [xShift yShift zShift]'; 0 0 0 1];
+    
+    if ~isempty(moveablePoints)
+        if isequal(size(moveablePoints,1),3)
+            movedPoints = transMat * [moveablePoints; ones(1,length(moveablePoints))];
+            movedPoints = movedPoints(1:3,:);
+        elseif isequal(size(moveablePoints,2),3)
+            movedPoints = transMat * [moveablePoints, ones(length(moveablePoints),1)]';
+            movedPoints = movedPoints(1:3,:)';
+        else
+            error('mrC.RigidRotate: Input XYZ must be [N,3] or [3,N] matrix.\n');
+        end
+    else
+    end
 end
                  
-function [XYZ] = rotate(XYZ,angle,axis,units)
+function Rot = rotate(angle,axis,units)
     % rx - Rotate 3D Cartesian coordinates around the X, Y or Z axis
     %
     % Useage: [XYZ] = rx(XYZ,alpha,units)
@@ -77,15 +93,5 @@ function [XYZ] = rotate(XYZ,angle,axis,units)
         otherwise
             msg = sprintf('/n Unknown rotation axis provided %s',axis);
             error(msg);
-    end
-    if isequal(size(XYZ,1),3),
-        XYZ = Rot * XYZ;
-    else
-        XYZ = XYZ';
-        if isequal(size(XYZ,1),3),
-            XYZ = [Rot * XYZ]';
-        else
-            error('mrC.RigidRotate: Input XYZ must be [N,3] or [3,N] matrix.\n');
-        end
     end
 end
