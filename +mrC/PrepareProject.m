@@ -114,37 +114,47 @@ function PrepareProject( projectDir )
             return;
         end
         
+        % get hi-res scalp surface file
+        headSurfFile = fullfile(subjDir,'bem',[subjId '_fs4-head.fif']);
+        if ~exist(headSurfFile,'file')
+            msg = sprintf('Cannot find hi-res scalp surface: %s\n Not ploting subject scalp, or using hi res registration\n',fiducialFile);
+            display(msg);
+        else
+            surf =  mne_read_bem_surfaces(headSurfFile);
+            patch('faces',surf.tris,'vertices',surf.rr,'linestyle','none','facecolor',[.8 .7 .6],'facealpha',.75);
+            material dull;
+            lightangle(240, 30)
+            lightangle(120, 30)
+            lightangle(0, 0)
+            axis normal
+            axis equal
+            axis vis3d
+            axis tight;
+            axis off
+            campos([    0.7712    1.6339    0.7370]);
+            camva(7);
+            set(gcf, 'NumberTitle', 'off', 'Name', subjId, 'Position', [ 100,100, 512,512 ], 'Color', [ 0 0.75 0 ] );
+        end
+        
+        [elecPos,fidError] = mrC.CoregisterElectrodes( elpFile, fiducialFile, outputDir );
+        
+        msg = sprintf('%s\nLEFT EAR ERROR:   %03.2f mm \nRIGHT EAR ERROR: %03.2f mm \nNASION ERROR:     %03.2f mm \nTOTAL ERROR      %03.2f mm',... 
+            subjId,fidError(1),fidError(2),fidError(3),sum(fidError));
+        msg = sprintf('\n##########################\n%s \n##########################\nSAVE DATA AND CONTINUE Y/N [N]? ', msg);
+        choice = input(msg,'s');
+        if isempty(choice)
+            choice = 'Y';
+        end
+        if strcmpi(choice,'N') || strcmpi(choice,'NO')
+            close all;
+            return;
+        else
+        end
         % loop over axx export list
-        for iFile = 1:length(exportFileList),
-            dataFile = fullfile(pdExportDir,exportFileList{iFile});
+        for z = 1:length(exportFileList),
+            dataFile = fullfile(pdExportDir,exportFileList{z});
             fprintf('Processing file: %s\n',dataFile);
-            if iFile == 1 % only register electrodes once
-                doReg = true;
-                % get hi-res scalp surface file
-                headSurfFile = fullfile(subjDir,'bem',[subjId '_fs4-head.fif']);
-                if ~exist(headSurfFile,'file')
-                    msg = sprintf('Cannot find hi-res scalp surface: %s\n Not ploting subject scalp, or using hi res registration\n',fiducialFile);
-                    display(msg);
-                else
-                    surf =  mne_read_bem_surfaces(headSurfFile);
-                    patch('faces',surf.tris,'vertices',surf.rr,'linestyle','none','facecolor',[.8 .7 .6]);
-                    material dull;
-                    lightangle(240, 30)
-                    lightangle(120, 30)
-                    lightangle(0, 0)
-                    axis normal
-                    axis equal
-                    axis vis3d
-                    axis tight;
-                    axis off
-                    campos([    0.7712    1.6339    0.7370]);
-                    camva(7);
-                    set(gcf,'name',subjId)
-                end  
-            else
-                doReg = false;
-            end
-            mrC.PowerDiva2Mne( elpFile, dataFile, fiducialFile, outputDir, doReg)
+            mrC.MakeFIFFData(dataFile,elecPos,outputDir);
         end
     end
     display('Done importing data into MNE')
