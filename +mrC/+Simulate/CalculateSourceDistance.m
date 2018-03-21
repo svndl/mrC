@@ -44,15 +44,12 @@ function [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
             warning ('If the matlab version you are using is older than 2015b, calculation of Geodesic distances might take a several hours. SUGGESTION: Use Euclidean distance instead');
             
             % this input gives an option to the user to switch to Euclidean if Geodesic is taking too much time
-            cond = 1;
-            while cond==1 
-                inp = input('Do you want to continue with Euclidean distance? \n Enter yes to continue with Euclidean distance \n Enter no to continue with Geodesic distance\n','s');
-                if strcmp(inp,'yes') 
-                    spat_dists =  Euc_dist;
-                    return
-                elseif strcmp(inp,'no')
-                    cond = 0;    
-                end
+
+            inp = input('Do you want to continue with Euclidean distance?[Y]/N \n Enter Y to continue with Euclidean distance \n Enter N to continue with Geodesic distance\n','s');
+            if strcmpi(inp,'N')
+            else
+                spat_dists =  Euc_dist;
+                return
             end
             %----------------------SLOW SHORTEST PATH----------------------
             hWait = waitbar(0,'Calculating Geodesic distances ... ');
