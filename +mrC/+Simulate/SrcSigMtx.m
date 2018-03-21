@@ -39,15 +39,21 @@ roiSet = repmat({NaN},2,length(masterList));
 if ~isempty(roiChunk)
     %% seed ROIs
     % Note: I consider here that the ROI labels in shortList are unique (L or R are considered separetly)
-    [~,RoiIdx] = intersect(lower(shortList),lower(masterList));% find the ROIs, make both in lower case to avoid case sensitivity
+    [~,RoiIdx,order] = intersect(lower(shortList),lower(masterList));% find the ROIs, make both in lower case to avoid case sensitivity
 
     % V4v to V4: LATER CHANGE THIS PART
     %   indv4L = find(cellfun(@(x) ~isempty(x),strfind(lower(shortList),'v4-r')));indv4S = find(cellfun(@(x) ~isempty(x),strfind(lower(materList),'v4-r')));
     % V3a to V3ab
 
     if numel(RoiIdx)~= size(signalArray,2)
-        error('Number of ROI is not equal to number of source signals');
+        EEGData=[]; 
+        sourceData=[];
+        roiSet=[];
+        warning('Number of ROIs is not equal to number of source signals');
+        return;
+        % error('Number of ROIs is not equal to number of source signals');
     else
+        RoiIdx = RoiIdx(order);
         % place source array in source space
         sourceTemp = zeros(size(noise));
         for s = 1: size(signalArray,2)% place the signal for each source

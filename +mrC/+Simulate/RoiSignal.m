@@ -8,25 +8,22 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     % 
 %--------------------------------------------------------------------------    
 % INPUT:
-  % projectPath - string, path to mrCurrent project folder. ELHAM: For now, I have considered a single subject folder
-    %              If this is a string,subIds and dataIn will be ignored ("mrCurrent mode").??
-    %              If this is false, subIds and dataIn will be used ("direct mode"). % for now I have not considered this
-    %
-    %
-    %   note that in direct mode, dataIn and subIds are required!
+  % projectPath: Cell array of strings, indicating a list of paths to mrCurrent project folder of subjects
+    %             
+    % 
     %
   %   <options>:
     %
   % (Source Signal Parameters)
-    %       signalArray:    a ns x Srcnum matrix, where ns is the number of
-    %                       time samples and Srcnum is the number of seed sources
-    %                       [ns x 2 SSVEP sources] -> for these two, the
-    %                       default ROIs of VO1L and V4R in functional
+    %       signalArray:    a NS x seedNum matrix, where NS is the number of
+    %                       time samples and seedNum is the number of seed sources
+    %                       [NS x 2 SSVEP sources] -> for these two, the
+    %                       random ROIs in functional
     %                       roitype is selected
     %
     %       signalsf:       sampling frequency of the input source signal
     %       
-    %       signalFF:       a 1 x Srcnum vector: determines the fundamental
+    %       signalFF:       a 1 x seedNum vector: determines the fundamental
     %                       frequencis of sources
   
   % (ROI Parameters)
@@ -35,7 +32,7 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     %                       /Volumes/svndl/anatomy/SUBJ/standard/meshes/ROIs
     %                       is to be used. (['func']/'wang'/'glass','kgs','benson','main').
     %
-    %       roiList:        a 1 x Srcnum cell of strings, with names of ROIs to simulate. 
+    %       roiList:        a 1 x seedNum cell of strings, with names of ROIs to simulate. 
     %                       [all ROIs of the specified type]
     %
     %       anatomyPath:  The folder should be for the same subject as
@@ -71,20 +68,20 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     %
     
 % OUTPUT:
-    %       EEGData:        a ns x e matrix, containing simulated EEG,
-    %                       where ns is number of time samples and e is the
+    %       EEGData:        a NS x e matrix, containing simulated EEG,
+    %                       where NSs is number of time samples and e is the
     %                       number of the electrodes
     %
     %
-    %       sourceDataOrigin: a ns x sources matrix, containing simulated
+    %       sourceDataOrigin: a NS x srcNum matrix, containing simulated
     %                           EEG in source space before converting to
-    %                           sensor space EEG, where sources is the
+    %                           sensor space EEG, where srcNum is the
     %                           number of source points on the cortical
     %                           meshe
     %
-    %       masterList:     a 1 x Srcnum cell of strings, indicating ROI names
+    %       masterList:     a 1 x seedNum cell of strings, indicating ROI names
     %
-    %       subIDs:         a 1 x s cell of strings, indicating subjects IDs     SHOULD BE UPDATED LATER
+    %       subIDs:         a 1 x s cell of strings, indicating subjects IDs
     %
 %--------------------------------------------------------------------------
  % The function was originally written by Peter Kohler, ...
@@ -127,19 +124,6 @@ if ~strcmp(opt.roiType,'main')% THIS SHOUDL BE CORRECTED
 else
 end
 
-%--------------------------set inverse path--------------------------------
- %projectPath = subfolders(projectPath,1);% CHANGED FOR NOW, SHOULD CHANGE IT BACK?
-if isempty(opt.inverse)
-    tempStrct = dir(fullfile(projectPath{1},'Inverses/*'));% CHANGE
-    %tempStrct = dir(mrCfolders{2}); %CHANGE
-    [~,tempIdx]=max(cat(3,tempStrct.datenum)); % sort by date
-    opt.inverse = tempStrct(tempIdx).name;         % use latest
-else
-    if iscell(opt.inverse) % unwrap if necessary
-        opt.inverse = opt.inverse{1};
-    else
-    end
-end
 
 %----------Set folder for saving the results...default is desktop----------
 if isempty(opt.figFolder)
@@ -161,12 +145,24 @@ else
     anatDir = opt.anatomyPath;
 end
 
+% -----------------Generate default source signal if not given-------------
+% Generate signal of interest
+    if isempty(opt.signalArray) 
+        if isempty(opt.roiList),
+            [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal(); % default signal (can be compatible with the number of ROIs, can be improved later)
+        else 
+            [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalFreq',round(rand(lengthopt.roiList)*3+3));
+        end
+    end  
+
+
 %% ===========================GENERATE EEG signal==========================
 
-for s=1:length(projectPath)
-%--------------------READ FORWARD SOLUTION AND ROIs------------------------  
+for s = 1:length(projectPath)
+%--------------------------READ FORWARD SOLUTION---------------------------  
     % Read forward
-    [~,subIDs{s}]=fileparts(projectPath{s});
+    [~,subIDs{s}] = fileparts(projectPath{s});
+    
     fwdPath = fullfile(projectPath{s},'_MNE_',[subIDs{s} '-fwd.fif']);
     
     % remove the session number from subjec ID
@@ -184,7 +180,7 @@ for s=1:length(projectPath)
     srcStrct = readDefaultSourceSpace(subIDs{s}); % Read source structure from freesurfer
     fwdMatrix = makeForwardMatrixFromMne(fwdStrct ,srcStrct); % Generate Forward matrix
     
-    % Set ROI folder
+    %-----------------------------Set ROI folder---------------------------
     if strcmp(opt.roiType,'main')
         roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','ROIs');
         roiPaths = subfiles(roiDir);
@@ -193,41 +189,53 @@ for s=1:length(projectPath)
         roiPaths = subfiles(roiDir);
     end
     if ~exist(roiDir,'dir')
-        error('selected roi directory does not exist: %s', roiDir);
+        EEGData{s}=[]; sourceDataOrigin{s}=[];
+        warn = ['' opt.roiType ' ROIs are not defined for subject ' subIDs{s}];
+        warning(warn);
+        continue;
+        %error('selected roi directory does not exist: %s', roiDir);
     else
     end
-    
-    % Read the list of ROIs
-    if s==1
-        if isempty(opt.roiList)
-             opt.roiList = unique(cellfun(@(x) x(1:end-4),roiPaths,'uni',false));%roiPaths; % I CONSIDER THE LEFT AND RIGHT ROIS SEPARATELY
+
+    %--------------------------Set inverse path--------------------------------
+    % projectPath = subfolders(projectPath,1);% CHANGED FOR NOW, SHOULD CHANGE IT BACK?
+    if isempty(opt.inverse)
+        tempStrct = dir(fullfile(projectPath{s},'Inverses/*'));% CHANGE
+        %tempStrct = dir(mrCfolders{2}); %CHANGE
+        [~,tempIdx]=max(cat(3,tempStrct.datenum)); % sort by date
+        opt.inverse = tempStrct(tempIdx).name;         % use latest
+    else
+        if iscell(opt.inverse) % unwrap if necessary
+            opt.inverse = opt.inverse{1};
         else
         end
-        masterList = opt.roiList;
-    else
     end
     
-% -----------------Generate default source signal--------------------------
-    [roiChunk,tempList] = mrC.ChunkFromMesh(roiDir,size(fwdMatrix,2));
+%--------------------Display message---------------------------------------
+disp (['Simulating EEG for subject ' subIDs{s}]);
+% -----------------Default ROIs--------------------------
+    seedNum = size(opt.signalArray,2); % Number of seed sources
+    
+    [roiChunk,tempList] = mrC.ChunkFromMesh(roiDir,size(fwdMatrix,2));% read the ROIs
     tempList = unique(cellfun(@(x) x(1:end-4),tempList,'uni',false));
-    % Generate signal of interest
-    if isempty(opt.signalArray) 
-        [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal(); % default signal (can be compatible with the number of ROIs, can be improved later )
-        opt.roiList = tempList([33 34]);
-        masterList = opt.roiList;
-    end   
- 
+    
+    % Select Random ROIs 
+    if isempty(opt.roiList) % This part should be updated. The default ROIs should be the same among subjects
+        % Initialized only for the first subject, then use the same for the rest
+        opt.roiList = tempList(randperm(numel(tempList),seedNum));
+        
+    end
+    masterList = opt.roiList;
 %-------------------Generate noise: from Sebastian's code------------------
     
     % -----Noise default parameters-----
-    NS = size(opt.signalArray,1); % number of time samples
-    srcNum = size(opt.signalArray,2); % number of seed sources
+    NS = size(opt.signalArray,1); % Number of time samples
     Noise = opt.noiseParams;
     Noisefield = fieldnames(Noise);
     
-    if ~any(strcmp(Noisefield,'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
-    if ~any(strcmp(Noisefield,'lamda')),Noise.lambda = 1/NS;end % power distribution between signal and 'total noise' (SNR)
-    if ~any(strcmp(Noisefield,'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% ['active_nodes', 'all_nodes']
+    if ~any(strcmp(Noisefield, 'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
+    if ~any(strcmp(Noisefield, 'lamda')),Noise.lambda = 1/NS;end % power distribution between signal and 'total noise' (SNR)
+    if ~any(strcmp(Noisefield, 'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% 'active_nodes'/['all_nodes']
     if ~any(strcmp(Noisefield, 'distanceType')),Noise.distanceType = 'Euclidean';end
     if ~any(strcmp(Noisefield, 'Noise.mixing_type_pink_noise')), Noise.mixing_type_pink_noise = 'coh' ;end % coherent mixing of pink noise
     if ~any(strcmp(Noisefield, 'alpha_nodes')), Noise.alpha_nodes = 'all';end % for now I set it to all visual areas, later I can define ROIs for it
@@ -242,7 +250,7 @@ for s=1:length(projectPath)
     load(fullfile(anatDir,subIDs{s},'Standard','meshes','defaultCortex.mat'));
     MDATA = msh.data; MDATA.VertexLR = msh.nVertexLR;
     clear msh;
-    spat_dists = CalculateSourceDistance(MDATA,Noise.distanceType);
+    spat_dists = mrC.Simulate.CalculateSourceDistance(MDATA,Noise.distanceType);
     
     % -----This part calculate mixing matrix for coherent noise-----
     if strcmp(Noise.mixing_type_pink_noise,'coh')
@@ -256,40 +264,48 @@ for s=1:length(projectPath)
     end
     
     % ----- Generate noise-----
+    % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
     noiseSignal = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
     % 
 %------------------------PLACE SIGNAL IN THE ROIs--------------------------
-    warning('on');
+    
     display('Generating EEG signal ...')
     % Put an option to get the ROIs either from input of function or from command line
     
-    % In the following function size(opt.signalArray,2) should be equal to size of masterList) 
-    if numel(masterList)~=srcNum
+
+    CorrectROI = cellfun(@(x) strcmpi(tempList,x), masterList,'UniformOutput',false);% compare the names of input ROIs with the ones from the filess
+    
+    % In the following function size(opt.signalArray,2) should be equal to size of masterList)     
+    if (numel(masterList)~=seedNum) && (sum(cellfun(@(x) sum(x),CorrectROI))==seedNum)
         ROIcorr = false;
         while ROIcorr==false
-            warning(['Number of ROIs does not match the number of input signals. Please select ' num2str(srcNum) ' ROIs among the list below:']);
+            warning(['Number of ROIs does not match the number of input signals. Please select ' num2str(seedNum) ' ROIs among the list below:']);
             if strcmp(opt.roiType,'wang')
                 tempList = cellfun(@(x) x(11:end),tempList,'uni',false);
             end
             List = strcat(sprintfc('%d',1:numel(tempList)),{' - '},tempList);
             display(List);
-            ROIidx = unique(input(['Please enter ' num2str(srcNum) ' ROIs: (example: [1 10])\n']));
+            ROIidx = unique(input(['Please enter ' num2str(seedNum) ' ROIs: (example: [1 10])\n']));
             
             % If the criteria is correct
-            if (numel(ROIidx)==srcNum) && (prod(ismember(ROIidx,1:numel(tempList)))) 
+            if (numel(ROIidx)==seedNum) && (prod(ismember(ROIidx,1:numel(tempList)))) 
+                
                 masterList = masterList(ROIidx); 
+                opt.roiList = masterList;
                 ROIcorr = true;
             end
         end     
     end
     
-    [EEGData,sourceDataOrigin] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % noiseParams
+    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % noiseParams
     
 %--------------Adjust structure for output and plots-----------------------
     invPath = fullfile(projectPath{s},'Inverses',opt.inverse);
     %invMatrix = mrC_readEMSEinvFile(invPath);
     readyInverse{s} = invPath;    
 end
+
+
 
 %% =======================DRAW FIGURES=====================================
 %The length of fft should be indicated (This is similar to axx file from PowerDiva)
@@ -303,42 +319,50 @@ else
     WL = opt.signalsf*2;
 end
 
-% -----FIRST PLOT: EEG and source spectrum-----
-freq = (-0.5:1/(WL*4):0.5-1/(WL*4))*opt.signalsf;
-figure,
-subplot(3,1,1);
-plot(freq,abs(fftshift(fft(opt.signalArray,WL*4),1)));
-xlim([0,max(freq)]);xlabel('Frequency(Hz)');
-ylabel('Source signal','Fontsize',14);
-
-subplot(3,1,2);
-plot(freq,abs(fftshift(fft(noiseSignal(:,1:500:end),WL*4),1)));
-xlim([0,max(freq)]);xlabel('Frequency(Hz)');
-ylabel('Noise signal','Fontsize',14);
-
-subplot(3,1,3);
-plot(freq,abs(fftshift(fft(EEGData,WL*4),1)));
-xlim([0,max(freq)]);xlabel('Frequency(Hz)');
-ylabel('EEG signal','Fontsize',14);
-
-
-% -----SECOND PLOT: interactive head and spectrum plots-----
-ASDEEG = abs(fftshift(fft(EEGData,WL),1));% it is important which n is considered for fft
+%-------------------Calculate EEG spectrum---------------------------------
 freq = (-0.5:1/WL:0.5-1/WL)*opt.signalsf; % frequncy labels, based on fft
 fidx = find(freq>=0); freq = freq(fidx);
-ASDEEG = ASDEEG(fidx,:);
 
-if ~isempty(opt.signalFF)
-    FOI = opt.signalFF;
-else
-    %ASDSIG = abs(fftshift(fft(opt.signalArray,WL)));% if the fundamental frequencies are not given as an input to the function
-    FOI = 2;% for now just 2Hz
+for s = 1: length(projectPath)
+    if ~isempty(EEGData{s})
+        ASDEEG{s} = abs(fftshift(fft(EEGData{s},WL),1));% it is important which n is considered for fft
+        ASDEEG{s} = ASDEEG{s}(fidx,:);
+    end
 end
-[~,~,FOIidx] = intersect(FOI,round(freq*1000)/1000);% find the index of fundamental frequencies in freq
 
-Probs{1} = {'facecolor','none','edgecolor','none','markersize',10,'marker','o','markerfacecolor','g' ,'MarkerEdgeColor','k','LineWidth',.5};% plotting parameters
-conMap = jmaColors('hotcortex');
-mrC.Simulate.PlotEEG(ASDEEG,freq,FOIidx,Probs,opt.figFolder,masterList,opt.signalFF);
+MASDEEG = mean(cat(3,ASDEEG{:}),3);
 
+% ------------------------FIRST PLOT: EEG and source spectra---------------
+freq2 = (-0.5:1/(WL*4):0.5-1/(WL*4))*opt.signalsf;
+figure,
+subplot(3,1,1); % Plot signal ASD
+plot(freq2,abs(fftshift(fft(opt.signalArray,WL*4),1)));
+xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
+ylabel('Source signal','Fontsize',14);
+
+subplot(3,1,2); % Plot noise ASD
+plot(freq2,abs(fftshift(fft(noiseSignal(:,1:500:end),WL*4),1)));
+xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
+ylabel('Noise signal','Fontsize',14);
+
+subplot(3,1,3); % plot EEG ASD
+%plot(freq2,abs(fftshift(fft(EEGData,WL*4),1)));
+plot(freq,MASDEEG);
+xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
+ylabel('EEG signal','Fontsize',14);
+
+input('Press enter to continue....');
+close all;
+% --------------SECOND PLOT: interactive head and spectrum plots-----------
+
+ % Plot average over individuals
+mrC.Simulate.PlotEEG(MASDEEG,freq,opt.figFolder,'average over all  ',masterList,opt.signalFF);
+
+ % Plot individuals
+for s = 1: length(projectPath)
+    if ~isempty(EEGData{s})
+        mrC.Simulate.PlotEEG(ASDEEG{s},freq,opt.figFolder,subIDs{s},masterList,opt.signalFF);
+    end
+end
 
 end
