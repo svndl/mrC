@@ -1,6 +1,12 @@
 classdef axx
-    %UNTITLED Summary of this class goes here
-    %   Detailed explanation goes here
+    % This class defines standard data type that is exported by xDiva. Axx
+    % contains spectral and time domain representation of the multichannel
+    % steady-state brain response signal.
+    
+    %----------------------------------------------------------------------
+    % Author: Peter Kohler,
+    % Last modification: Elham Barzegaran, 03/26/2018
+    %======================================================================
 
     properties
         cndNmb
@@ -8,24 +14,28 @@ classdef axx
     end
     
     properties (Dependent)
-        nT   % how many time points
+        nT   % how many time points: for a period of a single stimulus cycle
         nCh  % how many channels
+        nFr  % how many frequencies
     end
     
     properties
-        dTms % time resolution
+        dTms % time resolution in miliseconds
         dFHz % frequency resolution
-        nFr  % how many frequencies
-        i1F1 % 
-        i1F2 %
-        DataUnitStr
-        Amp
-        Cos
-        Sin
+        i1F1 % fundamental frequency 1
+        i1F2 % fundamental frequency 1
+        DataUnitStr %like 'microVolts' 
+        Amp % Amplitude spectrum of EEG: a nFr x nCh x nTrl matrix
+        Cos % Cosine part of spectrum (real): a nFr x nCh x nTrl matrix
+        Sin % Sine part of spectrum (imaginary): a nFr x nCh x nTrl matrix
         SpecPValue
         SpecStdErr
         Cov
-        Wave
+        Wave % Averaged EEG in time domain: a nT x nCh x nTrl matrix: 
+        %%% Note that nT might be different from the time points used for
+        %%% spectrum estimation, since nT is the length of single stimulus 
+        %%% cycle, while time window for spectrum is selected so that dFHz 
+        %%% is about 0.5 Hz and time window lengths is an integer of stimulus cycle
     end
     
     methods
@@ -75,7 +85,10 @@ classdef axx
         function value = get.nCh(obj)
             value = size(obj.Wave,2);
         end
-            
+        function value = get.nFr(obj)
+            value = size(obj.Cos,1);
+        end
+        
         function identify(thisAxx)
             if isempty(thisAxx.Wave)
                 disp('I am an axx file. I am empty.');
