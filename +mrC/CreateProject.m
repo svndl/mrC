@@ -13,7 +13,7 @@ function CreateProject(varargin)
     %                    ([/Volumes/svndl/4D2/kohler/headless99])
     opt	= ParseArgs(varargin,...
             'mode'		, 'source', ...
-            'templateFolder', '/Volumes/svndl/4D2/kohler/headless99'...
+            'templateFolder', '/Volumes/svndl/mrC_Projects/kohler/headless99'...
             );
     
     if sum(strcmp(opt.mode,{'sensor','source'}))==0
@@ -21,7 +21,7 @@ function CreateProject(varargin)
     else
     end
     
-    projectDir = uigetdir('/Volumes/svndl/4D2/kohler', 'Source localization project folder?');
+    projectDir = uigetdir('/Volumes/svndl/mrC_Projects/kohler', 'Source localization project folder?');
     
     polPath{1} = '/Volumes/Denali_4D2/kohler/EEG_DATA/16_groups/Polhemus';
     sIdx = 0;
