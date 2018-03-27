@@ -20,7 +20,7 @@ function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, 
 %% ---------------------------- generate alpha noise------------------------
     %  
     alpha_noise = zeros(n_samples,n_nodes);
-    alpha_noise(:,alpha_nodes)  = repmat(mrC.Simulate.GetAlphaActivity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
+    alpha_noise(:,alpha_nodes)  = repmat(GetAlphaActivity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
     
     if strcmp(spatial_normalization_type,'active_nodes')
         n_active_nodes_alpha = sum(sum(abs(alpha_noise))~=0) ;
@@ -34,7 +34,7 @@ function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, 
     
     
 %% -----------------------------generate pink noise------------------------
-    pink_noise = mrC.Simulate.GetPinkNoise(n_samples, n_nodes );
+    pink_noise = GetPinkNoise(n_samples, n_nodes );
 
     % impose coherence on pink noise
     if strcmp(noise_mixing_data.mixing_type,'coh') % just in case we want to add other mixing mechanisms
@@ -53,7 +53,7 @@ function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, 
 
         pink_noise = real(ifft(pink_noise_spec,[],1));
         else
-        error('%s is not implemented as a mixing method',mixing_type_pink_noise)
+        error('%s is not implemented as a mixing method',noise_mixing_data.mixing_type)
     end
 
     if strcmp(spatial_normalization_type,'active_nodes')
@@ -88,5 +88,43 @@ function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, 
     end
 end
 
+function y = GetAlphaActivity(n_samples,sampling_freq,freq_band)
 
+% generate alpha activity as band-pass filtered white noise
+% returns a matrix of size [n_samples,n_nodes]
+% Author: Sebastian Bosse 03/2017
+%--------------------------------------------------------------------------
+
+if nargin <3
+    n_trials = 1 ;
+end
+
+% generate white noise
+x = randn(n_samples,1);
+
+% bandpass white noise according to alpha band
+[b,a] = butter(3, freq_band/sampling_freq*2); 
+y = filter(b,a, x); 
+
+% ensure zero mean value
+y = y - repmat(mean(y),[n_samples,1]) ;
+
+end
+
+function pink_noise = GetPinkNoise(n_samples,n_nodes)
+
+% generate pink noise by shaping white noise
+% returns a matrix of size [n_samples,n_nodes]
+% Author: Sebastian Bosse 01/2018
+%--------------------------------------------------------------------------
+
+    M = n_samples + rem(n_samples,2) ;
+    n = 1:M ;
+    scalings = sqrt(1./n);
+    scalings = repmat(scalings,[n_nodes,1])';
+        
+    noise_spec = fft(randn(M,n_nodes)).*scalings ;
+    pink_noise = real(ifft(noise_spec))  ;
+    pink_noise = pink_noise(1:n_samples,:) ;
+end
 
