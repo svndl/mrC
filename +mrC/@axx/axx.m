@@ -16,12 +16,12 @@ classdef axx
     properties (Dependent)
         nT   % how many time points: for a period of a single stimulus cycle
         nCh  % how many channels
-        nFr  % how many frequencies
     end
     
     properties
         dTms % time resolution in miliseconds
         dFHz % frequency resolution
+        nFr  % how many frequencies
         i1F1 % fundamental frequency 1
         i1F2 % fundamental frequency 1
         DataUnitStr %like 'microVolts' 
@@ -39,7 +39,10 @@ classdef axx
     end
     
     methods
-        function obj = axx(axxStrct)
+        function obj = axx(axxStrct,AVR)
+            if nargin<2
+                AVR=1;% average over trials?
+            end
              % class constructor
             if nargin > 0
                 % unchanged values, use first strct (will also work if oldStrct is just one 
@@ -53,29 +56,54 @@ classdef axx
                 obj.nFr = axxStrct(1).nFr;
 
                 % average together the following values Wave, Amp, Cos, Sin, Cov, SpecPValue, SpecStdErr
-                obj.Wave = mean(cat(3,axxStrct.Wave),3);
-                ampVal = mean(cat(3,axxStrct.Amp),3);
-                obj.Amp = ampVal(1:obj.nFr,:);
-                cosVal = mean(cat(3,axxStrct.Cos),3);
-                obj.Cos = cosVal(1:obj.nFr,:);
-                sinVal = mean(cat(3,axxStrct.Sin),3);
-                obj.Sin = sinVal(1:obj.nFr,:);
-                if isfield(axxStrct, 'SpecPValue')
-                    specpVal = mean(cat(3,axxStrct.SpecPValue),3);
-                    obj.SpecPValue = specpVal(1:obj.nFr,:);
-                else
-                    obj.SpecPValue = [];
-                end
-                if isfield(axxStrct, 'SpecStdErr')
-                    specstdVal = mean(cat(3,axxStrct.SpecStdErr),3);
-                    obj.SpecStdErr = specstdVal(1:obj.nFr,:);
-                else
-                    obj.SpecStdErr = [];
-                end
-                if isfield(axxStrct, 'Cov')
-                    obj.Cov = mean(cat(3,axxStrct.Cov),3);
-                else
-                    obj.SpecStdErr = [];
+                if AVR ==1,
+                    obj.Wave = mean(cat(3,axxStrct.Wave),3);
+                    ampVal = mean(cat(3,axxStrct.Amp),3);
+                    obj.Amp = ampVal(1:obj.nFr,:);
+                    cosVal = mean(cat(3,axxStrct.Cos),3);
+                    obj.Cos = cosVal(1:obj.nFr,:);
+                    sinVal = mean(cat(3,axxStrct.Sin),3);
+                    obj.Sin = sinVal(1:obj.nFr,:);
+                    if isfield(axxStrct, 'SpecPValue')
+                        specpVal = mean(cat(3,axxStrct.SpecPValue),3);
+                        obj.SpecPValue = specpVal(1:obj.nFr,:);
+                    else
+                        obj.SpecPValue = [];
+                    end
+                    if isfield(axxStrct, 'SpecStdErr')
+                        specstdVal = mean(cat(3,axxStrct.SpecStdErr),3);
+                        obj.SpecStdErr = specstdVal(1:obj.nFr,:);
+                    else
+                        obj.SpecStdErr = [];
+                    end
+                    if isfield(axxStrct, 'Cov')
+                        obj.Cov = mean(cat(3,axxStrct.Cov),3);
+                    else
+                        obj.SpecStdErr = [];
+                    end
+                elseif AVR==0,
+                    obj.Wave = axxStrct.Wave;
+                    obj.Amp = axxStrct.Amp(1:obj.nFr,:,:);
+                    obj.Cos = axxStrct.Cos(1:obj.nFr,:,:);
+                    obj.Sin = axxStrct.Sin(1:obj.nFr,:,:);
+                    
+                    if isfield(axxStrct, 'SpecPValue')
+                       obj.SpecPValue = xxStrct.SpecPValue(1:obj.nFr,:,:);
+                    else
+                        obj.SpecPValue = [];
+                    end
+                    
+                    if isfield(axxStrct, 'SpecStdErr')
+                        obj.SpecStdErr = axxStrct.SpecStdErr(1:obj.nFr,:,:);
+                    else
+                        obj.SpecStdErr = [];
+                    end
+                    
+                    if isfield(axxStrct, 'Cov')
+                        obj.Cov = axxStrct.Cov;
+                    else
+                        obj.SpecStdErr = [];
+                    end
                 end
             end
         end 
@@ -84,9 +112,6 @@ classdef axx
         end
         function value = get.nCh(obj)
             value = size(obj.Wave,2);
-        end
-        function value = get.nFr(obj)
-            value = size(obj.Cos,1);
         end
         
         function identify(thisAxx)

@@ -1,4 +1,4 @@
-function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,varargin)
+function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     
     % Description:	This function gets the path for a mrc project and simulate
     % EEG with activity (seed signal as input) in specific ROIs (input),
@@ -8,7 +8,7 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = RoiSignal(project
     % 
 %--------------------------------------------------------------------------    
 % INPUT:
-  % projectPath: Cell array of strings, indicating a list of paths to mrCurrent project folder of subjects
+  % projectPath: Cell array of strings, indicating a list of paths to mrCurrent project folders of individual subjects
     %             
     % 
     %

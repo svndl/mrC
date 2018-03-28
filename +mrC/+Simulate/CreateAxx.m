@@ -48,6 +48,7 @@ EEGSPEC = EEGSPEC(FIND,:,:);
 EEGAxx.Cos = real(EEGSPEC);
 EEGAxx.Sin = imag(EEGSPEC);
 EEGAxx.Amp = abs(EEGSPEC);
+EEGAxx.nFr = size(EEGAxx.Cos,1);
 
 % indicate fundamental frequency indexes
 if ~isempty(opt.signalFF)
