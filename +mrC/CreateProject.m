@@ -46,7 +46,12 @@ function CreateProject(varargin)
             else
             end
             subID{sIdx}=tempID;
-            exportDir{sIdx} = uigetdir('/Volumes/Denali_4D2/kohler', 'Matlab export folder?');
+            if exist('exportDir','var')
+                exportdirdef = exportDir{end};
+            else
+                exportdirdef = '/Volumes/Denali_4D2/kohler';
+            end
+            exportDir{sIdx} = uigetdir(exportdirdef, 'Matlab export folder?');
             %% MAKE DIRECTORIES
             if exist([projectDir,'/',subID{sIdx}],'dir');
                 rmdir([projectDir,'/',subID{sIdx}], 's');
