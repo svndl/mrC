@@ -1,14 +1,14 @@
-function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,varargin)
+function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     
     % Description:	This function gets the path for a mrc project and simulate
-    % EEG with activity (sourvce signal as input) in specific ROIs (input),
-    % and pink and alpha noise (parameters can be set as input)
+    % EEG with activity (seed signal as input) in specific ROIs (input),
+    % and pink and alpha noises (noise parameters can be set as input)
     %
-    % Syntax:	[sensorData,masterList,subIDs] = mrC.RoiDemo(projectPath,varargin)
+    % Syntax:	[EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = mrC.RoiDemo(projectPath,varargin)
     % 
 %--------------------------------------------------------------------------    
 % INPUT:
-  % projectPath: Cell array of strings, indicating a list of paths to mrCurrent project folder of subjects
+  % projectPath: Cell array of strings, indicating a list of paths to mrCurrent project folders of individual subjects
     %             
     % 
     %
@@ -22,6 +22,9 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     %                       roitype is selected
     %
     %       signalsf:       sampling frequency of the input source signal
+    %
+    %       signalType:     type of simulated signal (visualization might differ for different signals)
+    %                       
     %       
     %       signalFF:       a 1 x seedNum vector: determines the fundamental
     %                       frequencis of sources
@@ -73,6 +76,10 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     %                       number of the electrodes
     %
     %
+    %       EEGAxx:         A cell array containing Axx structure of each
+    %                       subject's simulated EEG. This output is
+    %                       available if the signal type is SSVEP
+    %
     %       sourceDataOrigin: a NS x srcNum matrix, containing simulated
     %                           EEG in source space before converting to
     %                           sensor space EEG, where srcNum is the
@@ -85,7 +92,7 @@ function [EEGData,sourceDataOrigin,masterList,subIDs] = RoiSignal(projectPath,va
     %
 %--------------------------------------------------------------------------
  % The function was originally written by Peter Kohler, ...
- % Latest modification: Elham Barzegaran, 03.07.2018
+ % Latest modification: Elham Barzegaran, 03.26.2018
  % NOTE: This function is a part of mrC toolboxs
 
 %% =====================Prepare input variables============================
@@ -97,12 +104,14 @@ opt	= ParseArgs(varargin,...
     'roiList'		, [],...
     'signalArray'   , [],...
     'signalsf'      , 100 ,... 
+    'signalType'    , 'SSVEP',...
+    'signalFF'      ,[],...
     'noiseParams'   , struct,...
     'sensorFig'     , true,...
     'doSource'      , false,...
     'figFolder'     , [],...
-    'anatomyPath'   ,[],...
-    'signalFF'      ,[]...
+    'anatomyPath'   ,[],...   
+    'plotting'      ,1 ...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -148,10 +157,10 @@ end
 % -----------------Generate default source signal if not given-------------
 % Generate signal of interest
     if isempty(opt.signalArray) 
-        if isempty(opt.roiList),
-            [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal(); % default signal (can be compatible with the number of ROIs, can be improved later)
+        if isempty(opt.roiList)
+            [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType); % default signal (can be compatible with the number of ROIs, can be improved later)
         else 
-            [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalFreq',round(rand(lengthopt.roiList)*3+3));
+            [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType,'signalFreq',round(rand(lengthopt.roiList)*3+3));
         end
     end  
 
@@ -269,7 +278,7 @@ disp (['Simulating EEG for subject ' subIDs{s}]);
     % 
 %------------------------PLACE SIGNAL IN THE ROIs--------------------------
     
-    display('Generating EEG signal ...')
+    disp('Generating EEG signal ...');
     % Put an option to get the ROIs either from input of function or from command line
     
 
@@ -298,71 +307,59 @@ disp (['Simulating EEG for subject ' subIDs{s}]);
     end
     
     [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % noiseParams
-    
-%--------------Adjust structure for output and plots-----------------------
-    invPath = fullfile(projectPath{s},'Inverses',opt.inverse);
-    %invMatrix = mrC_readEMSEinvFile(invPath);
-    readyInverse{s} = invPath;    
+%% convert EEG to axx format
+% if signalType=='SSVEP'
+    EEGAxx{s}= mrC.Simulate.CreateAxx(EEGData{s},opt);% Converts the simulated signal to Axx format  
+% end
 end
 
 
+%% =======================PLOT FIGURES=====================================
+if opt.plotting==1
+    %-------------------Calculate EEG spectrum---------------------------------
+    freq = 0:EEGAxx{1}.dFHz:EEGAxx{1}.dFHz*(EEGAxx{1}.nFr-1); % frequncy labels, based on fft
 
-%% =======================DRAW FIGURES=====================================
-%The length of fft should be indicated (This is similar to axx file from PowerDiva)
-if ~isempty(opt.signalFF)
-    WL = (opt.signalFF.^-1)*opt.signalsf*2;%window length for each fundamental frequency: half resolution of fundamentals
-    WL = lcms(WL);% least common multiple
-    if WL<(opt.signalsf*2)% find a time window for resolution less than .5 Hz
-        WL = WL*(WL\(opt.signalsf*2));
+    for s = 1: length(projectPath)
+        if ~isempty(EEGData{s})
+            ASDEEG{s} = EEGAxx{s}.Amp;% it is important which n is considered for fft
+        end
     end
-else
-    WL = opt.signalsf*2;
-end
+    MASDEEG = mean(cat(4,ASDEEG{:}),4);
 
-%-------------------Calculate EEG spectrum---------------------------------
-freq = (-0.5:1/WL:0.5-1/WL)*opt.signalsf; % frequncy labels, based on fft
-fidx = find(freq>=0); freq = freq(fidx);
+    % ------------------------FIRST PLOT: EEG and source spectra---------------
+    WL = 1000/(EEGAxx{1}.dTms*EEGAxx{1}.dFHz); % window length for FFT, based on AXX file
+    freq2 = (-0.5:1/(WL*4):0.5-1/(WL*4))*opt.signalsf;
+    figure,
+    subplot(3,1,1); % Plot signal ASD
+    plot(freq2,abs(fftshift(fft(opt.signalArray,WL*4),1)));
+    xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
+    ylabel('Source signal','Fontsize',14);
 
-for s = 1: length(projectPath)
-    if ~isempty(EEGData{s})
-        ASDEEG{s} = abs(fftshift(fft(EEGData{s},WL),1));% it is important which n is considered for fft
-        ASDEEG{s} = ASDEEG{s}(fidx,:);
+    subplot(3,1,2); % Plot noise ASD
+    plot(freq2,abs(fftshift(fft(noiseSignal(:,1:500:end),WL*4),1)));
+    xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
+    ylabel('Noise signal','Fontsize',14);
+
+    subplot(3,1,3); % plot EEG ASD
+    %plot(freq2,abs(fftshift(fft(EEGData,WL*4),1)));
+    plot(freq,MASDEEG);
+    xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
+    ylabel('EEG signal','Fontsize',14);
+
+    input('Press enter to continue....');
+    close all;
+    % --------------SECOND PLOT: interactive head and spectrum plots-----------
+    if isempty(opt.signalFF)
+        opt.signalFF = 1;
     end
-end
+     % Plot average over individuals
+    mrC.Simulate.PlotEEG(MASDEEG,freq,opt.figFolder,'average over all  ',masterList,opt.signalFF);
 
-MASDEEG = mean(cat(3,ASDEEG{:}),3);
-
-% ------------------------FIRST PLOT: EEG and source spectra---------------
-freq2 = (-0.5:1/(WL*4):0.5-1/(WL*4))*opt.signalsf;
-figure,
-subplot(3,1,1); % Plot signal ASD
-plot(freq2,abs(fftshift(fft(opt.signalArray,WL*4),1)));
-xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-ylabel('Source signal','Fontsize',14);
-
-subplot(3,1,2); % Plot noise ASD
-plot(freq2,abs(fftshift(fft(noiseSignal(:,1:500:end),WL*4),1)));
-xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-ylabel('Noise signal','Fontsize',14);
-
-subplot(3,1,3); % plot EEG ASD
-%plot(freq2,abs(fftshift(fft(EEGData,WL*4),1)));
-plot(freq,MASDEEG);
-xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-ylabel('EEG signal','Fontsize',14);
-
-input('Press enter to continue....');
-close all;
-% --------------SECOND PLOT: interactive head and spectrum plots-----------
-
- % Plot average over individuals
-mrC.Simulate.PlotEEG(MASDEEG,freq,opt.figFolder,'average over all  ',masterList,opt.signalFF);
-
- % Plot individuals
-for s = 1: length(projectPath)
-    if ~isempty(EEGData{s})
-        mrC.Simulate.PlotEEG(ASDEEG{s},freq,opt.figFolder,subIDs{s},masterList,opt.signalFF);
+     % Plot individuals
+    for s = 1: length(projectPath)
+        if ~isempty(EEGData{s})
+            mrC.Simulate.PlotEEG(ASDEEG{s},freq,opt.figFolder,subIDs{s},masterList,opt.signalFF);
+        end
     end
 end
-
 end

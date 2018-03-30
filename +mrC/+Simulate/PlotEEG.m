@@ -41,7 +41,7 @@ conMap = jmaColors('hotcortex');
 
 h=figure;
 set(h,'units','centimeters')
-set(h, 'Position',[10 10 35 16]);
+set(h, 'Position',[1 1 35 16]);
 set(h,'PaperPositionMode','manual')
 
 
