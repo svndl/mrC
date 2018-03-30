@@ -18,7 +18,7 @@ function RoiFromSuma(subId,varargin)
     %       
     % Out:
     
-    mrC.SetPrefs; % make sure preferences are set
+    mrC.SystemSetup; % make sure preferences are set
     
     %% DETERMINE FREESURFER DIR
     if strfind(subId,'_fs4');
