@@ -99,7 +99,7 @@ if sensorROI{1} ~= 0
         vertexLoc = get(plotH,'Vertices'); % vertex locations
         roiLoc = vertexLoc(sensorROI{t},:);
         roiH = patch(roiLoc(:,1),roiLoc(:,2),roiLoc(:,3),'o');
-        set(roiH,markerProps{t}{:});
+        set(roiH,markerProps{:});
         if doText
             roiX = get(roiH,'XData');
             roiY = get(roiH,'YData');
