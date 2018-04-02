@@ -38,7 +38,7 @@ if ~iscell(sensorROI)
 else
 end
 
-if iscell(markerProps{1})
+if ~iscell(markerProps{1})
     markerProps = {markerProps};
 else
 end
