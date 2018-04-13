@@ -77,13 +77,14 @@ function [results] = tSquaredFourierCoefs(xyData,varargin)
 
     results.alpha = opt.alphaVal;
 
-    % Eqn. 2 in Sec. 5.3 of Anderson (1984):
-    t0Sqrd = ((N-1)*2)/(N-2) * finv( 1-opt.alphaVal, 2, N - 2 ); 
-    results.tSqrdCritical = t0Sqrd;
-    
     p = 2; % number of variables
     df1 = p;  %Numerator degrees of freedom.
     df2 = N-p;  %Denominator degrees of freedom.
+    
+    % Eqn. 2 in Sec. 5.3 of Anderson (1984):
+    t0Sqrd = ( (N-1) * p )/ ( N-p ) * finv( 1-opt.alphaVal, p, N - p ); 
+    results.tSqrdCritical = t0Sqrd;
+    
     try
         invSampCovMat = inv(sampCovMat);    
         % Eqn. 2 of Sec. 5.1 of Anderson (1984):
