@@ -26,15 +26,25 @@ else
 end
 if nargin<6
     if doText
-        markerProps = {'facecolor','none','edgecolor','none','markersize',15,'marker','o','markerfacecolor','w','MarkerEdgeColor','k','LineWidth',.5};
+        markerProps{1} = {'facecolor','none','edgecolor','none','markersize',15,'marker','o','markerfacecolor','w','MarkerEdgeColor','k','LineWidth',.5};
     else
-        markerProps = {'facecolor','none','edgecolor','none','markersize',6,'marker','o','markerfacecolor','none','MarkerEdgeColor','k','LineWidth',1};
+        markerProps{1} = {'facecolor','none','edgecolor','none','markersize',6,'marker','o','markerfacecolor','none','MarkerEdgeColor','k','LineWidth',1};
     end
 else
 end
 
 if ~iscell(sensorROI)
     sensorROI = {sensorROI};
+else
+end
+
+if ~iscell(markerProps{1})
+    markerProps = {markerProps};
+else
+end
+
+if length(sensorROI) > 1 && length(markerProps) == 1
+    markerProps = repmat(markerProps,1,length(sensorROI));
 else
 end
 
