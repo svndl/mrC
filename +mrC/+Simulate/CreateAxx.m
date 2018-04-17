@@ -14,8 +14,17 @@ EEGAxx = mrC.axx();
 
 % Determine the window length for FFT (WLF), and window length in time domain (WLT)
 if ~isempty(opt.signalFF)
-    WLT = (opt.signalFF.^-1)*opt.signalsf*2;%window length for each fundamental frequency: half resolution of fundamentals
-    WLT = lcms(WLT);% least common multiple
+    if prod(mod(opt.signalFF,1)==0)
+        f = opt.signalFF(1);
+        for i = 1:numel(opt.signalFF)-1
+            f = gcd(f,opt.signalFF(i+1));
+        end
+        WLT = round((f^-1)*opt.signalsf*2);
+    else 
+        WLT = (opt.signalFF.^-1)*opt.signalsf*2;%window length for each fundamental frequency: half resolution of fundamentals
+        WLT = lcms(round(WLT));% least common multiple
+    end
+    
     if WLT<(opt.signalsf*2)% find a time window for resolution less than .5 Hz
         WLF = WLT*(WLT\(opt.signalsf*2));
     else 
@@ -52,9 +61,10 @@ EEGAxx.nFr = size(EEGAxx.Cos,1);
 
 % indicate fundamental frequency indexes
 if ~isempty(opt.signalFF)
-    [~,~,FFI] = intersect(opt.signalFF,round(f*1000)/1000);
+    %[~,~,FFI] = intersect(opt.signalFF,round(f*1000)/1000);
+    [~,FFI] = min(abs(repmat(opt.signalFF,[1,length(f)])-repmat(f,[numel(opt.signalFF) 1])),[],2);
     EEGAxx.i1F1 = FFI(1)-1;
-    EEGAxx.i1F2 = FFI(2)-1;
+    if length(FFI)>1, EEGAxx.i1F2 = FFI(2)-1; end
 end
 % Other axx parameteres
 EEGAxx.DataUnitStr = 'Simulation';

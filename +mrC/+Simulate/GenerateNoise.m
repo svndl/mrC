@@ -1,4 +1,4 @@
-function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
+                                                                    function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
 % GENERATE_NOISE Returns noise of unit variance as a combination of alpha
 % activity (bandpass filtered white noise) and spatially coherent pink
 % noise (spectrally shaped white noise)
