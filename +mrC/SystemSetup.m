@@ -41,5 +41,7 @@ function [fsDir,anatDir] = SystemSetup
     else
     end
     
+    %% SET DYLD
+    setenv('DYLD_LIBRARY_PATH','')
 end
 
