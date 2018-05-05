@@ -115,7 +115,7 @@ function [sensorData,masterList,subIDs] = RoiDemo(mrCpath,varargin)
         fwdPath = fullfile(mrCfolders{s},'_MNE_',[subIDs{s} '-fwd.fif']);
         fwdStrct = mne_read_forward_solution(fwdPath);
         srcStrct = readDefaultSourceSpace(subIDs{s});
-        fwdMatrix = makeForwardMatrixFromMne(fwdStrct ,srcStrct);
+        fwdMatrix = makeForwardMatrix(fwdStrct ,srcStrct);
         if strcmp(opt.roiType,'main')
             roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','ROIs');
             roiPaths = subfiles(roiDir);
