@@ -10,10 +10,10 @@
 
 %% Add latest mrC
 clear;clc
-mrCFolder = fileparts(pwd);%'/Users/kohler/code/gits';
+mrCFolder = fileparts(fileparts(mfilename('fullpath')));%'/Users/kohler/code/gits';
 addpath(genpath(mrCFolder));
 
-addpath(genpath('/Users/kohler/code/git/surfing'));
+addpath(genpath('C:\Users\Elhamkhanom\Documents\Codes\Git\surfing'));% this tool can be found in github
 %% SSVEP signal can be simulated using ModelSourceSignal with defined parameters, otherwise Roisignal function will generate a default two source SSVEP signal 
 % a sample SSVEP signal...
 
@@ -30,15 +30,15 @@ ProjectPath = '/Volumes/svndl/mrC_Projects/kohler/SYM_16GR/SOURCE';
 %% Example subject
 % 10 subject in SYM_16 project have wang atlas ROIs
 
- AnatomyPath = '/Users/kohler/code/git/mrC/Examples/ExampleData/anatomy';
- ProjectPath = '/Users/kohler/code/git/mrC/Examples/ExampleData/FwdProject';
+ AnatomyPath = fullfile(mrCFolder,'Examples','ExampleData','anatomy');
+ ProjectPath = fullfile(mrCFolder,'Examples','ExampleData','FwdProject');
 
  %% Pre-select ROIs
 [RoiList,RoiListC,subIDs] = mrC.Simulate.GetRoiList(ProjectPath,AnatomyPath,'wang');% 13 subjects with Wang atlab 
  
 %% simulation functions
 noise.mu=3;
-% noise.distanceType = 'Geodesic';
+noise.distanceType = 'Geodesic';
 
 [sensorData,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'roiType','wang','noiseParams',noise,'roiList',RoiList([31 10])');
 

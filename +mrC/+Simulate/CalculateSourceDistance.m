@@ -21,6 +21,8 @@ function [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
 
 %%
     Euc_dist = squareform(pdist(MDATA.vertices')) ;
+    Euc_dist(round(length(Euc_dist)/2)+1:end,1:round(length(Euc_dist)/2))=Inf;
+    Euc_dist(1:round(length(Euc_dist)/2),round(length(Euc_dist)/2)+1:end)=Inf;
     %---------------------EUCLIDEAN DISTANCE-------------------------------
     if strcmp(distanceType,'Euclidean') 
         spat_dists =  Euc_dist; 
@@ -34,13 +36,13 @@ function [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
         
         %---Using in-built matlab function:requires matlab 2015b ornewer---
         if exist('graph')==2
-            G = c.*Euc_dist;
+            G = c.*Euc_dist;G(isnan(G))=0;
             spat_dists = distances(graph(G));
             clear G c;
         else 
         %-----------Otherwise use Dijkstra function: very slow ------------
         % There are still some problem with this part....
-            spat_dists = Euc_dist;%ones(size(c))*max(Euc_dist(:));
+            spat_dists = Euc_dist2;%ones(size(c))*max(Euc_dist(:));
             warning ('If the matlab version you are using is older than 2015b, Geodesic distances is not implmented. SUGGESTION: Use Euclidean distance instead');
             
             % this input gives an option to the user to switch to Euclidean if Geodesic is taking too much time

@@ -179,7 +179,7 @@ end
 
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
 
-for s = 1:5%length(projectPath)
+for s = 1:length(projectPath)
     %--------------------------READ FORWARD SOLUTION---------------------------  
     % Read forward
     [~,subIDs{s}] = fileparts(projectPath{s});
@@ -284,7 +284,8 @@ for s = 1:5%length(projectPath)
     
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
-    noiseSignal = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+    [noiseSignal, pink_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+    visualize_noise(pink_noise, spat_dists, surfData,opt.signalsf)
     % 
 %------------------------PLACE SIGNAL IN THE ROIs--------------------------
     
@@ -333,7 +334,7 @@ if (opt.plotting==1) && strcmp(opt.signalType,'SSVEP')
     sub1 = find(~cellfun(@isempty,EEGAxx),1);
     freq = 0:EEGAxx{sub1}.dFHz:EEGAxx{sub1}.dFHz*(EEGAxx{sub1}.nFr-1); % frequncy labels, based on fft
 
-    for s = 1: 5% length(projectPath)
+    for s = 1: length(projectPath)
         if ~isempty(EEGData{s})
             ASDEEG{s} = EEGAxx{s}.Amp;% it is important which n is considered for fft
 

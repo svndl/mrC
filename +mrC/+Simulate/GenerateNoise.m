@@ -1,4 +1,4 @@
-                                                                    function noise = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
+function [noise, pink_noise, alpha_noise] = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
 % GENERATE_NOISE Returns noise of unit variance as a combination of alpha
 % activity (bandpass filtered white noise) and spatially coherent pink
 % noise (spectrally shaped white noise)
@@ -72,19 +72,22 @@
         f = [-0.5:1/n_samples:0.5-1/n_samples]*f_sampling; % frequncy range
         t = [0:n_samples-1]/f_sampling ;
         subplot(3,2,1)
-        plot(t, pink_noise)
+        plot(t, pink_noise(:,1:50:end));xlim([0 2]);
         subplot(3,2,2)
-        plot(f, abs(fftshift(fft(pink_noise))))
+        plot(f, abs(fftshift(fft(pink_noise(:,1:50:end)))));xlim([0 max(f)]);
+        %ylim([0 .2]);
 
         subplot(3,2,3)
-        plot(t, alpha_noise)
+        plot(t, alpha_noise(:,1:50:end));xlim([0 2]);
         subplot(3,2,4)
-        plot(f, abs(fftshift(fft(alpha_noise))))
+        plot(f, abs(fftshift(fft(alpha_noise(:,1:50:end)))));xlim([0 max(f)]);
+        %ylim([0 .2]);
 
         subplot(3,2,5)
-        plot(t, noise)
+        plot(t, noise(:,1:50:end)); xlim([0 2]);
         subplot(3,2,6)
-        plot(f, abs(fftshift(fft(noise))))
+        plot(f, abs(fftshift(fft(noise(:,1:50:end)))));xlim([0 max(f)]);
+        %ylim([0 .2]);
     end
 end
 
