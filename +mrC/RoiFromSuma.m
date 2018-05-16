@@ -35,8 +35,8 @@ function RoiFromSuma(subId,varargin)
             'MinMaxEcc'  ,   [0,0] ...
             );
     
-    if strcmp(opt.Mode,'wang')
-        opt.Mode = 'wangatlas'; % ensure flexibility
+    if strcmp(opt.Mode,'wangatlas')
+        opt.Mode = 'wang'; % ensure flexibility
     else
     end
     
@@ -48,7 +48,7 @@ function RoiFromSuma(subId,varargin)
     %% GET ROI FILE
     if strcmp(opt.Mode,'benson')
         roiNames = {'V3d','V2d','V1d','V1v','V2v','V3v'};
-        roiFile = subfiles(sprintf('%s/benson_atlas/*h.all.benson_atlas.niml.dset',fsDir),1);
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Benson2014.all.niml.dset',fsDir),1);
         if max(opt.MinMaxEcc) == 0
             eccMin = input('Minimum eccentricity? [default = 0] ');
             if isempty(eccMin)
@@ -66,19 +66,19 @@ function RoiFromSuma(subId,varargin)
             eccMin = opt.MinMaxEcc(1);
             eccMax = opt.MinMaxEcc(2);
         end
-    elseif strcmp(opt.Mode,'wangatlas')
-        roiFile = subfiles(sprintf('%s/wang_atlas/*h.wang_atlas_cluster.niml.dset',fsDir),1);
+    elseif strcmp(opt.Mode,'wang')
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015.niml.dset',fsDir),1);
         roiNames = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2',...
                     'PHC1' 'PHC2','TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A',...  
-                    'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4''IPS5' 'SPL1' 'FEF'};
-        eccComment = 'atlas, generated based on Wang et al., 2014';
+                    'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4','IPS5' 'SPL1' 'FEF'};
+        eccComment = 'atlas, generated based on Wang et al., 2015';
     elseif strcmp(opt.Mode,'glass')
-        roiFile = subfiles(sprintf('%s/glass_atlas/*h.glass_atlas.niml.dset',fsDir),1);
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Glasser2016.niml.dset',fsDir),1);
         roiNames = arrayfun(@(x) sprintf('roi%03d',x),1:180,'uni',false); 
         % true names can be found on pgs. 81-85 of the supplementary material.
         eccComment = 'atlas, generated based on Glasser et al., 2016';
     elseif strcmp(opt.Mode,'kgs')
-        roiFile = subfiles(sprintf('%s/kgs_atlas/*h.kgs_atlas.niml.dset',fsDir),1);
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.KGS2016.niml.dset',fsDir),1);
         roiNames = {'IOG','OTS','mFUS','pFUS','PPA','VWFA1','VWFA2'};
         eccComment = 'atlas, generated based on Weiner & Grill-Spector (in press)';
     else
