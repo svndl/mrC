@@ -63,6 +63,7 @@ if ~isempty(roiChunk)
         % Adjust Roi size, prepare spatial function (weights) and plot ROIs
         
         plotRoi = 1;
+        %RoiSize = 200;
         spatfunc = RoiSpatFunc(roiChunk,RoiIdx,surfData,RoiSize,[],funcType,plotRoi);
         
         % place seed signal array in source space
@@ -82,7 +83,8 @@ if ~isempty(roiChunk)
         end
         
         % Adds noise to source signal
-        sourceData = sqrt(lambda/(lambda+1))*sourceTemp + sqrt(1/(lambda+1)) *noise;
+        pow = .7;
+        sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
         sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
         
         % Generate EEG data by multiplication to forward matrix
@@ -98,7 +100,7 @@ end
 function spatfunc = RoiSpatFunc(roiChunk,RoiIdx,surfData,RoiSize,Hem,funcType,plotRoi)
 %------------resize and plot ROIs on the 3D brain Surface------------------
 
-if ~exist('RoiSize','var'),
+if ~exist('RoiSize','var')
     RoiSize = max(sum(full(roiChunk(:,RoiIdx))));
 elseif isempty(RoiSize)
     RoiSize = max(sum(full(roiChunk(:,RoiIdx))));
@@ -123,23 +125,23 @@ spatfunc = zeros(size(roiChunk,1),numel(RoiIdx));
 
 % ------------------------ spatial functions for ROIs----------------------
 for i = 1:numel(RoiIdx)
-    vertIdx = find(roiChunk(:,RoiIdx(i)));
-    [RoiV, RoiF,vertIdx] = SurfSubsample(vertices, faces,vertIdx,'union');
+    vertIdx_orig = find(roiChunk(:,RoiIdx(i)));
+    [RoiV, RoiF,vertIdx] = SurfSubsample(vertices, faces,vertIdx_orig,'union');
     [RoiVertices{i}, RoiFaces{i},vertIdxR,~,RoiDist,radius] = ResizeRoi(RoiV,RoiF,vertIdx,RoiSize,'geodesic');
     if (~isempty(vertIdx)) && (~isempty(vertIdxR))
         switch funcType
             case 'uniform'
-                spatfunc(vertIdx(vertIdxR),i)=1;
+                spatfunc(vertIdx_orig((vertIdxR)),i)=1;
             case 'gaussian'
                 Var = (radius/2)^2;
-                spatfunc(vertIdx(vertIdxR),i)=exp(-(RoiDist.^2)/(2*Var));
+                spatfunc(vertIdx_orig((vertIdxR)),i)=exp(-(RoiDist.^2)/(2*Var));
             otherwise
                 error([funType ' as a spatial function for ROI is not defined']);
         end
     end
 end
 
-if plotRoi ==1,
+if plotRoi ==1
     %--------------------------- plot surface------------------------------
     figure,
     switch Hem
@@ -159,13 +161,13 @@ if plotRoi ==1,
     axis  off vis3d equal
     set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .30, 0.45]);
     %---------------------------- plot Rois -------------------------------
-    cmap = colormap(hsv(128));
+    cmap = colormap(hsv(256));
     for i = 1:numel(RoiIdx)
-        C=cmap(i*5,:);
+        C=cmap(i*floor(255/numel(RoiIdx)),:);
         if ~isempty(RoiFaces{i}),
             hold on; patch('faces',RoiFaces{i},'vertices',RoiVertices{i},'edgecolor','k','facecolor','interp','facevertexcdata',repmat(C,size(RoiVertices{i},1),1),...
                 'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1);
-            scatter3(RoiVertices{i}(:,1),RoiVertices{i}(:,2),RoiVertices{i}(:,3),80,C,'filled');
+            scatter3(RoiVertices{i}(:,1),RoiVertices{i}(:,2),RoiVertices{i}(:,3),30,C,'filled');
         end
     end
 end
@@ -201,11 +203,11 @@ function [vertices, faces, vertIdx2, RoiC, dist, radius, area] = ResizeRoi(RoiV,
 if isempty(distanceType), distanceType='geodesic';end
 if ~exist('RoiC','var'),RoiC = [];end
 
-if RoiSize>numel(vertIdx), 
+if RoiSize>numel(vertIdx)
     warning('RoiSize is bigger than the number of vertices in this ROI');
     RoiSize = numel(vertIdx);
 end
-if isempty(RoiSize),
+if isempty(RoiSize)
     RoiSize = numel(vertIdx);
 end
 
@@ -248,7 +250,7 @@ radius = x(f==(RoiSize));
 vertIdx2 = find(RoiDist(RoiC,:)<=radius);
 vertIdx2 = sort(vertIdx2);
 
-if (isinf(radius)) || (radius >=1000),
+if (isinf(radius)) || (radius >=1000)
     x(x>=1000)=0;
     radius = max(x); 
 end

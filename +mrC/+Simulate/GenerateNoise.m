@@ -1,4 +1,4 @@
-function [noise, pink_noise, alpha_noise] = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
+function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
 % GENERATE_NOISE Returns noise of unit variance as a combination of alpha
 % activity (bandpass filtered white noise) and spatially coherent pink
 % noise (spectrally shaped white noise)
@@ -34,7 +34,7 @@ function [noise, pink_noise, alpha_noise] = GenerateNoise(f_sampling, n_samples,
     
     
 %% -----------------------------generate pink noise------------------------
-    pink_noise = GetPinkNoise(n_samples, n_nodes );
+    pink_noise = GetPinkNoise(n_samples, n_nodes );pink_noise_uncoh = pink_noise;
 
     % impose coherence on pink noise
     if strcmp(noise_mixing_data.mixing_type,'coh') % just in case we want to add other mixing mechanisms
