@@ -4,7 +4,6 @@ function [fsDir,anatDir] = SystemSetup
     %% CHECK IF NECESSARY FOLDERS ARE SET AS ENVIRONMENT VARIABLES AND EXIST
     
     % mrCurrent AnatomyFolder
-    
     if ~ispref('mrCurrent','AnatomyFolder')
         anatDir = '/Volumes/svndl/anatomy';
         if ~exist(anatDir,'dir')
@@ -28,17 +27,6 @@ function [fsDir,anatDir] = SystemSetup
         fprintf('Freesurfer folder set: %s\n',fsDir);
     else
         fsDir = getpref('freesurfer','SUBJECTS_DIR');
-    end
-    
-    
-    %% CHECK IF NECESSARY DEPENDENCIES ARE INSTALLED
-    % check if mrVista is installed and on path
-    if exist('nearpoints') ~= 3,
-        error(sprintf(strcat(2,...
-            ['\n nearpoints mex-file not found. \n', ...
-             'please install from http://github.com/vistalab/vistasoft. \n', ...
-             'and make sure to add to vistasoft folder to path.' ])));
-    else
     end
     
     %% SET DYLD
