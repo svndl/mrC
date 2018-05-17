@@ -108,7 +108,7 @@ opt	= ParseArgs(varargin,...
     'roiType'       , 'func',...
     'roiList'		, [],...
     'roiSpatfunc'   , 'uniform',...
-    'roiSize'       , 50,...
+    'roiSize'       , 200,...
     'signalArray'   , [],...
     'signalsf'      , 100 ,... 
     'signalType'    , 'SSVEP',...
@@ -171,7 +171,7 @@ if isempty(opt.signalArray)
     end
 end
 
-if isfield(opt,'signalFF'),
+if isfield(opt,'signalFF')
     if ~iscolumn(opt.signalFF), opt.signalFF = opt.signalFF';end
 end
 
@@ -202,7 +202,7 @@ for s = 1:length(projectPath)
         end
     end
     
-    if exist([fwdPath '-fwd.mat'],'file'), % if the forward matrix have been generated already for this subject
+    if exist([fwdPath '-fwd.mat'],'file') % if the forward matrix have been generated already for this subject
         load([fwdPath '-fwd.mat']);
     else
         fwdStrct = mne_read_forward_solution([fwdPath '-fwd.fif']); % Read forward structure
@@ -253,7 +253,7 @@ for s = 1:length(projectPath)
     Noisefield = fieldnames(Noise);
     
     if ~any(strcmp(Noisefield, 'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
-    if ~any(strcmp(Noisefield, 'lamda')),Noise.lambda = 1/NS;end % power distribution between signal and 'total noise' (SNR)
+    if ~any(strcmp(Noisefield, 'lamda')),Noise.lambda = 1/NS/2;end % power distribution between signal and 'total noise' (SNR)
     if ~any(strcmp(Noisefield, 'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% 'active_nodes'/['all_nodes']
     if ~any(strcmp(Noisefield, 'distanceType')),Noise.distanceType = 'Euclidean';end
     if ~any(strcmp(Noisefield, 'Noise.mixing_type_pink_noise')), Noise.mixing_type_pink_noise = 'coh' ;end % coherent mixing of pink noise
@@ -284,8 +284,10 @@ for s = 1:length(projectPath)
     
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
-    [noiseSignal, pink_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
-    visualize_noise(pink_noise, spat_dists, surfData,opt.signalsf)
+    [noiseSignal, pink_noise,~, alpha_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+    
+    %visualizeNoise(noiseSignal, spat_dists, surfData,opt.signalsf) % Just to visualize noise on the cortical surface 
+    %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
     % 
 %------------------------PLACE SIGNAL IN THE ROIs--------------------------
     
@@ -320,7 +322,7 @@ for s = 1:length(projectPath)
     
     
     [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
-
+    %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format
 if strcmp(opt.signalType,'SSVEP')
     EEGAxx{s}= mrC.Simulate.CreateAxx(EEGData{s},opt);% Converts the simulated signal to Axx format  
@@ -334,7 +336,7 @@ if (opt.plotting==1) && strcmp(opt.signalType,'SSVEP')
     sub1 = find(~cellfun(@isempty,EEGAxx),1);
     freq = 0:EEGAxx{sub1}.dFHz:EEGAxx{sub1}.dFHz*(EEGAxx{sub1}.nFr-1); % frequncy labels, based on fft
 
-    for s = 1: length(projectPath)
+    for s = 1:length(projectPath)
         if ~isempty(EEGData{s})
             ASDEEG{s} = EEGAxx{s}.Amp;% it is important which n is considered for fft
 

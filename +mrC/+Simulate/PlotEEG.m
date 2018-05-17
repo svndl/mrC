@@ -47,7 +47,7 @@ set(h,'PaperPositionMode','manual')
 
 subplot(2,2,2),axis off;% Show simulated signal information
 nrs = max(numel(masterList),3);
-text(.1,1,['Subject ' subID],'fontsize',FS+1,'fontweight','bold');
+text(.1,1,['' subID],'fontsize',FS+1,'fontweight','bold');
 for i= 1:numel(masterList)
     if ~isempty(signalFF)
         text (.1,1-((.15)*(i)),['Source' num2str(i) ': f' num2str(i) ' = ' num2str(signalFF(i)) ' Hz,  ' strrep(masterList{i},'_','-')],'fontsize',FS-2);
@@ -70,6 +70,7 @@ while(1)
     mrC.plotOnEgi(ASDEEG(FOI,:)',colorbarLimits,false,EOI,false,Probs); 
     title(['Frequency = ' num2str(Freq(FOI)) 'Hz'],'fontsize',FS);
     set(sp1,'tag',num2str(1));
+    colormap(conMap);
     colorbar;
     
     if exist('sp2','var'),delete(sp2);end % spectrum plot

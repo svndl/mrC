@@ -84,5 +84,17 @@ end
 
 FundFreq = opt.signalFreq;
 SF = opt.sf;
+
+%% plot the signal
+if false
+    figure;
+    subplot(1,2,1),plot(1/opt.sf:1/opt.sf:2,signalOut(1:opt.sf*2,:));
+    xlabel('Time(s)');
+    
+    fsig = fft(signalOut,opt.sf);
+    f = 0:round(opt.sf/2);
+    subplot(1,2,2),bar(f,abs(fsig(1:round(opt.sf/2)+1,:)),2);
+    xlabel('Frequency (Hz)'); ylim([0 200]);
+end
 end
 
