@@ -7,8 +7,7 @@ function Fiducials(subj_id)
     else
     end   
     
-    global fs_dir;
-    global vAnatomyPath;
+    global fs_dir vAnatomyPath pos_idx ax_h lineR lineA lineS fVoxVal;
     
     [fs_dir,anat_dir] = mrC.SystemSetup;
     if nargin < 2
@@ -25,7 +24,7 @@ function Fiducials(subj_id)
     else
     end
     
-    if isempty(which(readVolAnat));
+    if isempty(which('readVolAnat'));
         msg = '/n ... vistasoft package not on path, please download from \n https://github.com/vistalab/vistasoft \n and add to path \n';
         error(msg);
     else
@@ -49,8 +48,8 @@ function Fiducials(subj_id)
     Scolor = 'c';
     boxColor = [0.5 0.5 0.5];
 
-    i = [128 128 128];
-    ax = zeros(1,3);
+    pos_idx = [128 128 128];
+    ax_h = zeros(1,3);
     lineR = zeros(1,2);
     lineA = zeros(1,2);
     lineS = zeros(1,2);
@@ -60,23 +59,23 @@ function Fiducials(subj_id)
     figure('Color',BGcolor,'Colormap',[gray(255);1 0 1],'defaultuicontrolunits','normalized',...
             'name',vAnatomyPath)
 
-    ax(1) = axes('Position',[0.10 0.50 0.4 0.4]);
-        imgA = image(squeeze(V(:,i(2),:))');
-        lineR(1) = line(i([1 1]),[0 256],'color',Rcolor);
-        lineS(1) = line([0 256],i([3 3]),'color',Scolor);
+    ax_h(1) = axes('Position',[0.10 0.50 0.4 0.4]);
+        imgA = image(squeeze(V(:,pos_idx(2),:))');
+        lineR(1) = line(pos_idx([1 1]),[0 256],'color',Rcolor);
+        lineS(1) = line([0 256],pos_idx([3 3]),'color',Scolor);
         xlabel('R \rightarrow','color',Rcolor)
         ylabel('S \rightarrow','color',Scolor)
-    ax(2) = axes('Position',[0.55 0.50 0.4 0.4]);
-        imgR = image(squeeze(V(i(1),:,:))');
-        lineA(1) = line(i([2 2]),[0 256],'color',Acolor);
-        lineS(2) = line([0 256],i([3 3]),'color',Scolor);
+    ax_h(2) = axes('Position',[0.55 0.50 0.4 0.4]);
+        imgR = image(squeeze(V(pos_idx(1),:,:))');
+        lineA(1) = line(pos_idx([2 2]),[0 256],'color',Acolor);
+        lineS(2) = line([0 256],pos_idx([3 3]),'color',Scolor);
         xlabel('A \rightarrow','color',Acolor)
-    ax(3) = axes('Position',[0.10 0.05 0.4 0.4]);
-        imgS = image(V(:,:,i(3))');
-        lineR(2) = line(i([1 1]),[0 256],'color',Rcolor);
-        lineA(2) = line([0 256],i([2 2]),'color',Acolor);
+    ax_h(3) = axes('Position',[0.10 0.05 0.4 0.4]);
+        imgS = image(V(:,:,pos_idx(3))');
+        lineR(2) = line(pos_idx([1 1]),[0 256],'color',Rcolor);
+        lineA(2) = line([0 256],pos_idx([2 2]),'color',Acolor);
         ylabel('A \rightarrow','color',Acolor)
-    set(ax,'YDir','normal','XAxisLocation','top','XTick',[],'YTick',[],...
+    set(ax_h,'YDir','normal','XAxisLocation','top','XTick',[],'YTick',[],...
         'XColor',boxColor,'YColor',boxColor,'Box','on','DataAspectRatio',[1 1 1])
     set([imgA,imgR,imgS],'ButtonDownFcn',@moveCrosshairs)
     set([lineR,lineA,lineS],'HitTest','off')
@@ -86,12 +85,12 @@ function Fiducials(subj_id)
     uicontrol('position',[0.55 0.35 0.05 0.05],'style','text','string','A','foregroundcolor',Acolor,'backgroundcolor',BGcolor)
     uicontrol('position',[0.55 0.30 0.05 0.05],'style','text','string','S','foregroundcolor',Scolor,'backgroundcolor',BGcolor)
     UIslice = [ ...
-        uicontrol('position',[0.60 0.40 0.30 0.05],'style','slider','min',1,'max',256,'value',i(1),'sliderstep',[1 10]/255,'tag','sliderR','callback',@setSlice),...
-        uicontrol('position',[0.60 0.35 0.30 0.05],'style','slider','min',1,'max',256,'value',i(2),'sliderstep',[1 10]/255,'tag','sliderA','callback',@setSlice),...
-        uicontrol('position',[0.60 0.30 0.30 0.05],'style','slider','min',1,'max',256,'value',i(3),'sliderstep',[1 10]/255,'tag','sliderS','callback',@setSlice),...
-        uicontrol('position',[0.90 0.40 0.05 0.05],'style','edit','string',i(1),'tag','editR','callback',@setSlice),...
-        uicontrol('position',[0.90 0.35 0.05 0.05],'style','edit','string',i(2),'tag','editA','callback',@setSlice),...
-        uicontrol('position',[0.90 0.30 0.05 0.05],'style','edit','string',i(3),'tag','editS','callback',@setSlice),...
+        uicontrol('position',[0.60 0.40 0.30 0.05],'style','slider','min',1,'max',256,'value',pos_idx(1),'sliderstep',[1 10]/255,'tag','sliderR','callback',@setSlice),...
+        uicontrol('position',[0.60 0.35 0.30 0.05],'style','slider','min',1,'max',256,'value',pos_idx(2),'sliderstep',[1 10]/255,'tag','sliderA','callback',@setSlice),...
+        uicontrol('position',[0.60 0.30 0.30 0.05],'style','slider','min',1,'max',256,'value',pos_idx(3),'sliderstep',[1 10]/255,'tag','sliderS','callback',@setSlice),...
+        uicontrol('position',[0.90 0.40 0.05 0.05],'style','edit','string',pos_idx(1),'tag','editR','callback',@setSlice),...
+        uicontrol('position',[0.90 0.35 0.05 0.05],'style','edit','string',pos_idx(2),'tag','editA','callback',@setSlice),...
+        uicontrol('position',[0.90 0.30 0.05 0.05],'style','edit','string',pos_idx(3),'tag','editS','callback',@setSlice),...
     ];
 
     % FIDUCIAL CONTROLS
@@ -116,129 +115,131 @@ function Fiducials(subj_id)
     % LOAD,SAVE
     uicontrol('position',[0.60 0.05 0.17 0.05],'style','pushbutton','string','LOAD','callback',@loadFiducials) %,'backgroundcolor',[0 0.4 0.8],'foregroundcolor','k')
     uicontrol('position',[0.77 0.05 0.18 0.05],'style','pushbutton','string','SAVE','callback',@saveFiducials) %,'backgroundcolor',[0 0.4 0.8],'foregroundcolor','k')
-end
 
-function setSlice(H,varargin)
-    switch get(H,'tag')
-    case 'sliderR'
-        updateSlice(get(H,'value'),1)
-    case 'sliderA'
-        updateSlice(get(H,'value'),2)
-    case 'sliderS'
-        updateSlice(get(H,'value'),3)
-    case 'editR'
-        updateSlice(eval(get(H,'string')),1)
-    case 'editA'
-        updateSlice(eval(get(H,'string')),2)
-    case 'editS'
-        updateSlice(eval(get(H,'string')),3)
-    end
-end
+    return
 
-function updateSlice(val,dim)
-    val = round(min(max(val,1),256));
-    if i(dim) ~= val
-        i(dim) = val;
-        switch dim
-        case 1
-            set(lineR,'XData',i([1 1]))
-            set(UIslice(1),'value',i(1))
-            set(UIslice(4),'string',i(1))
-            set(imgR,'CData',squeeze(V(i(1),:,:))')
-        case 2
-            set(lineA(1),'XData',i([2 2]))
-            set(lineA(2),'YData',i([2 2]))
-            set(UIslice(2),'value',i(2))
-            set(UIslice(5),'string',i(2))
-            set(imgA,'CData',squeeze(V(:,i(2),:))')
-        case 3
-            set(lineS,'YData',i([3 3]))
-            set(UIslice(3),'value',i(3))
-            set(UIslice(6),'string',i(3))
-            set(imgS,'CData',V(:,:,i(3))')
+    function setSlice(H,varargin)
+        switch get(H,'tag')
+        case 'sliderR'
+            updateSlice(get(H,'value'),1)
+        case 'sliderA'
+            updateSlice(get(H,'value'),2)
+        case 'sliderS'
+            updateSlice(get(H,'value'),3)
+        case 'editR'
+            updateSlice(eval(get(H,'string')),1)
+        case 'editA'
+            updateSlice(eval(get(H,'string')),2)
+        case 'editS'
+            updateSlice(eval(get(H,'string')),3)
         end
     end
-end
 
-function moveCrosshairs(varargin)
-    k = gca == ax;
-    xyz = get(ax(k),'currentpoint');
-    if k(1)
-        updateSlice(xyz(1,1),1)
-        updateSlice(xyz(1,2),3)
-    elseif k(2)
-        updateSlice(xyz(1,1),2)
-        updateSlice(xyz(1,2),3)
-    else
-        updateSlice(xyz(1,1),1)
-        updateSlice(xyz(1,2),2)
+    function updateSlice(val,dim)
+        val = round(min(max(val,1),256));
+        if pos_idx(dim) ~= val
+            pos_idx(dim) = val;
+            switch dim
+            case 1
+                set(lineR,'XData',pos_idx([1 1]))
+                set(UIslice(1),'value',pos_idx(1))
+                set(UIslice(4),'string',pos_idx(1))
+                set(imgR,'CData',squeeze(V(pos_idx(1),:,:))')
+            case 2
+                set(lineA(1),'XData',pos_idx([2 2]))
+                set(lineA(2),'YData',pos_idx([2 2]))
+                set(UIslice(2),'value',pos_idx(2))
+                set(UIslice(5),'string',pos_idx(2))
+                set(imgA,'CData',squeeze(V(:,pos_idx(2),:))')
+            case 3
+                set(lineS,'YData',pos_idx([3 3]))
+                set(UIslice(3),'value',pos_idx(3))
+                set(UIslice(6),'string',pos_idx(3))
+                set(imgS,'CData',V(:,:,pos_idx(3))')
+            end
+        end
     end
-end
 
-function clickPoint(H,varargin)
-    ginput(1);
-    moveCrosshairs
-    setPoint(H)
-end
+    function moveCrosshairs(varargin)
+        ax_idx = gca == ax_h;
+        xyz = get(ax_h(ax_idx),'currentpoint');
+        if ax_idx(1)
+            updateSlice(xyz(1,1),1)
+            updateSlice(xyz(1,2),3)
+        elseif ax_idx(2)
+            updateSlice(xyz(1,1),2)
+            updateSlice(xyz(1,2),3)
+        else
+            updateSlice(xyz(1,1),1)
+            updateSlice(xyz(1,2),2)
+        end
+    end
 
-function setPoint(H,varargin)
-    f = strcmp({'LA','RA','NZ'},get(H,'tag'));
-    old = get(UIfiducial(f),'value');
-    if ~isempty(old)
-        V(old(1),old(2),old(3)) = fVoxVal(f);
+    function clickPoint(H,varargin)
+        ginput(1);
+        moveCrosshairs
+        setPoint(H)
     end
-    fVoxVal(f) = V(i(1),i(2),i(3));
-    V(i(1),i(2),i(3)) = 256;
-    set(UIfiducial(f),'string',sprintf('%g, %g, %g',i),'value',i)
-    set(imgR,'CData',squeeze(V(i(1),:,:))')		% color voxel under crosshair
-    set(imgA,'CData',squeeze(V(:,i(2),:))')
-    set(imgS,'CData',V(:,:,i(3))')
-end
 
-function gotoPoint(H,varargin)
-    i2 = get(UIfiducial(strcmp({'LA','RA','NZ'},get(H,'tag'))),'value');
-    for dim = 1:3
-        updateSlice(i2(dim),dim)
+    function setPoint(H,varargin)
+        f = strcmp({'LA','RA','NZ'},get(H,'tag'));
+        old = get(UIfiducial(f),'value');
+        if ~isempty(old)
+            V(old(1),old(2),old(3)) = fVoxVal(f);
+        end
+        fVoxVal(f) = V(pos_idx(1),pos_idx(2),pos_idx(3));
+        V(pos_idx(1),pos_idx(2),pos_idx(3)) = 256;
+        set(UIfiducial(f),'string',sprintf('%g, %g, %g',pos_idx),'value',pos_idx)
+        set(imgR,'CData',squeeze(V(pos_idx(1),:,:))')		% color voxel under crosshair
+        set(imgA,'CData',squeeze(V(:,pos_idx(2),:))')
+        set(imgS,'CData',V(:,:,pos_idx(3))')
     end
-end
 
-function loadFiducials(varargin)
-    [filename,pathname] = uigetfile('*.txt','Fiducial text file');
-    if isnumeric(filename)
-        return
+    function gotoPoint(H,varargin)
+        i2 = get(UIfiducial(strcmp({'LA','RA','NZ'},get(H,'tag'))),'value');
+        for dim = 1:3
+            updateSlice(i2(dim),dim)
+        end
     end
-    P = load('-ascii',[pathname,filename]);
-    if ~all(size(P)==[3 3])
-        uiwait(errordlg({filename;'doesn''t contain 3x3 ascii matrix'},'Invalid file')),return
-    end
-    P = P + 128;
-    for f = 1:3
-        set(UIfiducial(f),'string',sprintf('%d, %d, %d',P(f,:)),'value',P(f,:))
-    end
-end
 
-function saveFiducials(varargin)
-    P = [ get(UIfiducial(1),'value'); get(UIfiducial(2),'value'); get(UIfiducial(3),'value') ];
-    if ~all(size(P)==[3 3])
-        uiwait(errordlg({'Set LA, RA, and NZ';'Not saving'},'Incomplete fiducials')),return
+    function loadFiducials(varargin)
+        [filename,pathname] = uigetfile('*.txt','Fiducial text file');
+        if isnumeric(filename)
+            return
+        end
+        P = load('-ascii',[pathname,filename]);
+        if ~all(size(P)==[3 3])
+            uiwait(errordlg({filename;'doesn''t contain 3x3 ascii matrix'},'Invalid file')),return
+        end
+        P = P + 128;
+        for f = 1:3
+            set(UIfiducial(f),'string',sprintf('%d, %d, %d',P(f,:)),'value',P(f,:))
+        end
     end
-    if P(2,1) < P(1,1)
-        uiwait(errordlg({'RA is left of LA';'Not saving'},'Implausible fiducials')),return
+
+    function saveFiducials(varargin)
+        P = [ get(UIfiducial(1),'value'); get(UIfiducial(2),'value'); get(UIfiducial(3),'value') ];
+        if ~all(size(P)==[3 3])
+            uiwait(errordlg({'Set LA, RA, and NZ';'Not saving'},'Incomplete fiducials')),return
+        end
+        if P(2,1) < P(1,1)
+            uiwait(errordlg({'RA is left of LA';'Not saving'},'Implausible fiducials')),return
+        end
+        P = P - 128;
+        [vAnatPath,vAnatFile] = fileparts(vAnatomyPath);
+        [~,subjid] = fileparts(vAnatPath);
+        [filename,pathname] = uiputfile('*.txt','Fiducial text file',fullfile(vAnatPath,[subjid,'_fiducials.txt']));
+        if isnumeric(filename)
+            return
+        end
+        save([pathname,filename],'P','-ascii','-tabs');
+        disp(['wrote ',pathname,filename])
+        % save freesurfer copy in bem directory
+        fs_path = sprintf('%s/%s_fs4/bem',fs_dir,subj_id);
+        if exist(fs_path,'dir');
+            save([fs_path,filename],'P','-ascii','-tabs');
+        else
+        end
+        disp(['wrote ',fs_path,filename])
     end
-    P = P - 128;
-    [vAnatPath,vAnatFile] = fileparts(vAnatomyPath);
-    [~,subjid] = fileparts(vAnatPath);
-    [filename,pathname] = uiputfile('*.txt','Fiducial text file',fullfile(vAnatPath,[subjid,'_fiducials.txt']));
-    if isnumeric(filename)
-        return
-    end
-    save([pathname,filename],'P','-ascii','-tabs');
-    disp(['wrote ',pathname,filename])
-    % save freesurfer copy in bem directory
-    fs_path = sprintf('%s/%s_fs4/bem',fs_dir,subj_id);
-    if exist(fs_path,'dir');
-        save([fs_path,filename],'P','-ascii','-tabs');
-    else
-    end
-    disp(['wrote ',fs_path,filename])
 end
