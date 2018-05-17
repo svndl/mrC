@@ -53,6 +53,7 @@ function success = TriMaker(subj_id,headmodel_folder)
     drawnow;
 
     % SAVE
+    if ~exist(sprintf('%s/%s_fs4/bem',fsDir,subj_id),'dir'),mkdir(sprintf('%s/%s_fs4/bem',fsDir,subj_id));end
     triDir = sprintf('%s/%s_fs4/bem',fsDir,subj_id);
     status(1) = writeTriFile(V1,F1,fullfile(triDir,'inner_skull.tri'));	%,'betsurf mesh')
     status(2) = writeTriFile(V2,F2,fullfile(triDir,'outer_skull.tri'));	%,'betsurf mesh')
