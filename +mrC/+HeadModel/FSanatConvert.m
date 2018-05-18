@@ -9,6 +9,10 @@ function success = FSanatConvert(subj_id,nifti_folder)
     [fs_dir,anat_dir] = mrC.SystemSetup;
     if nargin < 2
         nifti_folder = sprintf('%s/%s/nifti',anat_dir,subj_id);
+        if ~exist(nifti_folder,'dir')
+            mkdir(nifti_folder);
+        else
+        end
     else
     end
     
@@ -28,7 +32,8 @@ function success = FSanatConvert(subj_id,nifti_folder)
                 cmd_list{6} = sprintf('fslmaths %s/tmpWhiteL.nii.gz -add %s/tmpWhiteR.nii.gz -bin %s/%s_FS4_wm.nii.gz',nifti_folder,nifti_folder,nifti_folder,subj_id);
                 cmd_list{7} = sprintf('rm %s/tmpWhiteL.nii.gz',nifti_folder);
                 cmd_list{8} = sprintf('rm %s/tmpWhiteR.nii.gz',nifti_folder);
-            else
+            elseif strcmp(fs_files{f},'nu.mgz')
+                cmd_list{4} = sprintf('cp %s %s/../vAnatomy.nii.gz',out_file,nifti_folder);
             end
         else
             msg = sprintf('\n ... %s does not exist, so not copied \n',in_file);
