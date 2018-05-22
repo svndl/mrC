@@ -1,4 +1,4 @@
-function [outData,transMtx] = SourceBrain(mrCPath,invPaths,varargin)
+function [outData,transMtx,FreqFeatures] = SourceBrain(mrCPath,invPaths,varargin)
     % Description:	Convert EEG data to source-localized whole-brain data
     % 
     % Syntax:	[outData,transMtx] = mrC.SourceBrain(mrCPath,invPaths,varargin)
@@ -13,6 +13,7 @@ function [outData,transMtx] = SourceBrain(mrCPath,invPaths,varargin)
     %               This is only available in mrCurrent mode. 
     %               In direct mode, this option will be ignored if dataIn
     %               is source data, rather than sensor data.
+    %
     %
     %   note that in direct mode, dataIn and subIds are required! 
     %
@@ -30,6 +31,9 @@ function [outData,transMtx] = SourceBrain(mrCPath,invPaths,varargin)
     %
     %       doConvert: convert the data to µAmp/mm2 by multiplying with 1e6
     %                  ([true]/false)
+    %       domain: calculate the inverse in time or frequency domain. if
+    %               in frequency domain, it will return the inverse data in
+    %               complex matrices. ([time]/frequency)
                         
     % Out:
     
@@ -39,7 +43,8 @@ function [outData,transMtx] = SourceBrain(mrCPath,invPaths,varargin)
             'dataIn'		, [], ...
             'subIDs'		, []	, ...
             'doSmooth' , true,   ...
-            'doConvert',true...
+            'doConvert',true,...
+            'domain', 'time'...
             );
     
     if ischar(mrCPath)
@@ -63,7 +68,17 @@ function [outData,transMtx] = SourceBrain(mrCPath,invPaths,varargin)
             axxFiles = subfiles(fullfile(curFolder,'Exp_MATL_HCN_128_Avg','Axx*'),1);
             for c=1:length(axxFiles)
                 axxStrct = matfile(axxFiles{c});
-                opt.dataIn{c,s} = axxStrct.Wave;
+                if strcmp(opt.domain,'time'),
+                    opt.dataIn{c,s} = axxStrct.Wave;
+                    FreqFeatures = [];
+                elseif strcmp(opt.domain,'frequency'),
+                    opt.dataIn{c,s} = axxStrct.Cos+(axxStrct.Sin*1i);
+                    FreqFeatures.dFHz = axxStrct.dFHz;
+                    FreqFeatures.i1F1 = axxStrct.i1F1;
+                    FreqFeatures.i1F2 = axxStrct.i1F2;
+                else
+                    error(['Input domain " ' opt.domain ' "is not defined']);
+                end
                 clear axxStrct;
             end
         end
