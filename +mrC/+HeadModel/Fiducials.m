@@ -235,7 +235,7 @@ function Fiducials(subj_id)
         save([pathname,filename],'P','-ascii','-tabs');
         disp(['wrote ',pathname,filename])
         % save freesurfer copy in bem directory
-        fs_path = sprintf('%s/%s_fs4/bem',fs_dir,subj_id);
+        fs_path = sprintf('%s/%s_fs4/bem/',fs_dir,subj_id);
         if exist(fs_path,'dir');
             save([fs_path,filename],'P','-ascii','-tabs');
         else
