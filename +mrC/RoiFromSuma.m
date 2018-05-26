@@ -7,12 +7,12 @@ function RoiFromSuma(subId,varargin)
     %           removed
     %
     %   <options>:
-    %       Mode:   string specifying the mode, aka the set of ROIs to convert 
+    %       mode:   string specifying the mode, aka the set of ROIs to convert 
     %               (['func']/'benson'/'wangatlas')
     %
-    %       CortexFile: string specifying the full path to the mrMesh cortex file
+    %       cortexfile: string specifying the full path to the mrMesh cortex file
     %
-    %       MinMaxEcc: 2 integer vector designating the minimum and maximum eccentricity
+    %       ecc_range: 2 integer vector designating the minimum and maximum eccentricity
     %                  to use with Benson ROIs. Does nothing if other ROIs
     %                  are used. Default: ask which eccentricities to use
     %       
@@ -30,26 +30,26 @@ function RoiFromSuma(subId,varargin)
     
     %% SET DEFAULTS
     opt	= ParseArgs(varargin,...
-            'Mode'		 , 'wangatlas', ...
-            'CortexFile' , 	 fullfile(anatDir,'/Standard/meshes/defaultCortex.mat'), ...
-            'MinMaxEcc'  ,   [0,0] ...
+            'mode'		 , 'wangatlas', ...
+            'cortexfile' , 	 fullfile(anatDir,'/Standard/meshes/defaultCortex.mat'), ...
+            'ecc_range'  ,   [0,0] ...
             );
     
-    if strcmp(opt.Mode,'wangatlas')
-        opt.Mode = 'wang'; % ensure flexibility
+    if strcmp(opt.mode,'wangatlas')
+        opt.mode = 'wang'; % ensure flexibility
     else
     end
     
-    if strcmp(opt.Mode,'glasser')
-        opt.Mode = 'glass'; % ensure flexibility
+    if strcmp(opt.mode,'glasser')
+        opt.mode = 'glass'; % ensure flexibility
     else
     end
     
     %% GET ROI FILE
-    if strcmp(opt.Mode,'benson')
+    if strcmp(opt.mode,'benson')
         roiNames = {'V3d','V2d','V1d','V1v','V2v','V3v'};
         roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Benson2014.all.niml.dset',fsDir),1);
-        if max(opt.MinMaxEcc) == 0
+        if max(opt.ecc_range) == 0
             eccMin = input('Minimum eccentricity? [default = 0] ');
             if isempty(eccMin)
                 eccMin = 0;
@@ -63,21 +63,26 @@ function RoiFromSuma(subId,varargin)
             else
             end
         else
-            eccMin = opt.MinMaxEcc(1);
-            eccMax = opt.MinMaxEcc(2);
+            eccMin = opt.ecc_range(1);
+            eccMax = opt.ecc_range(2);
         end
-    elseif strcmp(opt.Mode,'wang')
-        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015.niml.dset',fsDir),1);
+    elseif strcmp(opt.mode,'wang')
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015_cluster.niml.dset',fsDir),1);
+        if roiFile{1} == 0
+            warning('\n ... using unclustered ROI-file ...\n');
+            roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015.niml.dset',fsDir),1);
+        else
+        end
         roiNames = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2',...
                     'PHC1' 'PHC2','TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A',...  
                     'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4','IPS5' 'SPL1' 'FEF'};
         eccComment = 'atlas, generated based on Wang et al., 2015';
-    elseif strcmp(opt.Mode,'glass')
+    elseif strcmp(opt.mode,'glass')
         roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Glasser2016.niml.dset',fsDir),1);
         roiNames = arrayfun(@(x) sprintf('roi%03d',x),1:180,'uni',false); 
         % true names can be found on pgs. 81-85 of the supplementary material.
         eccComment = 'atlas, generated based on Glasser et al., 2016';
-    elseif strcmp(opt.Mode,'kgs')
+    elseif strcmp(opt.mode,'kgs')
         roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.KGS2016.niml.dset',fsDir),1);
         roiNames = {'IOG','OTS','mFUS','pFUS','PPA','VWFA1','VWFA2'};
         eccComment = 'atlas, generated based on Weiner & Grill-Spector (in press)';
@@ -96,13 +101,19 @@ function RoiFromSuma(subId,varargin)
             roiFile{1} = tempFile;
         end
     end
+    
+    if roiFile{1} == 0
+        msg = sprintf('\n ... %s ROI files have not been found for subject %s ... \n',opt.mode,subId);
+        error(mgs);
+    else
+    end
 
     %% LOAD MRMESH CORTEX AND TRANSFORM TO MATCH FREESURFER
-    load(opt.CortexFile);
+    load(opt.cortexfile);
     msh.nVertex = sum(msh.nVertexLR);
     % sanity check
     if any( [ size(msh.data.vertices,2), size(msh.initVertices,2) ] ~= msh.nVertex )
-        error('vertex disagreement within %s',opt.CortexFile)
+        error('vertex disagreement within %s',opt.cortexfile)
     end
     % get hash before doing any transforms
     meshHash = hashOld(msh.data.vertices(:),'md5');
@@ -157,10 +168,10 @@ function RoiFromSuma(subId,varargin)
                 ROIs(iROI).color = tempColor(1:3);
                 ROIs(iROI).ViewType = 'Gray';
                 ROIs(iROI).date = creationTime;
-                ROIs(iROI).type = opt.Mode;
-                ROIs(iROI).comment = [opt.Mode,': Converted from SUMA using mrC.ConvertROI'];
+                ROIs(iROI).type = opt.mode;
+                ROIs(iROI).comment = [opt.mode,': Converted from SUMA using mrC.ConvertROI'];
             end
-        elseif strcmp(opt.Mode,'benson') % if it is not a proper ROI file, this is designed specifically for Noah Benson's ROI data
+        elseif strcmp(opt.mode,'benson') % if it is not a proper ROI file, this is designed specifically for Noah Benson's ROI data
             cmap = distinguishable_colors(10);
             colors = cmap(end-length(roiNames)-1:end,:);
             nimlStrct = afni_niml_readsimple(roiFile{z});
@@ -204,8 +215,8 @@ function RoiFromSuma(subId,varargin)
                 ROIs(iROI).color = colors(z,:);
                 ROIs(iROI).ViewType = 'Gray';
                 ROIs(iROI).date = creationTime;
-                ROIs(iROI).type = opt.Mode;
-                ROIs(iROI).comment = [opt.Mode,': Converted from SUMA using mrC.ConvertROI.',eccComment];
+                ROIs(iROI).type = opt.mode;
+                ROIs(iROI).comment = [opt.mode,': Converted from SUMA using mrC.ConvertROI.',eccComment];
             end
             disp(eccComment);
         else % wang, kgs or glasser
@@ -235,8 +246,8 @@ function RoiFromSuma(subId,varargin)
                 ROIs(iROI).color = colors(z,:);
                 ROIs(iROI).ViewType = 'Gray';
                 ROIs(iROI).date = creationTime;
-                ROIs(iROI).type = opt.Mode;
-                ROIs(iROI).comment = [opt.Mode,': Converted from SUMA using mrC.ConvertROI.',eccComment];
+                ROIs(iROI).type = opt.mode;
+                ROIs(iROI).comment = [opt.mode,': Converted from SUMA using mrC.ConvertROI.',eccComment];
             end
             disp(eccComment);
         end
@@ -262,7 +273,7 @@ function RoiFromSuma(subId,varargin)
     
     %% PLOT ROIs
     kFr = find(ctx.triangles(:,1) > msh.nVertexLR(1),1,'first');		% 1st RH face index
-    figH = figure('name',sprintf('%s ',opt.Mode));
+    figH = figure('name',sprintf('%s ',opt.mode));
     subplot(121)
         patch(struct('vertices',ctx.vertices(kL,:),'faces',ctx.triangles(1:(kFr-1),:)),...
             'facevertexcdata',cdata(kL,:),'facecolor','interp','facelighting','gouraud','edgecolor','none')
@@ -294,7 +305,7 @@ function RoiFromSuma(subId,varargin)
 
     function saveAnatROIs(varargin)
         in = guidata(gcf);
-        outDir = [fileparts(in.CortexFile),'/',in.ROIs(1).type,'_ROIs']; % default output directory 
+        outDir = [fileparts(in.cortexfile),'/',in.ROIs(1).type,'_ROIs']; % default output directory 
         if ~exist(outDir,'dir')
             mkdir(outDir);
         else
