@@ -12,6 +12,7 @@ function [cmap] = jmaColors(mapName,thresh,nPoints);
 %'hotcortex'     = gray to red to yellow
 %'coolhotcortex' = cyan to blue to gray to red to yellow
 %'pval'          = yellow to red
+%'phasecolor'    = grey to red to blue to grey
 
 if ~exist('nPoints','var') || isempty(nPoints),
     
@@ -125,6 +126,19 @@ switch lower(mapName)
             
         
         colorLoc = [0 0 0; 
+                    1 1 1;];
+                
+    case 'phasecolor'
+
+        colorVal = [.6 .6 .6;
+                    1 0 0;
+                    0 0 1;
+                    .6 .6 .6];
+            
+        
+        colorLoc = [0 0 0;
+                    .25 .25 .25;
+                    .75 .75 .75;
                     1 1 1;];
 
     otherwise
