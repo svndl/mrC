@@ -1,6 +1,6 @@
-function PlotEEG(ASDEEG,Freq,savepath,subID, masterList,signalFF)
-% This function provides a dual plot of electrode spectrum and topographic
-% map of amplitude at a specific frequency (similar to powerDiva)
+function PlotEEG(ASDEEG,Freq,savepath,subID, masterList,signalFF,SignalType,jcolors)
+% This function provides a dual plot of electrode amplitude/phase spectrum and topographic
+% map of amplitude/phase at a specific frequency (similar to powerDiva)
 
 % This function is interactive: click on the head plot to select electrode
 % and click on spectrum plot to select frequency bin
@@ -15,11 +15,21 @@ function PlotEEG(ASDEEG,Freq,savepath,subID, masterList,signalFF)
     % Freq: nf x 1 vector, indicating the frequency bins
     % savepath: the string input indicating the folder to save the plots
     % master list: a cell array containing the names of ROIs
+    % signalFF: fundamental frequency of the seed signals
+    % SignalType: plot amplitude or phase, [Amplitude]/Phase
+    
     
 % Written by ELham Barzegaran,
 % Last modification: 3.7.2018
 
 %% set parameters
+if ~exist('SignalType','var')
+    if min(ASDEEG(:))>0
+        SignalType = 'Amplitude';
+    else
+        SignalType = 'Phase';
+    end
+end
 
 FS=14;%font size
 Fmax = numel(Freq); % maximum frequency
@@ -37,7 +47,17 @@ FOI = FFI(1);
 
 %% Plot prepration
 Probs{1} = {'facecolor','none','edgecolor','none','markersize',10,'marker','o','markerfacecolor','g' ,'MarkerEdgeColor','k','LineWidth',.5};% plotting parameters
-conMap = jmaColors('hotcortex');
+if ~exist('colors','var')
+    switch SignalType
+        case 'Amplitude'
+            conMap = jmaColors('hotcortex');
+        case 'Phase'
+            conMap = jmaColors('phasecolor');
+            %conMap = hsv(64);
+    end
+else
+    conMap = jmaColors(jcolors);
+end
 
 h=figure;
 set(h,'units','centimeters')
@@ -61,8 +81,12 @@ set(gca,'tag','info');
 
 N = 1;
 while(1)
-    if N == 1, colorbarLimits = [-0 max(ASDEEG(FOI,:))];
-    else colorbarLimits = [-0 max(ASDEEG(:))];
+    if strcmp(SignalType,'Amplitude')
+        if N == 1, colorbarLimits = [-0 max(ASDEEG(FOI,:))];
+        else colorbarLimits = [-0 max(ASDEEG(:))];
+        end
+    elseif strcmp(SignalType,'Phase')
+        colorbarLimits = [min(ASDEEG(:)) max(ASDEEG(:))];
     end
     
     if exist('sp1','var'),delete(sp1);end % topography map plot
@@ -78,8 +102,13 @@ while(1)
     bar(Freq(1:Fmax), ASDEEG(1:Fmax,EOI),.15); 
     xlim([Freq(1) Freq(Fmax)]);
     xlabel('Frequency(Hz)','fontsize',FS-2);
-    ylim([0 max(ASDEEG(1:Fmax,EOI))*1.1]);
-    ylabel('ASD','fontsize',FS-2);
+    if strcmp(SignalType,'Amplitude')
+        ylim([0 max(ASDEEG(1:Fmax,EOI))*1.1]);
+        ylabel('ASD','fontsize',FS-2);
+    elseif strcmp(SignalType,'Phase')
+        ylim([min(ASDEEG(1:Fmax,EOI))*1.1 max(ASDEEG(1:Fmax,EOI))*1.1]);
+        ylabel('Phase(degree)','fontsize',FS-2);
+    end
     set(sp2,'tag',num2str(2));
     hold on; 
     bar(Freq(FOI), ASDEEG(FOI,EOI),.4,'FaceColor','g','EdgeColor','g'); 
