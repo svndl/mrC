@@ -1,13 +1,37 @@
-function [roiList,roiList_C,subIDs] = GetRoiList(projectPath,anatDir,roiType)
+function [roiList,roiList_C,subIDs] = GetRoiList(projectPath,anatDir,roiType,subject)
 % Get a project and anatomy path and roi atlas and returns the list of of
 % all ROIs in that atlas, and the list of subjects with this altas ROIs in
 % the project
 
+%% Set defaults
+
+if ~exist('anatDir','var') || isempty(anatDir),
+    anatDir = getpref('mrCurrent','AnatomyFolder');
+end
+
+if ~exist('roiType','var')
+    roiType = 'wang';
+end
+
+if ~exist('subject','var')
+    roiType = 'all';
+end
+
+
 %% Extract the name of all ROI lists
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
 roiList = [];
-noRoi = zeros(length(projectPath),1);
-for s = 1:length(projectPath)   
+
+switch subject
+    case 'first'
+        len = 1;
+    case 'all'
+        len = length(projectPath) ;
+end
+
+noRoi = zeros(len,1);
+
+for s = 1: len
     [~,subIDs{s}] = fileparts(projectPath{s});
     % remove the session number from subjec ID
     SI = strfind(subIDs{s},'ssn');
@@ -16,6 +40,9 @@ for s = 1:length(projectPath)
     end
     
     roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes',[roiType,'_ROIs']);
+    if ~exist(roiDir,'dir'),
+        error ([roiDir ' dir is not defined for ' subIDs{s}]);
+    end
     nroiList =  subfiles(fullfile(roiDir,'/*.mat'),0);
     if nroiList{1}~=0, 
         roiList = unique([roiList; nroiList]); 
