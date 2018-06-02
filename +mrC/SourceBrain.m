@@ -1,4 +1,4 @@
-function [outData,transMtx,FreqFeatures] = SourceBrain(mrCPath,invPaths,varargin)
+function [outData,transMtx,FreqFeatures,subIDs] = SourceBrain(mrCPath,invPaths,varargin)
     % Description:	Convert EEG data to source-localized whole-brain data
     % 
     % Syntax:	[outData,transMtx] = mrC.SourceBrain(mrCPath,invPaths,varargin)
@@ -156,14 +156,16 @@ function [outData,transMtx,FreqFeatures] = SourceBrain(mrCPath,invPaths,varargin
                 else
                 end
                 if opt.template
-                    outData{c,s}(:,:,t) = mapMtx*curWave';  % apply between-subject morphing matrix
+                    outData{c,s}(:,:,t) = mapMtx*curWave.';  % apply between-subject morphing matrix
                 else
-                    outData{c,s}(:,:,t) = curWave';
+                    outData{c,s}(:,:,t) = curWave.';
                 end
             end
         end
         transMtx{1,s} = curInv;
         transMtx{2,s} = smoothMtx;
         transMtx{3,s} = mapMtx;
+        
+        subIDs = opt.subIDs;
     end
 end
