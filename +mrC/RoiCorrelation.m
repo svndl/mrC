@@ -41,6 +41,12 @@ function RoiCorrelation(subId,type,overwrite)
     if strcmp(type, 'func')
         ROIlist = {'V1d','V1v','V2v','V2d','V3v','V3d','V4','V3ab','LOC','MT','IPS0','VO1'};
         ROIcorrFile = fullfile( meshDir, 'ROIs_correlation.mat' );
+    elseif strcmp(type,'wangkgs')
+        ROIlist1 = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2' 'PHC1' 'PHC2' ...
+        'TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A' 'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4' ...
+        'IPS5' 'SPL1' 'FEF'};
+        ROIlist2 = {'IOG' 'mFUS' 'OTS' 'pFUS' 'PPA' 'VWFA1' 'VWFA2'};
+        ROIcorrFile = fullfile( meshDir, 'WANGKGS_correlation.mat' );
     elseif strfind(type,'wang')
         type = 'wang';%'wangatlas';
         ROIlist = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2' 'PHC1' 'PHC2' ...
@@ -65,19 +71,24 @@ function RoiCorrelation(subId,type,overwrite)
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Definition of the correlation within each of the ROIs
-
-    nROIs = numel(ROIlist) * 2;
-    ROIs = struct( 'ndx',{cell(1,nROIs)}, 'corr',{cell(1,nROIs)}, 'name',{reshape([strcat(type,'_',ROIlist,'-L');strcat(type,'_',ROIlist,'-R')],1,nROIs)} );
-    if strcmp(type,'wang')
-        ROIname2 = reshape([strcat(type,'atlas_',ROIlist,'-L');strcat(type,'atlas_',ROIlist,'-R')],1,nROIs);
+    if strcmp(type,'wangkgs')
+        nROIs = (numel(ROIlist1)+numel(ROIlist2)) * 2;
+        ROIs = struct( 'ndx',{cell(1,nROIs)}, 'corr',{cell(1,nROIs)}, 'name',{reshape([strcat('wang','_',ROIlist1,'-L') strcat('kgs','_',ROIlist2,'-L');strcat('wang','_',ROIlist1,'-R') strcat('kgs','_',ROIlist2,'-R')],1,nROIs)} );
+        ROIname2 = reshape([strcat('wang','atlas_',ROIlist1,'-L') strcat('kgs','_',ROIlist2,'-L');strcat('wang','atlas_',ROIlist1,'-R') strcat('kgs','_',ROIlist2,'-R')],1,nROIs);
+    else
+        nROIs = numel(ROIlist) * 2;
+        ROIs = struct( 'ndx',{cell(1,nROIs)}, 'corr',{cell(1,nROIs)}, 'name',{reshape([strcat(type,'_',ROIlist,'-L');strcat(type,'_',ROIlist,'-R')],1,nROIs)} );
+        if strcmp(type,'wang')
+            ROIname2 = reshape([strcat(type,'atlas_',ROIlist,'-L');strcat(type,'atlas_',ROIlist,'-R')],1,nROIs);
+        end
     end
     cntROI = 0;
     for iROI = 1:nROIs
         % loop over complete set of ROIs
         roiPath = fullfile( meshDir, 'ROIs', ROIs.name{iROI} );
         E1 = exist([roiPath '.mat'],'file');
-        if strcmp(type,'wang') && ~E1
-            roiPath = fullfile( meshDir, 'ROIs', ROIsname2{iROI});
+        if (strcmp(type,'wang') || strcmp(type,'wangkgs')) && ~E1
+            roiPath = fullfile( meshDir, 'ROIs', ROIname2{iROI});
             E1 = exist([roiPath '.mat'],'file');
             if E1, ROIs.name = ROIname2;end
         end

@@ -198,6 +198,8 @@ function params = MakeInverses( projectDir,params )
                 [ fwd ] = mrC.AddCorr( fwd , subjId );
             elseif params.GCV.roiCorrelation == 2
                 [ fwd ] = mrC.AddCorr( fwd , subjId ,'wang');
+            elseif params.GCV.roiCorrelation == 3
+                [ fwd ] = mrC.AddCorr( fwd , subjId ,'wangkgs');
             else
             end
             
@@ -216,6 +218,9 @@ function params = MakeInverses( projectDir,params )
             elseif params.GCV.roiCorrelation == 2
                 [ sol ] = mrC.AddCorr( sol , subjId ,'wang');
                 inverse_name = strcat(inverse_name , '_wangROIsCorr');
+            elseif params.GCV.roiCorrelation == 3
+                [ sol ] = mrC.AddCorr( sol , subjId ,'wangkgs');
+                inverse_name = strcat(inverse_name , '_wangkgsROIsCorr');
             else
             end
             if find( setdiff( [ 1 2 3 4 ] , params.GCV.Quadrants ) )
@@ -239,7 +244,7 @@ function params = MakeInverses( projectDir,params )
                 optionString =  [optionString inverse_name ];
             else
                 % if JMA or MNE inverse
-                optionString =  [optionString 'snr_' num2str(SNR)];
+                optionString =  [optionString 'snr_' num2str(params.SNR)];
             end
             invOutFile = fullfile(projectDir,subjId,'Inverses',['mneInv_' optionString '.inv']);
             mrC.WriteInverse(sol,invOutFile);
@@ -328,7 +333,7 @@ function [ gcv_params ] = get_gcv_params( Axx )
         end
         gcv_params.roiCorrelation = 0;
         gcv_params.Quadrants = [1 2 3 4];
-        f_labels{end+1} = sprintf('\nROI correlation \n( 0 = no, 1 = func ROIs, 2 = wang ROIs )');
+        f_labels{end+1} = sprintf('\nROI correlation \n( 0 = no, 1 = func ROIs, 2 = wang ROIs, 3 = wand and kgs ROIs)');
         f_labels{end+1} = sprintf('\nActivated Quadrants\n( 1 = upL, 2 = upR, 3 = lowL, 4 = lowR )');
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -349,7 +354,7 @@ function [ gcv_params ] = get_gcv_params( Axx )
             gcv_params.(f{i}) = paramValue;
             switch f{i}
                 case 'roiCorrelation'
-                    correctInput(i) = any(ismember(paramValue,[0,1,2]));
+                    correctInput(i) = any(ismember(paramValue,[0,1,2,3]));
                 case 'Quadrants'
                     correctInput(i) = any(ismember(paramValue,[1,2,3,4]));
                 otherwise
