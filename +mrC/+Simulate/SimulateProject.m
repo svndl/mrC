@@ -31,13 +31,24 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %                       frequencis of sources
   
   % (ROI Parameters)
-    %       roiType:        string specifying the roitype to use. 
+    %       rois            a cell array of roi structure that can be
+    %                       extracted from mrC.Simulate.GetRoiList for any
+    %                       atlas. The roi structure contain .Type field
+    %                       which is the type of atlas used:
+    %                       (['func']/'wang'/'glass','kgs','benson')
+    %                       the other field is .Name which should be the
+    %                       name of ROI and .Hemi which indicates the
+    %                       hemisphere, and can be 'L' or 'R' or 'B' for
+    %                       both hemisphere.
+    %                       Note that the cell array can contain ROIs from
+    %                       different atlases
+    %                       
+    %       roiType:        THIS IS NOT NEEDED IF YOU GIVE THE rois INPUT.  
+    %                       string specifying the roitype to use. 
     %                       'main' indicates that the main ROI folder
     %                       /Volumes/svndl/anatomy/SUBJ/standard/meshes/ROIs
-    %                       is to be used. (['func']/'wang'/'glass','kgs','benson','main').
+    %                       is to be used. (['func']/'wang'/'glass','kgs','benson').
     %
-    %       roiList:        a 1 x seedNum cell of strings, with names of ROIs to simulate. 
-    %                       [all ROIs of the specified type]
     %
     %       roiSpatfunc     a string indicating which spatial function
     %                       will be used to put the seed signal in ROI
@@ -68,6 +79,12 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %       figFolder:        string specifying folder in which to save sensor
     %                       figs. [Users' Desktop]
     
+
+  % (Save Parameters)
+    %       SavePath:       The folder to save simulated data in axx format
+    %
+    %       cndNum:         The condition number for simulated EEG
+  
   % (Inverse Parameters) .... should be corrected
     %       inverse:        a string specifying the inverse name to use
     %                       [latest inverse]
@@ -75,7 +92,6 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %                       the simulated ROI data back into source space
     %                       true/[false]
     %
-    
 % OUTPUT:
     %       EEGData:        a NS x e matrix, containing simulated EEG,
     %                       where NSs is number of time samples and e is the
@@ -106,8 +122,8 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
 %--------------------------set up default values---------------------------
 opt	= ParseArgs(varargin,...
     'inverse'		, [], ...
-    'roiType'       , 'func',...
-    'roiList'		, [],...
+    'rois'          , [], ...
+    'roiType'       , 'wang',...
     'roiSpatfunc'   , 'uniform',...
     'roiSize'       , 200,...
     'signalArray'   , [],...
@@ -119,7 +135,9 @@ opt	= ParseArgs(varargin,...
     'doSource'      , false,...
     'figFolder'     , [],...
     'anatomyPath'   , [],...   
-    'plotting'      , 0 ...
+    'plotting'      , 0 ,...
+    'SavePath'      ,[],...
+    'cndNmb'        ,1 ...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -165,10 +183,10 @@ end
 % -----------------Generate default source signal if not given-------------
 % Generate signal of interest
 if isempty(opt.signalArray) 
-    if isempty(opt.roiList)
+    if isempty(opt.rois)
         [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType); % default signal (can be compatible with the number of ROIs, can be improved later)
     else 
-        [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType,'signalFreq',round(rand(length(opt.roiList),1)*3+3));
+        [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType,'signalFreq',round(rand(length(opt.rois),1)*3+3));
     end
 end
 
@@ -177,7 +195,7 @@ if isfield(opt,'signalFF')
 end
 
 %% ===========================GENERATE EEG signal==========================
-
+projectPathfold = projectPath;
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
 
 for s = 1:length(projectPath)
@@ -216,36 +234,36 @@ for s = 1:length(projectPath)
         fwdMatrix = makeForwardMatrixFromMne(fwdStrct ,srcStrct); % Generate Forward matrix
     end
     
-    %-----------------------------Set ROI folder---------------------------
-    if strcmp(opt.roiType,'main')
-        roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','ROIs');
-        roiPaths = subfiles(roiDir);
-    else
-        roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.roiType,'_ROIs']);
-        roiPaths = subfiles(roiDir);
-    end
-    if ~exist(roiDir,'dir')
-        EEGData{s}=[]; sourceDataOrigin{s}=[];
-        warn = ['' opt.roiType ' ROIs are not defined for subject ' subIDs{s}];
-        warning(warn);
-        continue;
-        %error('selected roi directory does not exist: %s', roiDir);
-    else
-    end
-
-    % -----------------Default ROIs--------------------------
+    % ---------------------------Default ROIs----------------------------------
     seedNum = size(opt.signalArray,2); % Number of seed sources
-    
-    [roiChunk,tempList] = mrC.ChunkFromMesh(roiDir,size(fwdMatrix,2));% read the ROIs
-    tempList = unique(cellfun(@(x) x(1:end-4),tempList,'uni',false));
-    
+    [Roi] = mrC.Simulate.GetRoiList(projectPathfold,anatDir,opt.roiType);
+       
     % Select Random ROIs 
-    if isempty(opt.roiList) % This part should be updated. The default ROIs should be the same among subjects
+    if isempty(opt.rois)
         % Initialized only for the first subject, then use the same for the rest
-        opt.roiList = tempList(randperm(numel(tempList),seedNum));
-        
+        opt.rois = Roi(randperm(numel(Roi),seedNum));
     end
-    masterList = opt.roiList;
+    masterList = cellfun(@(x) {[x.Name '_' x.Hemi]},opt.rois,'UniformOutput',false); 
+    
+    %-----------------------------Set ROI folder/folders-----------------------  
+    if ~isempty(opt.rois)
+        nex = zeros(size(opt.rois));% variable for checking the atlases
+        for r = 1:numel(opt.rois)
+            opt.rois{r}.roiDir = (fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.rois{r}.Type,'_ROIs']));
+            if ~exist(opt.rois{r}.roiDir,'dir')
+                nex(r)=1;
+            end
+        end
+        if sum(nex)>1
+            warn = ['' opt.rois{find(nex,1,'first')}.Type ' ROIs are not defined for subject ' subIDs{s}];
+            warning(warn);
+            continue;
+        end
+    else
+        warning('No ROI is defined');
+        continue;
+    end
+    
 %-------------------Generate noise: from Sebastian's code------------------
     
     % -----Noise default parameters-----
@@ -261,8 +279,9 @@ for s = 1:length(projectPath)
     if ~any(strcmp(Noisefield, 'alpha_nodes')), Noise.alpha_nodes = 'all';end % for now I set it to all visual areas, later I can define ROIs for it
 
     % -----Determine alpha nodes: This is temporary-----
-
-    if strcmp(Noise.alpha_nodes,'all'), AlphaSrc = find(sum(roiChunk,2)); end % for now: all nodes will show the same alpha power over whole visual cortex  
+    alphaRoiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','wang_ROIs');% alpha noise is always placed in wang ROIs
+    [alpharoiChunk] = mrC.ChunkFromMesh(alphaRoiDir,size(fwdMatrix,2));% read the ROIs 
+    if strcmp(Noise.alpha_nodes,'all'), AlphaSrc = find(sum(alpharoiChunk,2)); end % for now: all nodes will show the same alpha power over whole visual cortex  
 
     disp ('Generating noise signal ...');
     
@@ -292,42 +311,41 @@ for s = 1:length(projectPath)
     % 
 %------------------------PLACE SIGNAL IN THE ROIs--------------------------
     
-    disp('Generating EEG signal ...');
-    % Put an option to get the ROIs either from input of function or from command line
+    disp('Generating EEG signal ...'); 
+ 
+    %[EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
     
-    CorrectROI = cellfun(@(x) strcmpi(tempList,x), masterList,'UniformOutput',false);% compare the names of input ROIs with the ones from the filess
-    
-    % In the following function size(opt.signalArray,2) should be equal to size of masterList)     
-    if (numel(masterList)~=seedNum) && (sum(cellfun(@(x) sum(x),CorrectROI))==seedNum)
-        ROIcorr = false;
-        while ROIcorr==false
-            warning(['Number of ROIs does not match the number of input signals. Please select ' num2str(seedNum) ' ROIs among the list below:']);
-            if strcmp(opt.roiType,'wang')
-                tempList = cellfun(@(x) x(11:end),tempList,'uni',false);
-            end
-            List = strcat(sprintfc('%d',1:numel(tempList)),{' - '},tempList);
-            display(List);
-            ROIidx = unique(input(['Please enter ' num2str(seedNum) ' ROIs: (example: [1 10])\n']));
-            
-            % If the criteria is correct
-            if (numel(ROIidx)==seedNum) && (prod(ismember(ROIidx,1:numel(tempList)))) 
-                
-                masterList = masterList(ROIidx); 
-                opt.roiList = masterList;
-                ROIcorr = true;
-                
-            end
-        end     
-    end
-    
-    
-    
-    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
+    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois,fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
+       
     %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format
-if strcmp(opt.signalType,'SSVEP')
-    EEGAxx{s}= mrC.Simulate.CreateAxx(EEGData{s},opt);% Converts the simulated signal to Axx format  
-end
+    if strcmp(opt.signalType,'SSVEP')
+        EEGAxx{s}= mrC.Simulate.CreateAxx(EEGData{s},opt);% Converts the simulated signal to Axx format  
+    end
+    
+%% write output to file 
+    
+    if ~isempty(opt.SavePath)
+        % prepare mrC simulation project
+        if ~exist(fullfile(opt.SavePath,subIDs{s}),'dir')
+            mkdir(fullfile(opt.SavePath,subIDs{s}));
+        end
+        
+        % Write axx files
+        if ~exist(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'),'dir')
+            mkdir(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'))
+            EEGAxx{s}.writetofile(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg',sprintf('Axx_c0%02d.mat',opt.cndNmb)));
+        end
+        % Copy Inverse files
+        copyfile(fullfile(projectPath{s},'Inverses'),fullfile(opt.SavePath,subIDs{s},'Inverses'));
+        
+        % Write Original source Data
+        if ~exist(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul'),'dir')
+            SourceDataOrigin = sourceDataOrigin{s};
+            mkdir(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul'));
+            save(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul',sprintf('Source_c0%02d.mat',opt.cndNmb)),'SourceDataOrigin');
+        end
+    end
 end
 
 
