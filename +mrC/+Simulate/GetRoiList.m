@@ -1,4 +1,4 @@
-function [roiList,roiList_C,subIDs] = GetRoiList(projectPath,anatDir,roiType,subject)
+function [Roi,roiList,subIDs] = GetRoiList(projectPath,anatDir,roiType,subject)
 % Get a project and anatomy path and roi atlas and returns the list of of
 % all ROIs in that atlas, and the list of subjects with this altas ROIs in
 % the project
@@ -14,7 +14,7 @@ if ~exist('roiType','var')
 end
 
 if ~exist('subject','var')
-    roiType = 'all';
+    subject= 'first';
 end
 
 
@@ -54,8 +54,17 @@ end
 %% Clean ROI names
 Ind1 = strfind(roiList,'_');
 Ind2 = strfind(roiList,'-');
-roiList_C = unique(cellfun(@(x,y,z) z(x+1:y-1),Ind1,Ind2,roiList,'UniformOutput',false));
+roiList_C = (cellfun(@(x,y,z) z(x+1:y-1),Ind1,Ind2,roiList,'UniformOutput',false));
+hemi = (cellfun(@(y,z) z(y+1:y+1),Ind2,roiList,'UniformOutput',false));
 subIDs=subIDs(noRoi==0);
 
 roiList = unique(cellfun(@(x) x(1:end-4),roiList,'uni',false));
+
+%% Output structure
+for r = 1:numel(roiList)
+    Roi{r}.Type = roiType;
+    Roi{r}.Name = roiList_C{r};
+    Roi{r}.Hemi = hemi{r};
+end
+
 end

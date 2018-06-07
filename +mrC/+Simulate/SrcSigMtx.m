@@ -1,4 +1,4 @@
-function [EEGData,sourceData,roiSet] = SrcSigMtx(roiDir,masterList,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)% ROIsig %NoiseParams
+function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)% ROIsig %NoiseParams
     % Description:	Generate Seed Signal within specified ROIs
     %
     % Syntax:	
@@ -32,74 +32,85 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(roiDir,masterList,fwdMatrix,sur
     
   % Elham Barzegaran 2.27.2018
     
+  % Updated EB, 6.5.2018
 %%
-[roiChunk, tempList] = mrC.ChunkFromMesh(roiDir,size(fwdMatrix,2));
-shortList = cellfun(@(x) x(1:end-4),tempList,'uni',false);
-roiSet = repmat({NaN},2,length(masterList));
 
 if ~exist('RoiSize','var'), RoiSize = [];end
 if ~exist('funcType','var'), funcType = [];end
 
-%
-if ~isempty(roiChunk)
-    %% seed ROIs
-    % Note: I consider here that the ROI labels in shortList are unique (L or R are considered separetly)
-    [~,RoiIdx,order] = intersect(lower(shortList),lower(masterList));% find the ROIs, make both in lower case to avoid case sensitivity
+for r = 1:numel(rois) % Read each Roi and check if they exist
+    [roichunk, tempList] = mrC.ChunkFromMesh(rois{r}.roiDir,size(fwdMatrix,2));
+    Ind1 = strfind(tempList,'_');Ind2 = strfind(tempList,'-');
+    shortList = (cellfun(@(x,y,z) z(x+1:y-1),Ind1,Ind2,tempList,'UniformOutput',false));
+    hemi = (cellfun(@(y,z) z(y+1:y+1),Ind2,tempList,'UniformOutput',false));
+    if sum(strcmp(rois{r}.Hemi,{'R','L'}))>0 
+        Ind = strcmp(shortList,rois{r}.Name) .* strcmp(hemi,rois{r}.Hemi);
+    elseif strcmp(rois{r}.Hemi,'B')
+        Ind = strcmp(shortList,rois{r}.Name) .* (strcmp(hemi,'R')+strcmp(hemi,'L'));
+    else
+        Ind =0;
+    end
+    if sum(Ind)>0,
+        roiChunk(:,r)= sum(roichunk(:,find(Ind)),2);
+    else
+        warning(['ROI ' rois{r}.Name '_' rois{r}.Hemi 'is not found in' rois{r}.Type 'atlas']);
+    end
+end
 
-    % V4v to V4: LATER CHANGE THIS PART
-    %   indv4L = find(cellfun(@(x) ~isempty(x),strfind(lower(shortList),'v4-r')));indv4S = find(cellfun(@(x) ~isempty(x),strfind(lower(materList),'v4-r')));
-    % V3a to V3ab
-
-    if numel(RoiIdx)~= size(signalArray,2)
+if size(roiChunk,2)~= size(signalArray,2)
         EEGData=[]; 
         sourceData=[];
         roiSet=[];
         warning('Number of ROIs is not equal to number of source signals');
         return;
         % error('Number of ROIs is not equal to number of source signals');
-    else
-        RoiIdx = RoiIdx(order);
-        
-        % Adjust Roi size, prepare spatial function (weights) and plot ROIs
-        
-        plotRoi = 1;
-        %RoiSize = 200;
-        spatfunc = RoiSpatFunc(roiChunk,RoiIdx,surfData,RoiSize,[],funcType,plotRoi);
-        
-        % place seed signal array in source space
-        sourceTemp = zeros(size(noise));
-        for s = 1: size(signalArray,2)% place the signal for each seed 
-            sourceTemp = sourceTemp + repmat (signalArray(:,s),[1 size(sourceTemp,2)]).*(repmat(spatfunc(:,s),[1 size(sourceTemp,1)])');
-        end
-        
-        % Normalize the source signal
-        if strcmp(spatial_normalization_type,'active_nodes')
-        n_active_nodes_signal = sum(sum(abs(sourceTemp))~=0) ;
-            sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
-        elseif strcmp(spatial_normalization_type,'all_nodes')
-            sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
-        else
-            error('%s is not implemented as spatial normalization method', spatial_normalization_type)
-        end
-        
-        % Adds noise to source signal
-        pow = .7;
-        sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
-        sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
-        
-        % Generate EEG data by multiplication to forward matrix
-        EEGData = sourceData*fwdMatrix';
-        
-        % there should be another step: add measurement noise to EEG?
+end
+
+%
+if ~isempty(roiChunk)
+    %% seed ROIs
+    % Note: I consider here that the ROI labels in shortList are unique (L or R are considered separetly)
+    % Adjust Roi size, prepare spatial function (weights) and plot ROIs
+
+    plotRoi = 0;
+    %RoiSize = 200;
+    spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,[],funcType,plotRoi);
+
+    % place seed signal array in source space
+    sourceTemp = zeros(size(noise));
+    for s = 1: size(signalArray,2)% place the signal for each seed 
+        sourceTemp = sourceTemp + repmat (signalArray(:,s),[1 size(sourceTemp,2)]).*(repmat(spatfunc(:,s),[1 size(sourceTemp,1)])');
     end
+
+    % Normalize the source signal
+    if strcmp(spatial_normalization_type,'active_nodes')
+    n_active_nodes_signal = sum(sum(abs(sourceTemp))~=0) ;
+        sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
+    elseif strcmp(spatial_normalization_type,'all_nodes')
+        sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
+    else
+        error('%s is not implemented as spatial normalization method', spatial_normalization_type)
+    end
+        
+        
 else
+    sourceTemp = zeros(size(noise));
 end
 
+% Adds noise to source signal
+pow = .7;
+sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
+sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
+
+% Generate EEG data by multiplication to forward matrix
+EEGData = sourceData*fwdMatrix';
+
+% there should be another step: add measurement noise to EEG?
 end
 
-function spatfunc = RoiSpatFunc(roiChunk,RoiIdx,surfData,RoiSize,Hem,funcType,plotRoi)
+function spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,Hem,funcType,plotRoi)
 %------------resize and plot ROIs on the 3D brain Surface------------------
-
+RoiIdx = 1:size(roiChunk,2);
 if ~exist('RoiSize','var')
     RoiSize = max(sum(full(roiChunk(:,RoiIdx))));
 elseif isempty(RoiSize)
