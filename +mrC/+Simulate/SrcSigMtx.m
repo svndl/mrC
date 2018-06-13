@@ -72,7 +72,7 @@ if ~isempty(roiChunk)
     % Note: I consider here that the ROI labels in shortList are unique (L or R are considered separetly)
     % Adjust Roi size, prepare spatial function (weights) and plot ROIs
 
-    plotRoi = 0;
+    plotRoi = 1;
     %RoiSize = 200;
     spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,[],funcType,plotRoi);
 
@@ -164,7 +164,7 @@ if plotRoi ==1
             Faces = faces;
     end
     patch('faces',Faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
-         'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.4,'FaceAlpha',.55);
+         'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.4,'FaceAlpha',.55,'facelighting','gouraud');
     shading interp
     lightangle(50,180)
     lightangle(50,0)
@@ -177,7 +177,7 @@ if plotRoi ==1
         C=cmap(i*floor(255/numel(RoiIdx)),:);
         if ~isempty(RoiFaces{i}),
             hold on; patch('faces',RoiFaces{i},'vertices',RoiVertices{i},'edgecolor','k','facecolor','interp','facevertexcdata',repmat(C,size(RoiVertices{i},1),1),...
-                'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1);
+                'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
             scatter3(RoiVertices{i}(:,1),RoiVertices{i}(:,2),RoiVertices{i}(:,3),30,C,'filled');
         end
     end

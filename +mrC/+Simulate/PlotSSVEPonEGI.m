@@ -12,7 +12,7 @@ function PlotSSVEPonEGI(EEGAxx, SignalType, SavePath, SaveName,signalFF,RoiList,
 %% set default valuse
 
 if ~exist('Mode','var') || isempty(Mode)
-    SignalType = 'Simple';
+    Mode = 'Simple';
 end
 
 if ~exist('SignalType','var') || isempty(SignalType)
@@ -44,7 +44,7 @@ end
                     set(H,'PaperPositionMode','manual');
                     set(H,'units','centimeters');
                     set(H, 'PaperPosition',[1 1 12 5]);   
-                    print(fullfile(SavePath,[SaveName '_SimEEG_SubjectAverage_Electrode_Freq' num2str(signalFF) 'Hz_' SignalType  '.tif']),'-dtiff','-r300');
+                    print(fullfile(SavePath,[ 'SimEEG_Subject_' subIDs{s} '_Electrode_Freq' num2str(signalFF) 'Hz_' SignalType '_' SaveName '.tif']),'-dtiff','-r300');
                 end
             end 
         end 
@@ -65,6 +65,6 @@ end
         set(h,'PaperPositionMode','manual')
         set(h,'units','centimeters')
         set(h, 'PaperPosition',[1 1 12 5]);    
-        print(fullfile(SavePath,[SaveName '_SimEEG_SubjectAverage_Electrode_Freq' num2str(signalFF(1)) 'Hz_' SignalType  '.tif']),'-dtiff','-r300');
+        print(fullfile(SavePath,[ 'SimEEG_Subject_Average_Electrode_Freq' num2str(signalFF(1)) 'Hz_' SignalType '_' SaveName  '.tif']),'-dtiff','-r300');
     end
 end

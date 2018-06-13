@@ -13,6 +13,9 @@ function [ForwardPath, AnatomyPath]  = PrepareProjectSimulate(ProjectPath,DestPa
         %             the reason for adding .mat is to reduce the size of the 
         %             files, .mat files are much smaller than fif files
         %             ['fif']/'mat'
+        
+        % CopyInv:    if true, copies the available inverses for each
+                      % subject, true/[false]
     
 % OUTPUTS:
     % ForwardPath: The path of Project that contains forward models
@@ -22,7 +25,8 @@ function [ForwardPath, AnatomyPath]  = PrepareProjectSimulate(ProjectPath,DestPa
 % Author: Elham Barzegaran, 4/9/2018
 %%
 opt	= ParseArgs(varargin,...
-    'FwdFormat'		, 'fif' ...
+    'FwdFormat'		, 'fif', ...
+    'CopyInv'       , false ...
     );
 display ('Copy project and anatomy files to a local folder...')
 
@@ -57,7 +61,7 @@ for s = 1:length(projectPath)
     [~,subIDs{s}] = fileparts(projectPath{s});
     
     disp(['Copying data for subject ' subIDs{s} ' ...']);
-    % ---------------------Copy Froward matrixes---------------------------
+    % ---------------------Copy Froward matrices---------------------------
     fwdPath = fullfile(projectPath{s},'_MNE_',[subIDs{s} '-fwd.fif']);
     % remove the session number from subjec ID
     SI = strfind(subIDs{s},'ssn');
@@ -86,7 +90,13 @@ for s = 1:length(projectPath)
         %[~,name,~] = fileparts(fwdPath);
         save(fullfile(fwdPathDest,[subIDs{s} '-fwd.mat']),'fwdMatrix');
     end
-
+    %-------------------------Copy Inverse matrices------------------------
+    if islogical(opt.CopyInv) && opt.CopyInv
+        InvPathDest = fullfile(DestPath,'FwdProject',subIDs{s},'Inverses');
+        InvPathSrc = fullfile(projectPath{s},'Inverses');
+        mkdir(InvPathSrc);
+        copyfile(InvPathSrc,InvPathDest);
+    end
     % ------------------------Copy Anatomy data----------------------------
     if strcmpi(opt.FwdFormat,'fif'),
         fsDir = getpref('freesurfer','SUBJECTS_DIR');
