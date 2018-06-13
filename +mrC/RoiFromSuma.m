@@ -8,7 +8,7 @@ function RoiFromSuma(subId,varargin)
     %
     %   <options>:
     %       mode:   string specifying the mode, aka the set of ROIs to convert 
-    %               (['func']/'benson'/'wangatlas')
+    %               (['func']/'benson'/'wangatlas'/'glasser')
     %
     %       cortexfile: string specifying the full path to the mrMesh cortex file
     %
