@@ -13,6 +13,7 @@ function [cmap] = jmaColors(mapName,thresh,nPoints);
 %'coolhotcortex' = cyan to blue to gray to red to yellow
 %'pval'          = yellow to red
 %'phasecolor'    = grey to red to blue to grey
+% 'coolhot'      = blue to grey ro red
 
 if ~exist('nPoints','var') || isempty(nPoints),
     
@@ -140,6 +141,17 @@ switch lower(mapName)
                     .25 .25 .25;
                     .75 .75 .75;
                     1 1 1;];
+    case 'coolhot'
+     
+        colorVal = [
+                    0 0 1; 
+                    .6 .6 .6;
+                    1 0 0;];
+                
+        colorLoc = [0 0 0;
+                    .5 .5 .5;
+                    1 1 1;];
+
 
     otherwise
         error(['Sorry cannot find matching colormap named: ' mapName ])
