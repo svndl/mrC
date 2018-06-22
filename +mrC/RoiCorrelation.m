@@ -99,21 +99,36 @@ function RoiCorrelation(subId,type,overwrite)
             else
                 curHemi = 'right';
             end
-            [ dist, ROIs.ndx{cntROI} ] = mrC.MeshDist(subId,'ROI',roiPath,'hemi',curHemi);
-            nInd = numel( ROIs.ndx{cntROI} );
-            % mrC.MeshDist outputs zeroes on the diagonal, replace with 0.5
-            dist( eye(nInd)==1 ) = 0.5;
-            ROIs.corr{cntROI} = 0.5 ./ dist + eye(nInd);
-            for iInd = 1 : nInd
-                ROIs.corr{cntROI}( iInd , ROIs.corr{cntROI}(iInd,:) < 0.2 ) = 0;
+            
+            if strfind(ROIs.name{iROI},'kgs')
+                % Get the previous ROIs vertices
+                Prevndx = cat(2,ROIs.ndx{:});
+                % Read the ROI
+                [ ~, ROIs.ndx{cntROI} ] = mrC.MeshDist(subId,'ROI',roiPath,'hemi',curHemi);
+                % Remove the reperated vertices
+                Repndx = intersect(Prevndx,ROIs.ndx{cntROI});
+                ROIs.ndx{cntROI} = setdiff(ROIs.ndx{cntROI},Repndx);
+                % Set the corr matrix diagonal to enhance inverse results for these sources
+                ROIs.corr{cntROI} = eye(numel(ROIs.ndx{cntROI}))*4.5;
+            else
+                [ dist, ROIs.ndx{cntROI} ] = mrC.MeshDist(subId,'ROI',roiPath,'hemi',curHemi);
+                nInd = numel( ROIs.ndx{cntROI} );
+                % mrC.MeshDist outputs zeroes on the diagonal, replace with 0.5
+                dist( eye(nInd)==1 ) = 0.5;
+                ROIs.corr{cntROI} = 0.5 ./ dist + eye(nInd);
+                for iInd = 1 : nInd
+                    ROIs.corr{cntROI}( iInd , ROIs.corr{cntROI}(iInd,:) < 0.2 ) = 0;
+                end
+                
             end
-
+            
             [V,D] = eig( ROIs.corr{cntROI} );
             D_tmp = diag( D );
             if any( D_tmp <= 0 )
                 D_tmp( D_tmp < 0 ) = 0.0001;
                 ROIs.corr{cntROI} = ( V * diag( D_tmp ) * inv( V ) );
             end
+            
             included(cntROI)={ROIs.name{iROI}};
         else
         end
