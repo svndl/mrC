@@ -15,6 +15,8 @@ function RoiFromSuma(subId,varargin)
     %       ecc_range: 2 integer vector designating the minimum and maximum eccentricity
     %                  to use with Benson ROIs. Does nothing if other ROIs
     %                  are used. Default: ask which eccentricities to use
+    %       plotting:  a logical variable,indicates ploting ROIs or not
+    %                   [true]/false
     %       
     % Out:
     
@@ -32,7 +34,8 @@ function RoiFromSuma(subId,varargin)
     opt	= ParseArgs(varargin,...
             'mode'		 , 'wangatlas', ...
             'cortexfile' , 	 fullfile(anatDir,'/Standard/meshes/defaultCortex.mat'), ...
-            'ecc_range'  ,   [0,0] ...
+            'ecc_range'  ,   [0,0], ...
+            'plotting'   ,   true ...
             );
     
     if strcmp(opt.mode,'wangatlas')
@@ -48,7 +51,10 @@ function RoiFromSuma(subId,varargin)
     %% GET ROI FILE
     if strcmp(opt.mode,'benson')
         roiNames = {'V3d','V2d','V1d','V1v','V2v','V3v'};
-        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Benson2014.all.niml.dset',fsDir),1);
+        %roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Benson2014.all.niml.dset',fsDir),1);
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*Benson*.dset',fsDir),1);
+        if ~roiFile{1}, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*benson*.dset',fsDir),1); end
+        
         if max(opt.ecc_range) == 0
             eccMin = input('Minimum eccentricity? [default = 0] ');
             if isempty(eccMin)
@@ -67,7 +73,10 @@ function RoiFromSuma(subId,varargin)
             eccMax = opt.ecc_range(2);
         end
     elseif strcmp(opt.mode,'wang')
-        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015_cluster.niml.dset',fsDir),1);
+        %roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015_cluster.niml.dset',fsDir),1);
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*Wang*.dset',fsDir),1);
+        if ~roiFile{1}, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*wang*.dset',fsDir),1); end
+        
         if roiFile{1} == 0
             warning('\n ... using unclustered ROI-file ...\n');
             roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015.niml.dset',fsDir),1);
@@ -78,12 +87,18 @@ function RoiFromSuma(subId,varargin)
                     'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4','IPS5' 'SPL1' 'FEF'};
         eccComment = 'atlas, generated based on Wang et al., 2015';
     elseif strcmp(opt.mode,'glass')
-        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Glasser2016.niml.dset',fsDir),1);
+        %roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Glasser2016.niml.dset',fsDir),1);
+        roiFile{1} = subfiles(sprintf('%s/TEMPLATE_ROIs/*Glasser*.dset',fsDir),1);
+        if ~roiFile, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*glass*.dset',fsDir),1); end
+        
         roiNames = arrayfun(@(x) sprintf('roi%03d',x),1:180,'uni',false); 
         % true names can be found on pgs. 81-85 of the supplementary material.
         eccComment = 'atlas, generated based on Glasser et al., 2016';
     elseif strcmp(opt.mode,'kgs')
-        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.KGS2016.niml.dset',fsDir),1);
+        %roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.KGS2016.niml.dset',fsDir),1);
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*KGS*.dset',fsDir),1);
+        if ~roiFile{1}, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*kgs*.dset',fsDir),1); end
+        
         roiNames = {'IOG','OTS','mFUS','pFUS','PPA','VWFA1','VWFA2'};
         eccComment = 'atlas, generated based on Weiner & Grill-Spector (in press)';
     else
@@ -137,7 +152,7 @@ function RoiFromSuma(subId,varargin)
     %% READ SUMA 1D ROI
     nROI = [0 0];
     iROI = 0;
-    ROIs = struct('name','','coords',[],'color',[],'ViewType','','meshIndices',[],'meshHash','','date','','comment','');
+    ROIs = struct('name','','coords',[],'color',[],'ViewType','','meshIndices',[],'eccData',[],'meshHash','','date','','comment','');
     creationTime = datestr(now,0);
     for z=1:length(roiFile)
         [~,tempName,ext]=fileparts(roiFile{z});
@@ -190,7 +205,10 @@ function RoiFromSuma(subId,varargin)
                 bensonSuffix = 'all';
             else
                 eccComment = ['V1-V3 with ecc: ',num2str(eccMin),'-',num2str(eccMax)];
-                eccIndices = eccData>eccMin & eccData<eccMax;
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                %eccIndices = eccData>eccMin & eccData<eccMax;
+                eccIndices = eccData>0;
+                
                 bensonSuffix = [num2str(eccMin),'-',num2str(eccMax)];
             end
             for z=1:length(roiMapping)
@@ -203,11 +221,13 @@ function RoiFromSuma(subId,varargin)
                     label = zeros(1,length(FSvL));
                     label(tempIndices)=1;
                     ROIs(iROI).meshIndices = kL(label(iL)==1);
+                    ROIs(iROI).eccData = eccData(label(iL)==1)';
                 elseif strcmp(hemi,'R')
                     nROI(2) = nROI(2)+1;
                     label = zeros(1,length(FSvR));
                     label(tempIndices)=1;
-                    ROIs(iROI).meshIndices = kR(label(iR)==1);
+                    ROIs(iROI).meshIndices = kR(label(iR)>0);
+                    ROIs(iROI).eccData = eccData(label(iR)==1)';
                 else
                     error('ERROR: Hemisphere could not be deduced from ROI name!')
                 end
@@ -259,9 +279,15 @@ function RoiFromSuma(subId,varargin)
     overlapMesh = non_unique(allIndices);
     for iROI = 1:sum(nROI)
         tempMesh = ROIs(iROI).meshIndices(~ismember(ROIs(iROI).meshIndices,overlapMesh)); % remove overlap
+        if ~isempty(ROIs(iROI).eccData)
+            tempEcc = ROIs(iROI).eccData(~ismember(ROIs(iROI).meshIndices,overlapMesh)); % remove overlap
+        else
+            tempEcc =[];
+        end
         overlapRate = length(find(ismember(ROIs(iROI).meshIndices,overlapMesh)))/length(ROIs(iROI).meshIndices)*100;
         if overlapRate > 0
             ROIs(iROI).meshIndices = tempMesh;
+            ROIs(iROI).eccData = tempEcc;
             fprintf('Warning: ROI %s overlaps by %0.4g percent\n',ROIs(iROI).name,overlapRate)
         else
         end
@@ -272,45 +298,64 @@ function RoiFromSuma(subId,varargin)
     opt.ROIs = ROIs; % add ROIs to opt struct
     
     %% PLOT ROIs
-    kFr = find(ctx.triangles(:,1) > msh.nVertexLR(1),1,'first');		% 1st RH face index
-    figH = figure('name',sprintf('%s ',opt.mode));
-    subplot(121)
-        patch(struct('vertices',ctx.vertices(kL,:),'faces',ctx.triangles(1:(kFr-1),:)),...
-            'facevertexcdata',cdata(kL,:),'facecolor','interp','facelighting','gouraud','edgecolor','none')
-        light('position',[0 0  256])
-        light('position',[0 0 -256])
-        light('position',[ 256 0 0])
-        light('position',[-256 0 0])
-        xlabel('+Right'),ylabel('+Anterior'),zlabel('+Superior'),title('LEFT')
-        set(gca,'dataaspectratio',[1 1 1],'view',[0 90],'xlim',[-100 25],'ylim',[-150 100],'zlim',[-100 150])
-    subplot(122)
-        patch(struct('vertices',ctx.vertices(kR,:),'faces',ctx.triangles(kFr:end,:)-msh.nVertexLR(1)),...
-            'facevertexcdata',cdata(kR,:),'facecolor','interp','facelighting','gouraud','edgecolor','none')
-        light('position',[0 0  256])
-        light('position',[0 0 -256])
-        light('position',[ 256 0 0])
-        light('position',[-256 0 0])
-        xlabel('+Right'),ylabel('+Anterior'),zlabel('+Superior'),title('RIGHT')
-        set(gca,'dataaspectratio',[1 1 1],'view',[0 90],'xlim',[-25 100],'ylim',[-150 100],'zlim',[-100 150])
+    if opt.plotting,
+        kFr = find(ctx.triangles(:,1) > msh.nVertexLR(1),1,'first');		% 1st RH face index
+        figH = figure('name',sprintf('%s ',opt.mode));
+        subplot(121)
+            patch(struct('vertices',ctx.vertices(kL,:),'faces',ctx.triangles(1:(kFr-1),:)),...
+                'facevertexcdata',cdata(kL,:),'facecolor','interp','facelighting','gouraud','edgecolor','none')
+            light('position',[0 0  256])
+            light('position',[0 0 -256])
+            light('position',[ 256 0 0])
+            light('position',[-256 0 0])
+            xlabel('+Right'),ylabel('+Anterior'),zlabel('+Superior'),title('LEFT')
+            set(gca,'dataaspectratio',[1 1 1],'view',[0 90],'xlim',[-100 25],'ylim',[-150 100],'zlim',[-100 150])
+        subplot(122)
+            patch(struct('vertices',ctx.vertices(kR,:),'faces',ctx.triangles(kFr:end,:)-msh.nVertexLR(1)),...
+                'facevertexcdata',cdata(kR,:),'facecolor','interp','facelighting','gouraud','edgecolor','none')
+            light('position',[0 0  256])
+            light('position',[0 0 -256])
+            light('position',[ 256 0 0])
+            light('position',[-256 0 0])
+            xlabel('+Right'),ylabel('+Anterior'),zlabel('+Superior'),title('RIGHT')
+            set(gca,'dataaspectratio',[1 1 1],'view',[0 90],'xlim',[-25 100],'ylim',[-150 100],'zlim',[-100 150])
 
-    UIm = uimenu('label','HemiViews');
-    uimenu(UIm,'label','dorsal','callback','set([subplot(121),subplot(122)],''view'',[0 90])')
-    uimenu(UIm,'label','ventral','callback','set([subplot(121),subplot(122)],''view'',[0 -90])')
-    uimenu(UIm,'label','medial','callback','set(subplot(121),''view'',[90 0]),set(subplot(122),''view'',[-90 0])')
-    uimenu(UIm,'label','lateral','callback','set(subplot(121),''view'',[-90 0]),set(subplot(122),''view'',[90 0])')
-    uimenu(UIm,'label','anterior','callback','set([subplot(121),subplot(122)],''view'',[180 0])')
-    uimenu(UIm,'label','posterior','callback','set([subplot(121),subplot(122)],''view'',[0 0])')
-    guidata(figH,opt);
-    uimenu(UIm,'label','SAVE ROIs','separator','on','callback',@saveAnatROIs)
-
+        UIm = uimenu('label','HemiViews');
+        uimenu(UIm,'label','dorsal','callback','set([subplot(121),subplot(122)],''view'',[0 90])')
+        uimenu(UIm,'label','ventral','callback','set([subplot(121),subplot(122)],''view'',[0 -90])')
+        uimenu(UIm,'label','medial','callback','set(subplot(121),''view'',[90 0]),set(subplot(122),''view'',[-90 0])')
+        uimenu(UIm,'label','lateral','callback','set(subplot(121),''view'',[-90 0]),set(subplot(122),''view'',[90 0])')
+        uimenu(UIm,'label','anterior','callback','set([subplot(121),subplot(122)],''view'',[180 0])')
+        uimenu(UIm,'label','posterior','callback','set([subplot(121),subplot(122)],''view'',[0 0])')
+        guidata(figH,opt);
+        uimenu(UIm,'label','SAVE ROIs','separator','on','callback',@saveAnatROIs)
+    else
+        
+        saveAnatROIs('data',opt)
+    end
+    
+    
     function saveAnatROIs(varargin)
-        in = guidata(gcf);
+        opts	= ParseArgs(varargin,'data'	, []);
+        in = [];
+        if ~isempty(findobj('type','figure'))
+            in = guidata(gcf);
+        end
+        if isempty(in)
+            in = opts.data;
+        end
         outDir = [fileparts(in.cortexfile),'/',in.ROIs(1).type,'_ROIs']; % default output directory 
         if ~exist(outDir,'dir')
             mkdir(outDir);
         else
         end
-        ROIdir = uigetdir(outDir,'ROI output directory');
+        
+        if ~(in.plotting) && exist(outDir,'dir')
+             ROIdir = outDir;
+        else
+            ROIdir = uigetdir(outDir,'ROI output directory');
+        end
+        
         if ~isnumeric(ROIdir)
             for i = 1:length(in.ROIs)
                 ROI = in.ROIs(i);

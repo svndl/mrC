@@ -180,13 +180,24 @@ else
     anatDir = opt.anatomyPath;
 end
 
+%------------------------Check ROIs class----------------------------------
+if ~isempty(opt.rois)
+    [opt.rois,FullroiNames] = CheckROIsArray(opt.rois);
+    if isempty(opt.rois)
+        display('Simulation terminated');
+        EEGData=[];EEGAxx=[];sourceDataOrigin=[];masterList=[];subIDs=[];
+    end
+else
+    [Roi] = mrC.Simulate.GetRoiClass(projectPathfold,anatDir);
+    Roi = cellfun(@(x) x.getAtlasROIs(opt.roiType),Roi,'UniformOutput',false);
+end
 % -----------------Generate default source signal if not given-------------
 % Generate signal of interest
 if isempty(opt.signalArray) 
     if isempty(opt.rois)
         [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType); % default signal (can be compatible with the number of ROIs, can be improved later)
     else 
-        [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType,'signalFreq',round(rand(length(opt.rois),1)*3+3));
+        [opt.signalArray, opt.signalFF, opt.signalsf]= mrC.Simulate.ModelSeedSignal('signalType',opt.signalType,'signalFreq',round(rand(length(FullroiNames),1)*3+3));
     end
 end
 
@@ -236,33 +247,38 @@ for s = 1:length(projectPath)
     
     % ---------------------------Default ROIs----------------------------------
     seedNum = size(opt.signalArray,2); % Number of seed sources
-    [Roi] = mrC.Simulate.GetRoiList(projectPathfold,anatDir,opt.roiType);
-       
+    
     % Select Random ROIs 
     if isempty(opt.rois)
         % Initialized only for the first subject, then use the same for the rest
-        opt.rois = Roi(randperm(numel(Roi),seedNum));
+        RROI = randperm(Roi{1}.ROINum,seedNum);
+        %BE careful about this part %%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        opt.rois = cellfun(@(x) x.selectROIs(RROI),Roi,'UniformOutput',false);% Control for consistency
+        [~,M] = max(cellfun(@(x) x.ROINum,opt.rois));
+        disp (['Number of ROIs :' num2str(opt.rois{M}.ROINum)]);
+        FullroiNames =opt.rois{M}.getFullNames;
+        disp(['ROI Names : ' cat(2,FullroiNames{:}) ]);
     end
-    masterList = cellfun(@(x) {[x.Name '_' x.Hemi]},opt.rois,'UniformOutput',false); 
+    masterList = FullroiNames; %cellfun(@(x) [x.Name '_' x.Hemi],opt.rois,'UniformOutput',false); 
     
     %-----------------------------Set ROI folder/folders-----------------------  
-    if ~isempty(opt.rois)
-        nex = zeros(size(opt.rois));% variable for checking the atlases
-        for r = 1:numel(opt.rois)
-            opt.rois{r}.roiDir = (fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.rois{r}.Type,'_ROIs']));
-            if ~exist(opt.rois{r}.roiDir,'dir')
-                nex(r)=1;
-            end
-        end
-        if sum(nex)>1
-            warn = ['' opt.rois{find(nex,1,'first')}.Type ' ROIs are not defined for subject ' subIDs{s}];
-            warning(warn);
-            continue;
-        end
-    else
-        warning('No ROI is defined');
-        continue;
-    end
+%     if ~isempty(opt.rois)
+%         nex = zeros(size(opt.rois));% variable for checking the atlases
+%         for r = 1:numel(opt.rois)
+%             opt.rois{r}.roiDir = (fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.rois{r}.Type,'_ROIs']));
+%             if ~exist(opt.rois{r}.roiDir,'dir')
+%                 nex(r)=1;
+%             end
+%         end
+%         if sum(nex)>1
+%             warn = ['' opt.rois{find(nex,1,'first')}.Type ' ROIs are not defined for subject ' subIDs{s}];
+%             warning(warn);
+%             continue;
+%         end
+%     else
+%         warning('No ROI is defined');
+%         continue;
+%     end
     
 %-------------------Generate noise: from Sebastian's code------------------
     
@@ -315,7 +331,8 @@ for s = 1:length(projectPath)
  
     %[EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
     
-    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois,fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
+    subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
+    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
        
     %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format
@@ -334,17 +351,18 @@ for s = 1:length(projectPath)
         % Write axx files
         if ~exist(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'),'dir')
             mkdir(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'))
-            EEGAxx{s}.writetofile(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg',sprintf('Axx_c0%02d.mat',opt.cndNmb)));
         end
+        EEGAxx{s}.writetofile(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg',sprintf('Axx_c0%02d.mat',opt.cndNmb)));
+        
         % Copy Inverse files
         copyfile(fullfile(projectPath{s},'Inverses'),fullfile(opt.SavePath,subIDs{s},'Inverses'));
         
         % Write Original source Data
         if ~exist(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul'),'dir')
-            SourceDataOrigin = sourceDataOrigin{s};
             mkdir(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul'));
-            save(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul',sprintf('Source_c0%02d.mat',opt.cndNmb)),'SourceDataOrigin');
         end
+        SourceDataOrigin = sourceDataOrigin{s};
+        save(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul',sprintf('Source_c0%02d.mat',opt.cndNmb)),'SourceDataOrigin');
     end
 end
 
@@ -396,4 +414,30 @@ if (opt.plotting==1) && strcmp(opt.signalType,'SSVEP')
     mrC.Simulate.PlotEEG(MASDEEG,freq,opt.figFolder,'average over all  ',masterList,opt.signalFF);
 
 end
+end
+
+function [ROIsArr,FullroiNames] = CheckROIsArray(ROIsArr)
+    if sum(abs(diff(cellfun(@(x) x.ROINum,ROIsArr))))~=0
+        warning ('Number of ROIs in not the same for all subjects');
+        ROIsArr(cellfun(@(x) x.ROINum,ROIsArr)==0)=[];% remove the subjects
+    end
+
+    [~,M] = max(cellfun(@(x) x.ROINum,ROIsArr));
+    disp ('Start simulating EEG...');
+    disp (['Number of ROIs :' num2str(ROIsArr{M}.ROINum)]);
+    FullroiNames =ROIsArr{M}.getFullNames;
+    disp(['ROI Names : ' cat(2,FullroiNames{:}) ]);
+    Inp = input('Is this information correct? press enter'); %% CORRECT THIS
+    if isempty(Inp),
+    else
+        ROIsArr = [];
+        return
+    end
+
+    % check the order of ROIs in subjects and make them consistent
+    FNames = cellfun(@(x) x.getFullNames,ROIsArr,'UniformOutput',false);
+    comps = cellfun(@(x) strcmpi(cat(1,FNames{:}),x), FullroiNames,'UniformOutput',false);
+    comps = cat(3,comps{:});comps = sum(comps.*repmat(1:numel(FullroiNames),[size(comps,1) 1 size(comps,3)]),3);
+    comps = mat2cell(comps,ones(size(comps,1),1),size(comps,2))';
+    ROIsArr = cellfun(@(x,y) x.selectROIs(y),ROIsArr,comps,'UniformOutput',false);
 end

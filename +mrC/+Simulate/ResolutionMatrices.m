@@ -1,4 +1,4 @@
-function [CrossTalk CrossTalkN] = ResolutionMatrices(projectPath,varargin)
+function [CrossTalk,CrossTalkN,ROISource,LIST,subIDs] = ResolutionMatrices(projectPath,varargin)
     
     % Description:	This function gets the path for a mrc project and simulate
     % EEG with activity (seed signal as input) in specific ROIs (input),
@@ -31,7 +31,8 @@ function [CrossTalk CrossTalkN] = ResolutionMatrices(projectPath,varargin)
     %                       frequencis of sources
   
   % (ROI Parameters)
-
+    %       rois            Array of ROI class
+    %
     %       roiType:        THIS IS NOT NEEDED IF YOU GIVE THE rois INPUT.  
     %                       string specifying the roitype to use. 
     %                       'main' indicates that the main ROI folder
@@ -102,8 +103,7 @@ function [CrossTalk CrossTalkN] = ResolutionMatrices(projectPath,varargin)
     %       subIDs:         a 1 x s cell of strings, indicating subjects IDs
     %
 %--------------------------------------------------------------------------
- % The function was originally written by Peter Kohler, ...
- % Latest modification: Elham Barzegaran, 03.26.2018
+ % Latest modification: Elham Barzegaran, 06.13.2018
  % NOTE: This function is a part of mrC toolboxs
 
 %% =====================Prepare input variables============================
@@ -113,7 +113,9 @@ opt	= ParseArgs(varargin,...
     'inverse'		, [], ...
     'rois'          , [], ...
     'roiType'       , 'wang',...
+    'eccRange'      , [],...
     'figFolder'     , [],...
+    'plotting'      , false,...
     'anatomyPath'   , []...   
     );
 
@@ -162,6 +164,11 @@ end
 %% ===========================GENERATE EEG signal==========================
 projectPathfold = projectPath;
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
+if isempty(opt.rois)
+    Rois = mrC.Simulate.GetRoiClass(projectPathfold);
+else
+    Rois = opt.rois;
+end
 
 for s = 1:length(projectPath)
     %--------------------------READ FORWARD SOLUTION---------------------------  
@@ -213,30 +220,51 @@ for s = 1:length(projectPath)
         warning('Please indicate the inverse name...');
     end
 
-    %% Make the resolution matrix
-
-    Resolution = fwdMatrix'*curInv;
+    %
 
     %% Get the ROIs
     %%%%%%%%%%%%%%%%%%%%% add other atlases later...%%%%%%%%%%%%%%%%%%%%%%%
-    
-    RoiDir = fullfile(anatDir,subIDs{s},'Standard','meshes',['wang_ROIs']);%
-    [roiChunk , list] = mrC.ChunkFromMesh(RoiDir,size(fwdMatrix,2));% read the ROIs 
 
-    RoiDir2 = fullfile(anatDir,subIDs{s},'Standard','meshes','kgs_ROIs');%
-    [roiChunk2 , list2] = mrC.ChunkFromMesh(RoiDir2,size(fwdMatrix,2));% read the ROIs 
-    roiChunk = cat(2,roiChunk,roiChunk2);
-   
-    %RoiDir2 = fullfile(anatDir,subIDs{s},'Standard','meshes','glass_ROIs');%
-    if exist(RoiDir2,'dir'),
-        [roiChunk , list2] = mrC.ChunkFromMesh(RoiDir2,size(fwdMatrix,2));% read the ROIs    
-        
-        % cross talk matrix
-        ROISource{s} = roiChunk.'*Resolution;
-        CrossTalk{s} = ROISource{s}*roiChunk;
-        CrossTalkN{s} = CrossTalk{s}./repmat(max(CrossTalk{s},[],2),[1 length(CrossTalk{s})]);
-
+    subInd = strcmp(cellfun(@(x) x.subID,Rois,'UniformOutput',false),subIDs{s});
+    SROI = Rois{find(subInd)};
+    if strcmpi(opt.roiType,'benson') && ~isempty(opt.eccRange)
+        SROICent = SROI.getAtlasROIs('benson',[0 opt.eccRange(1)]);
+        SROISurr = SROI.getAtlasROIs('benson',opt.eccRange);
+        SROICS = SROICent.mergROIs(SROISurr);
+    else
+        SROICS = SROI.getAtlasROIs(opt.roiType);
     end
+    [roiChunk, NameList] = SROICS.ROI2mat(size(fwdMatrix,2));
+      
+    % Make the resolution matrix
+    %Resolution = fwdMatrix'*curInv;
+    Res1 = roiChunk.'*fwdMatrix';
+    
+    % cross talk matrix
+    ROISource{s} = Res1*curInv;
+    
+    % individual figure
+    INVname = opt.inverse; ind = strfind(INVname,'_');
+    
+    if opt.plotting ==1,
+        figure,
+        subplot(2,2,1),mrC.Simulate.VisualizeSourceData(subIDs{s},roiChunk(:,1),anatDir,jmaColors('coolhot')); 
+        caxis([-1 1]);title(['V1d 0-2 ' subIDs{s} ' Original']);
+        subplot(2,2,2), mrC.Simulate.VisualizeSourceData(subIDs{s},ROISource{s}(1,:),anatDir,jmaColors('coolhot')); 
+        Data = ROISource{s}(1,:);
+        caxis([-max(Data) max(Data)]);title(['V1d 0-2 ' subIDs{s} ' ' INVname(ind(end)+1:end)]);
+
+        subplot(2,2,3),mrC.Simulate.VisualizeSourceData(subIDs{s},roiChunk(:,13),anatDir,jmaColors('coolhot')); 
+        caxis([-1 1]);title(['V1d 2-10 ' subIDs{s} ' Original']);
+        subplot(2,2,4), mrC.Simulate.VisualizeSourceData(subIDs{s},ROISource{s}(13,:),anatDir,jmaColors('coolhot')); 
+        Data = ROISource{s}(13,:);
+        caxis([-max(Data) max(Data)]);title(['V1d 2-10 ' subIDs{s} ' ' INVname(ind(end)+1:end)]);
+    end
+
+    CrossTalk{s} = ROISource{s}*roiChunk;
+    CrossTalkN{s} = CrossTalk{s}./repmat(max(CrossTalk{s},[],2),[1 length(CrossTalk{s})]);
+    
+    LIST = NameList;
 end
 end
 

@@ -38,23 +38,31 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
 if ~exist('RoiSize','var'), RoiSize = [];end
 if ~exist('funcType','var'), funcType = [];end
 
-for r = 1:numel(rois) % Read each Roi and check if they exist
-    [roichunk, tempList] = mrC.ChunkFromMesh(rois{r}.roiDir,size(fwdMatrix,2));
-    Ind1 = strfind(tempList,'_');Ind2 = strfind(tempList,'-');
-    shortList = (cellfun(@(x,y,z) z(x+1:y-1),Ind1,Ind2,tempList,'UniformOutput',false));
-    hemi = (cellfun(@(y,z) z(y+1:y+1),Ind2,tempList,'UniformOutput',false));
-    if sum(strcmp(rois{r}.Hemi,{'R','L'}))>0 
-        Ind = strcmp(shortList,rois{r}.Name) .* strcmp(hemi,rois{r}.Hemi);
-    elseif strcmp(rois{r}.Hemi,'B')
-        Ind = strcmp(shortList,rois{r}.Name) .* (strcmp(hemi,'R')+strcmp(hemi,'L'));
-    else
-        Ind =0;
-    end
-    if sum(Ind)>0,
-        roiChunk(:,r)= sum(roichunk(:,find(Ind)),2);
-    else
-        warning(['ROI ' rois{r}.Name '_' rois{r}.Hemi 'is not found in' rois{r}.Type 'atlas']);
-    end
+if isempty(rois),% if roi is empty ofr this subject
+    EEGData=[];sourceData=[];roiSet=[];
+    warning('No ROI found, no simulated EEG is generated');
+    return
+end
+
+roiChunk = zeros(size(fwdMatrix,2),rois.ROINum);
+for r = 1:rois.ROINum % Read each Roi and check if they exist
+    roiChunk(rois.ROIList(r).meshIndices,r)=1;
+%     [roichunk, tempList] = mrC.ChunkFromMesh(rois{r}.roiDir,size(fwdMatrix,2));
+%     Ind1 = strfind(tempList,'_');Ind2 = strfind(tempList,'-');
+%     shortList = (cellfun(@(x,y,z) z(x+1:y-1),Ind1,Ind2,tempList,'UniformOutput',false));
+%     hemi = (cellfun(@(y,z) z(y+1:y+1),Ind2,tempList,'UniformOutput',false));
+%     if sum(strcmp(rois{r}.Hemi,{'R','L'}))>0 
+%         Ind = strcmp(shortList,rois{r}.Name) .* strcmp(hemi,rois{r}.Hemi);
+%     elseif strcmp(rois{r}.Hemi,'B')
+%         Ind = strcmp(shortList,rois{r}.Name) .* (strcmp(hemi,'R')+strcmp(hemi,'L'));
+%     else
+%         Ind =0;
+%     end
+%     if sum(Ind)>0,
+%         roiChunk(:,r)= sum(roichunk(:,find(Ind)),2);
+%     else
+%         warning(['ROI ' rois{r}.Name '_' rois{r}.Hemi 'is not found in' rois{r}.Type 'atlas']);
+%     end
 end
 
 if size(roiChunk,2)~= size(signalArray,2)

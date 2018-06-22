@@ -1,4 +1,4 @@
-function Fhandler = VisualizeSourceData(subID,data,anatDir,cmap,direction)
+function Fhandler = VisualizeSourceData(subID,data,anatDir,cmap,direction,hemi)
 % gets the subject ID and anatomy folder and the source data and plots the
 % result on the subjects default cortex...
 % Elham Barzegaran, 5.22.2018
@@ -10,6 +10,10 @@ end
 
 if ~exist('direction','var'),
     direction = 'anterior';
+end
+
+if ~exist('hemi','var')
+    hemi = 'B';
 end
 %%
 
@@ -26,14 +30,32 @@ if ~exist('cmap','var')
 end
 
 %% plot brain surface
+if hemi=='L'
+    Rind = round(length(vertices)/2)+1:length(vertices);
+    [~,i1] = intersect(faces(:,1),Rind);[~,i2] = intersect(faces(:,2),Rind);[~,i3] = intersect(faces(:,3),Rind);
+    I = ([i1; i2; i3]);
+    faces(I,:)=[];
+    [~,i1] = intersect(faces(:,1),Rind);[~,i2] = intersect(faces(:,2),Rind);[~,i3] = intersect(faces(:,3),Rind);
+    I = ([i1; i2; i3]);
+    faces(I,:)=[];
+elseif hemi=='R'
+    Lind = 1:round(length(vertices)/2);
+    [~,i1] = intersect(faces(:,1),Lind);[~,i2] = intersect(faces(:,2),Lind);[~,i3] = intersect(faces(:,3),Lind);
+    I = unique([i1; i2; i3]);
+    faces(I,:)=[];
+    [~,i1] = intersect(faces(:,1),Lind);[~,i2] = intersect(faces(:,2),Lind);[~,i3] = intersect(faces(:,3),Lind);
+    I = unique([i1; i2; i3]);
+    faces(I,:)=[];
+end
 
-Fhandler= patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',reshape(round(data),[numel(data) 1]),...
-     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.85);
+
+Fhandler = patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',reshape((data),[numel(data) 1]),... 
+     'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.1,'facelighting','gouraud','FaceAlpha',.75);
 
 colormap(cmap);
 
 shading interp
-lighting flat
+%lighting flat
 lightangle(50,120)
 lightangle(50,0)
 
