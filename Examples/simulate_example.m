@@ -10,7 +10,7 @@
 
 %% Add latest mrC
 clear;clc
-mrCFolder = fileparts(fileparts(mfilename('fullpath')));%'/Users/kohler/code/gits';
+mrCFolder = fileparts(fileparts(mfilename('fullpath')));%'/Users/kohler/code/git';
 addpath(genpath(mrCFolder));
 
 addpath(genpath('C:\Users\Elhamkhanom\Documents\Codes\Git\surfing'));% this tool can be found in github
@@ -18,7 +18,7 @@ addpath(genpath('C:\Users\Elhamkhanom\Documents\Codes\Git\surfing'));% this tool
 % a sample SSVEP signal...
 
 %[outSignal, FundFreq, SF]= mrC.Simulate.ModelSeedSignal('signalType','SSVEP','signalFreq',[2 3.5 5],'signalHarmonic',{[2,0,1],[0,1,0,2],[2, 2]},'signalPhase',{[.1,0,.2],[0,.3,0,.4],[.2,.5]});
-%[sensorData,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal);
+%[EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal);
 
 %% One subject mrC project and anatomy paths
 
@@ -40,7 +40,7 @@ ProjectPath = '/Volumes/svndl/mrC_Projects/kohler/SYM_16GR/SOURCE';
 noise.mu=3;
 noise.distanceType = 'Geodesic';
 
-[sensorData,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'roiType','wang','noiseParams',noise,'roiList',RoiList([31 10])');
+[EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'roiType','wang','noiseParams',noise,'roiList',RoiList([31 10])');
 
 
 

@@ -41,6 +41,12 @@ function RoiCorrelation(subId,type,overwrite)
     if strcmp(type, 'func')
         ROIlist = {'V1d','V1v','V2v','V2d','V3v','V3d','V4','V3ab','LOC','MT','IPS0','VO1'};
         ROIcorrFile = fullfile( meshDir, 'ROIs_correlation.mat' );
+    elseif strcmp(type,'wangkgs')
+        ROIlist1 = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2' 'PHC1' 'PHC2' ...
+        'TO2' 'TO1' 'LO2' 'LO1' 'V3B' 'V3A' 'IPS0' 'IPS1' 'IPS2' 'IPS3' 'IPS4' ...
+        'IPS5' 'SPL1' 'FEF'};
+        ROIlist2 = {'IOG' 'mFUS' 'OTS' 'pFUS' 'PPA' 'VWFA1' 'VWFA2'};
+        ROIcorrFile = fullfile( meshDir, 'WANGKGS_correlation.mat' );
     elseif strfind(type,'wang')
         type = 'wang';%'wangatlas';
         ROIlist = {'V1v' 'V1d' 'V2v' 'V2d' 'V3v' 'V3d' 'hV4' 'VO1' 'VO2' 'PHC1' 'PHC2' ...
@@ -65,19 +71,24 @@ function RoiCorrelation(subId,type,overwrite)
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Definition of the correlation within each of the ROIs
-
-    nROIs = numel(ROIlist) * 2;
-    ROIs = struct( 'ndx',{cell(1,nROIs)}, 'corr',{cell(1,nROIs)}, 'name',{reshape([strcat(type,'_',ROIlist,'-L');strcat(type,'_',ROIlist,'-R')],1,nROIs)} );
-    if strcmp(type,'wang')
-        ROIname2 = reshape([strcat(type,'atlas_',ROIlist,'-L');strcat(type,'atlas_',ROIlist,'-R')],1,nROIs);
+    if strcmp(type,'wangkgs')
+        nROIs = (numel(ROIlist1)+numel(ROIlist2)) * 2;
+        ROIs = struct( 'ndx',{cell(1,nROIs)}, 'corr',{cell(1,nROIs)}, 'name',{reshape([strcat('wang','_',ROIlist1,'-L') strcat('kgs','_',ROIlist2,'-L');strcat('wang','_',ROIlist1,'-R') strcat('kgs','_',ROIlist2,'-R')],1,nROIs)} );
+        ROIname2 = reshape([strcat('wang','atlas_',ROIlist1,'-L') strcat('kgs','_',ROIlist2,'-L');strcat('wang','atlas_',ROIlist1,'-R') strcat('kgs','_',ROIlist2,'-R')],1,nROIs);
+    else
+        nROIs = numel(ROIlist) * 2;
+        ROIs = struct( 'ndx',{cell(1,nROIs)}, 'corr',{cell(1,nROIs)}, 'name',{reshape([strcat(type,'_',ROIlist,'-L');strcat(type,'_',ROIlist,'-R')],1,nROIs)} );
+        if strcmp(type,'wang')
+            ROIname2 = reshape([strcat(type,'atlas_',ROIlist,'-L');strcat(type,'atlas_',ROIlist,'-R')],1,nROIs);
+        end
     end
     cntROI = 0;
     for iROI = 1:nROIs
         % loop over complete set of ROIs
         roiPath = fullfile( meshDir, 'ROIs', ROIs.name{iROI} );
         E1 = exist([roiPath '.mat'],'file');
-        if strcmp(type,'wang') && ~E1
-            roiPath = fullfile( meshDir, 'ROIs', ROIsname2{iROI});
+        if (strcmp(type,'wang') || strcmp(type,'wangkgs')) && ~E1
+            roiPath = fullfile( meshDir, 'ROIs', ROIname2{iROI});
             E1 = exist([roiPath '.mat'],'file');
             if E1, ROIs.name = ROIname2;end
         end
@@ -88,21 +99,36 @@ function RoiCorrelation(subId,type,overwrite)
             else
                 curHemi = 'right';
             end
-            [ dist, ROIs.ndx{cntROI} ] = mrC.MeshDist(subId,'ROI',roiPath,'hemi',curHemi);
-            nInd = numel( ROIs.ndx{cntROI} );
-            % mrC.MeshDist outputs zeroes on the diagonal, replace with 0.5
-            dist( eye(nInd)==1 ) = 0.5;
-            ROIs.corr{cntROI} = 0.5 ./ dist + eye(nInd);
-            for iInd = 1 : nInd
-                ROIs.corr{cntROI}( iInd , ROIs.corr{cntROI}(iInd,:) < 0.2 ) = 0;
+            
+            if strfind(ROIs.name{iROI},'kgs')
+                % Get the previous ROIs vertices
+                Prevndx = cat(2,ROIs.ndx{:});
+                % Read the ROI
+                [ ~, ROIs.ndx{cntROI} ] = mrC.MeshDist(subId,'ROI',roiPath,'hemi',curHemi);
+                % Remove the reperated vertices
+                Repndx = intersect(Prevndx,ROIs.ndx{cntROI});
+                ROIs.ndx{cntROI} = setdiff(ROIs.ndx{cntROI},Repndx);
+                % Set the corr matrix diagonal to enhance inverse results for these sources
+                ROIs.corr{cntROI} = eye(numel(ROIs.ndx{cntROI}))*4.5;
+            else
+                [ dist, ROIs.ndx{cntROI} ] = mrC.MeshDist(subId,'ROI',roiPath,'hemi',curHemi);
+                nInd = numel( ROIs.ndx{cntROI} );
+                % mrC.MeshDist outputs zeroes on the diagonal, replace with 0.5
+                dist( eye(nInd)==1 ) = 0.5;
+                ROIs.corr{cntROI} = 0.5 ./ dist + eye(nInd);
+                for iInd = 1 : nInd
+                    ROIs.corr{cntROI}( iInd , ROIs.corr{cntROI}(iInd,:) < 0.2 ) = 0;
+                end
+                
             end
-
+            
             [V,D] = eig( ROIs.corr{cntROI} );
             D_tmp = diag( D );
             if any( D_tmp <= 0 )
                 D_tmp( D_tmp < 0 ) = 0.0001;
                 ROIs.corr{cntROI} = ( V * diag( D_tmp ) * inv( V ) );
             end
+            
             included(cntROI)={ROIs.name{iROI}};
         else
         end

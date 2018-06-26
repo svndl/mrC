@@ -68,5 +68,6 @@ if ~isempty(opt.signalFF)
 end
 % Other axx parameteres
 EEGAxx.DataUnitStr = 'Simulation';
+EEGAxx.cndNmb = opt.cndNmb;
 
 end

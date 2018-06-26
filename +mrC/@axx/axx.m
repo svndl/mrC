@@ -121,6 +121,14 @@ classdef axx
                 disp('I am an axx file. I contain data.');
             end
         end
+        
+        function writetofile(thisAxx,FilePath)
+            Fields = fieldnames(thisAxx);
+            for f = 1:numel(Fields)
+                eval(['Sstruct.' Fields{f} '=' 'thisAxx.' Fields{f} ';']);
+            end
+            save(FilePath,'-struct','Sstruct');
+        end
     end
     
 end

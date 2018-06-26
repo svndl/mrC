@@ -12,6 +12,8 @@ function [ input ] = AddCorr( input , subjId ,type)
     meshDir = fullfile( anatDir, subjId, 'Standard', 'meshes' );
     if strcmp(type, 'func')
         ROIcorrFile = fullfile( meshDir, 'ROIs_correlation.mat' );
+    elseif strcmp(type,'wangkgs')
+        ROIcorrFile = fullfile( meshDir, 'WANGKGS_correlation.mat' );
     elseif strfind(type,'wang')
         ROIcorrFile = fullfile( meshDir, 'WANG_correlation.mat' );
     else
