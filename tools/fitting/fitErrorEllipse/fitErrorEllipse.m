@@ -161,7 +161,6 @@ zSNR = norm(meanXy)/mean([norm(meanXy)-ampMinNorm,ampMaxNorm-norm(meanXy)]);
 %% PLOT DATA
 if makePlot
     figure;
-    subplot(1,2,1);
     hold on;
     plot(xyData(:,srIx),xyData(:,siIx),'ko','MarkerFaceColor','k') 
     axis equal;
@@ -170,16 +169,34 @@ if makePlot
     hold on;
     plot([meanXy(1) sqrt(smaller_eigenval).*smaller_eigenvec(1)+meanXy(1)],[meanXy(2) sqrt(smaller_eigenval).*smaller_eigenvec(2)+meanXy(2)],'g-','LineWidth',1); 
     plot([meanXy(1) sqrt(larger_eigenval).*larger_eigenvec(1)+meanXy(1)],[meanXy(2) sqrt(larger_eigenval).*larger_eigenvec(2)+meanXy(2)],'m-','LineWidth',1); 
+    
+    % set plot dimensions
+    x_plotmin = min([floor(min(xlim)),-1]);
+    x_plotmax = max([ceil(max(xlim)),1]);
+    y_plotmin = min([floor(min(ylim)),-1]);
+    y_plotmax = max([ceil(max(ylim)),1]);
+    xlim([x_plotmin,x_plotmax]);
+    ylim([y_plotmin,y_plotmax]);
+    
     line([0 0],[min(ylim) max(ylim)],'Color','k')
     line([min(xlim) max(xlim)],[0 0],'Color','k')
     text(.9*min(xlim),.7*min(ylim),[ellipseType ' ellipse'],'FontSize',14,'Color','b');
     text(.9*min(xlim),.6*min(ylim),'larger eigen vec','FontSize',14,'Color','m');
     text(.9*min(xlim),.5*min(ylim),'smaller eigen vec','FontSize',14,'Color','g');
+    xlabel('real');
+    ylabel('imag');
+    drawnow;
+    hold off;
+    % change figure dimensions
+    set(gcf,'units','centimeters');
+    fig_pos = get(gcf,'position');
+    fig_pos(3) = 15;
+    fig_pos(4) = 15;
+    set(gcf,'position',fig_pos);
     
-    subplot(1,2,2);
+    figure;
     hold on;
     axis equal; 
-    
     plot(errorEllipse(:,1), errorEllipse(:,2),'k-','LineWidth',1) 
     plot([0 errorEllipse(ampMinNormIx,1)],[0 errorEllipse(ampMinNormIx,2)],'r:','LineWidth',1);
     plot([0 errorEllipse(ampMaxNormIx,1)],[0 errorEllipse(ampMaxNormIx,2)],'r:','LineWidth',1);
@@ -197,12 +214,30 @@ if makePlot
     text(errorEllipse(ampMaxNormIx,1),errorEllipse(ampMaxNormIx,2),sprintf('%.2f',ampMaxNorm),'FontSize',18,'Color','r')
     text(errorEllipse(phaseMinIx,1),errorEllipse(phaseMinIx,2),sprintf('%.2f',phaseEllipseExtremes(1)),'FontSize',18,'Color','b')
     text(errorEllipse(phaseMaxIx,1),errorEllipse(phaseMaxIx,2),sprintf('%.2f',phaseEllipseExtremes(2)),'FontSize',18,'Color','b')
-  
+    
+    % set plot dimensions
+    x_plotmin = min([floor(min(xlim)),-1]);
+    x_plotmax = max([ceil(max(xlim)),1]);
+    y_plotmin = min([floor(min(ylim)),-1]);
+    y_plotmax = max([ceil(max(ylim)),1]);
+    xlim([x_plotmin,x_plotmax]);
+    ylim([y_plotmin,y_plotmax]);
+    
     text(meanXy(1),meanXy(2),sprintf('%.2f',norm(meanXy)),'FontSize',18)
     text(.9*min(xlim),.7*min(ylim),'ampl. bounds','FontSize',14,'Color','r');
     text(.9*min(xlim),.6*min(ylim),'phase. bounds','FontSize',14,'Color','b');
     text(.9*min(xlim),.5*min(ylim),'mean ampl.','FontSize',14,'Color','k');
 
-    line([0 0],[min(ylim) max(ylim)],'Color','k','LineWidth',1)
-    line([min(xlim) max(xlim)],[0 0],'Color','k','LineWidth',1)    
+    line([0 0],[min(ylim) max(ylim)],'Color','k','LineWidth',1);
+    line([min(xlim) max(xlim)],[0 0],'Color','k','LineWidth',1);
+    xlabel('real');
+    ylabel('imag');
+    hold off
+    drawnow;
+    % change figure dimensions
+    set(gcf,'units','centimeters');
+    fig_pos = get(gcf,'position');
+    fig_pos(3) = 15;
+    fig_pos(4) = 15;
+    set(gcf,'position',fig_pos);
 end
