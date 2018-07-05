@@ -27,7 +27,7 @@ vertices = vertices(:,[1 3 2]);vertices(:,3)=200-vertices(:,3);
 Fhandler= figure,
 
 patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
-     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.65);
+     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.65,'facelighting','gouraud');
 
 %colormap(cmap);
 
@@ -62,7 +62,7 @@ for i = 1:numel(RoiIdx)
     C=cmap(i*floor(255/numel(RoiIdx)),:);
     if ~isempty(RoiF),
         hold on; patch('faces',RoiF,'vertices',RoiV,'edgecolor','k','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
-            'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1);
+            'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
         scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
     end
 end

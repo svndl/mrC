@@ -4,11 +4,11 @@ function Fhandler = VisualizeSourceData(subID,data,anatDir,cmap,direction,hemi)
 % Elham Barzegaran, 5.22.2018
 %% default variables
 
-if ~exist('anatDir','var'),
+if ~exist('anatDir','var') ||isempty(anatDir),
     anatDir = getpref('mrCurrent','AnatomyFolder');
 end
 
-if ~exist('direction','var'),
+if ~exist('direction','var') || isempty(direction),
     direction = 'anterior';
 end
 
@@ -25,7 +25,7 @@ faces = (msh.data.triangles+1)';
 % adjustements for visualization purpose
 vertices = vertices(:,[1 3 2]);vertices(:,3)=200-vertices(:,3);
 
-if ~exist('cmap','var')
+if ~exist('cmap','var') || isempty(cmap)
     cmap = jmaColors('hotcortex');
 end
 
@@ -50,7 +50,7 @@ end
 
 
 Fhandler = patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',reshape((data),[numel(data) 1]),... 
-     'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.1,'facelighting','gouraud','FaceAlpha',.75);
+     'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.1,'facelighting','gouraud','FaceAlpha',.95);
 
 colormap(cmap);
 

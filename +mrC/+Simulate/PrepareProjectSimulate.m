@@ -1,7 +1,7 @@
 
 function [ForwardPath, AnatomyPath]  = PrepareProjectSimulate(ProjectPath,DestPath,varargin)
-% This function get a mrC project folder and copy the necessary forward,
-% ROI and surface data to another destination to make a smaller input data
+% This function get a mrC project folder and copy the necessary data including forward,
+% ROI and surface  and inverse files to another destination to make a smaller input data
 % for mrC.simulate 
 % INPUTS:
     % ProjectPath: the path to mrCProject, if [], you can select with
