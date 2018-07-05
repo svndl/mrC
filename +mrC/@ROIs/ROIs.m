@@ -257,8 +257,18 @@ classdef ROIs
             obj.ROIList = obj.ROIList(ROIInd);
         end
         
-        function [NameList] = getFullNames(obj)
-            NameList = cellfun(@(x,y,z) [x '_' y '_' z],{obj.ROIList.Type},{obj.ROIList.Name},{obj.ROIList.Hemi},'UniformOutput',false);
+        function [NameList] = getFullNames(obj,mode)
+            if ~exist('mode','var'),
+                mode ='atlas';
+            end
+            if strcmp(mode,'atlas')
+                NameList = cellfun(@(x,y,z) [x '_' y '_' z],{obj.ROIList.Type},{obj.ROIList.Name},{obj.ROIList.Hemi},'UniformOutput',false);
+            elseif strcmp(mode,'noatlas')
+                NameList = cellfun(@(y,z) [y '_' z],{obj.ROIList.Name},{obj.ROIList.Hemi},'UniformOutput',false);
+            else
+                warning('The defined mode is wrong, use atlas or noatlas');
+                NameList=[];
+            end
         end
         
         %-----------------------convert to matrix format-------------------
