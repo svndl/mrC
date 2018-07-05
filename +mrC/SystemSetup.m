@@ -4,7 +4,7 @@ function [fsDir,anatDir] = SystemSetup
     %% CHECK IF NECESSARY FOLDERS ARE SET AS ENVIRONMENT VARIABLES AND EXIST
     
     % mrCurrent AnatomyFolder
-    if ~ispref('mrCurrent','AnatomyFolder')
+    if ~ispref('mrCurrent','AnatomyFolder') || ~ischar(getpref('mrCurrent','AnatomyFolder'))
         anatDir = '/Volumes/svndl/anatomy';
         if ~exist(anatDir,'dir')
             anatDir = uigetdir(anatDir,'Anatomy directory?');
