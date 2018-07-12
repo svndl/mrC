@@ -218,8 +218,13 @@ classdef ROIs
             % atlas is an optional input indicate atlas name to look in
             %-----------------------------------
             List = obj.ROIList;
+            
             if ~iscell(ROIname),
-                Ind = cellfun(@(x) ~isempty(x),strfind(lower({List.Name}),lower(ROIname)));
+                if strcmp(ROIname,'all'),
+                    Ind = true(1,obj.ROINum);
+                else
+                    Ind = cellfun(@(x) ~isempty(x),strfind(lower({List.Name}),lower(ROIname)));
+                end
             else
                 arrInd = cellfun(@(x) strfind(lower({List.Name}),x),lower(ROIname),'UniformOutput',false);
                 Ind = sum(cellfun(@(x) ~isempty(x),cat(1,arrInd{:})));
@@ -233,7 +238,11 @@ classdef ROIs
             
             if exist('Hemi','var') && ~isempty(Hemi)
                 if ~iscell(Hemi),
-                     Ind2 = cellfun(@(x) ~isempty(x),strfind(lower({List.Hemi}),lower(Hemi)));
+                    if strcmpi(Hemi,'B'),
+                        Ind2 = cellfun(@(x) ~isempty(x),strfind(lower({List.Hemi}),lower('L'))) | cellfun(@(x) ~isempty(x),strfind(lower({List.Hemi}),lower('R')));
+                    else
+                        Ind2 = cellfun(@(x) ~isempty(x),strfind(lower({List.Hemi}),lower(Hemi)));
+                    end
                     Ind = (Ind>0) & Ind2;
                 else
                     arrInd2 = cellfun(@(x) strfind(lower({List.Hemi}),x),lower(Hemi),'UniformOutput',false);
