@@ -124,55 +124,59 @@ classdef ROIs
         %---------------------add-remove-retrieve atlases------------------
         function [obj] = getAtlasROIs(obj,atlas,ecc_range)
             %returns the list of ROIs in one or several atlases
-            atlas = lower(atlas);
-            if ~strcmpi(atlas,'benson') || ~exist('ecc_range','var')
-                % returns ROIs in the atlas
-                List = obj.ROIList;
-                Ind = strcmpi(atlas,{List.Type});
-                obj.ROIList = obj.ROIList(Ind);
-                
-            else
-                if sum(ecc_range<0) || sum(ecc_range>80) || (ecc_range(1)>ecc_range(2))
-                    error('ecc_range should be defined as [ecc_min ecc_max] and should be within the range of [0 80]');
-                end
-                % get benson ROIs
-                List = obj.ROIList;
-                Ind = strcmpi(atlas,{List.Type});
-                obj.ROIList = obj.ROIList(Ind);
-                
-                
-                % Adjust ROIs with the specified eccentricity
-                List = obj.ROIList;
-                Ind = cellfun(@(x) ~isempty(x),strfind({List.Name},'0-80'));% read the benson atlas with 0-80 degree
-                List = List(Ind);
-                
-                % if cannot find them generate them with RoiFromSuma
-                if isempty(List)
-                    warning('Benson ROIs with eccentricity [0 80] is not found');
-                    display('Generating Benson ROIs with  eccentricity [0 80]');
-                    mrC.RoiFromSuma(obj.subID,'mode','benson','plotting',false,'ecc_range',[0 80]);
-                    obj = mrC.ROIs(obj.subID);
-                    obj = obj.getAtlasROIs('benson');
+            
+            if obj.ROINum~=0,
+            
+                atlas = lower(atlas);
+                if ~strcmpi(atlas,'benson') || ~exist('ecc_range','var')
+                    % returns ROIs in the atlas
+                    List = obj.ROIList;
+                    Ind = strcmpi(atlas,{List.Type});
+                    obj.ROIList = obj.ROIList(Ind);
 
+                else
+                    if sum(ecc_range<0) || sum(ecc_range>80) || (ecc_range(1)>ecc_range(2))
+                        error('ecc_range should be defined as [ecc_min ecc_max] and should be within the range of [0 80]');
+                    end
+                    % get benson ROIs
+                    List = obj.ROIList;
+                    Ind = strcmpi(atlas,{List.Type});
+                    obj.ROIList = obj.ROIList(Ind);
+
+
+                    % Adjust ROIs with the specified eccentricity
+                    List = obj.ROIList;
+                    Ind = cellfun(@(x) ~isempty(x),strfind({List.Name},'0-80'));% read the benson atlas with 0-80 degree
+                    List = List(Ind);
+
+                    % if cannot find them generate them with RoiFromSuma
+                    if isempty(List)
+                        warning('Benson ROIs with eccentricity [0 80] is not found');
+                        display('Generating Benson ROIs with  eccentricity [0 80]');
+                        mrC.RoiFromSuma(obj.subID,'mode','benson','plotting',false,'ecc_range',[0 80]);
+                        obj = mrC.ROIs(obj.subID);
+                        obj = obj.getAtlasROIs('benson');
+
+                    end
+
+                     % Adjust ROIs with the specified eccentricity
+                    List = obj.ROIList;
+                    Ind = cellfun(@(x) ~isempty(x),strfind({List.Name},'0-80'));% read the benson atlas with 0-80 degree
+                    List = List(Ind);
+                    Ind = cellfun(@(x) x>ecc_range(1) & x<ecc_range(2),{List.eccData},'UniformOutput',false);
+                    NewMInd = cellfun(@(x,y) x(y),{List.meshIndices},Ind,'UniformOutput',false);
+                    Newecc = cellfun(@(x,y) x(y),{List.eccData},Ind,'UniformOutput',false);
+                    [List(:).meshIndices] = deal(NewMInd{:});
+                    [List(:).eccData] = deal(Newecc{:});
+
+                    % Adjust the Names
+                    Names = {List.Name};
+                    Names = cellfun(@(x,y) x(1:y),Names,strfind(Names,'_'),'UniformOutput',false);
+                    Names = cellfun(@(x) [x num2str(ecc_range(1)) '-' num2str(ecc_range(2))],Names,'UniformOutput',false);
+                    [List(:).Name] = deal(Names{:});
+
+                    obj.ROIList = List;
                 end
-                
-                 % Adjust ROIs with the specified eccentricity
-                List = obj.ROIList;
-                Ind = cellfun(@(x) ~isempty(x),strfind({List.Name},'0-80'));% read the benson atlas with 0-80 degree
-                List = List(Ind);
-                Ind = cellfun(@(x) x>ecc_range(1) & x<ecc_range(2),{List.eccData},'UniformOutput',false);
-                NewMInd = cellfun(@(x,y) x(y),{List.meshIndices},Ind,'UniformOutput',false);
-                Newecc = cellfun(@(x,y) x(y),{List.eccData},Ind,'UniformOutput',false);
-                [List(:).meshIndices] = deal(NewMInd{:});
-                [List(:).eccData] = deal(Newecc{:});
-                
-                % Adjust the Names
-                Names = {List.Name};
-                Names = cellfun(@(x,y) x(1:y),Names,strfind(Names,'_'),'UniformOutput',false);
-                Names = cellfun(@(x) [x num2str(ecc_range(1)) '-' num2str(ecc_range(2))],Names,'UniformOutput',false);
-                [List(:).Name] = deal(Names{:});
-                
-                obj.ROIList = List;
             end
         end
         
@@ -218,6 +222,11 @@ classdef ROIs
             % atlas is an optional input indicate atlas name to look in
             %-----------------------------------
             List = obj.ROIList;
+            if isempty(List),% if the ROI class is empty
+                ROIInd = [];
+                ROIinfo = [];
+                return;
+            end
             
             if ~iscell(ROIname),
                 if strcmp(ROIname,'all'),
@@ -267,6 +276,12 @@ classdef ROIs
         end
         
         function [NameList] = getFullNames(obj,mode)
+            
+            if (obj.ROINum==0), % if the ROI class is empty
+                NameList = [];
+                return;
+            end
+            
             if ~exist('mode','var'),
                 mode ='atlas';
             end
@@ -320,8 +335,8 @@ classdef ROIs
                 return
             end
             roiDir = fullfile(anatDir,subID,'Standard','meshes');
-            if 0%exist(fullfile(roiDir,'ROIsClass'),'file')
-                load(fullfile(roiDir,'ROIsClass'),'obj');
+            if exist(fullfile(roiDir,'ROIsClass.mat'),'file')
+                load(fullfile(roiDir,'ROIsClass.mat'),'obj');
             else
                 obj = mrC.ROIs(subID,anatDir);
                 obj.saveROIs(anatDir);

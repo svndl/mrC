@@ -136,7 +136,7 @@ opt	= ParseArgs(varargin,...
     'figFolder'     , [],...
     'anatomyPath'   , [],...   
     'plotting'      , 0 ,...
-    'SavePath'      ,[],...
+    'Save'          ,true,...
     'cndNmb'        ,1 ...
     );
 
@@ -182,7 +182,7 @@ end
 
 %------------------------Check ROIs class----------------------------------
 if ~isempty(opt.rois)
-    [opt.rois,FullroiNames] = CheckROIsArray(opt.rois);
+    [opt.rois,FullroiNames,RSubID] = CheckROIsArray(opt.rois);
     if isempty(opt.rois)
         display('Simulation terminated');
         EEGData=[];EEGAxx=[];sourceDataOrigin=[];masterList=[];subIDs=[];
@@ -223,6 +223,16 @@ for s = 1:length(projectPath)
         subIDs{s} = subIDs{s}(1:SI-2);% -2 because there is a _ before session number
     end
     
+    % check if the ROIs and Wang atlas (used for alpha noise) exist for this subject
+    alphaRoi = mrC.ROIs();alphaRoi = alphaRoi.loadROIs(subIDs{s},anatDir);
+    alphaRoi = alphaRoi.getAtlasROIs('wang');
+    
+    if sum(strcmp(subIDs{s},RSubID)) || (alphaRoi.ROINum ==0)
+        EEGData{s}=[];EEGAxx{s}=[];sourceDataOrigin{s}=[];
+        continue;
+    end
+    
+    
     % To avoid repeatition for subjects with several sessions
     if s>1, 
         SUBEXIST = strcmpi(subIDs,subIDs{s});
@@ -260,27 +270,8 @@ for s = 1:length(projectPath)
         disp(['ROI Names : ' cat(2,FullroiNames{:}) ]);
     end
     masterList = FullroiNames; %cellfun(@(x) [x.Name '_' x.Hemi],opt.rois,'UniformOutput',false); 
-    
-    %-----------------------------Set ROI folder/folders-----------------------  
-%     if ~isempty(opt.rois)
-%         nex = zeros(size(opt.rois));% variable for checking the atlases
-%         for r = 1:numel(opt.rois)
-%             opt.rois{r}.roiDir = (fullfile(anatDir,subIDs{s},'Standard','meshes',[opt.rois{r}.Type,'_ROIs']));
-%             if ~exist(opt.rois{r}.roiDir,'dir')
-%                 nex(r)=1;
-%             end
-%         end
-%         if sum(nex)>1
-%             warn = ['' opt.rois{find(nex,1,'first')}.Type ' ROIs are not defined for subject ' subIDs{s}];
-%             warning(warn);
-%             continue;
-%         end
-%     else
-%         warning('No ROI is defined');
-%         continue;
-%     end
-    
-%-------------------Generate noise: from Sebastian's code------------------
+
+%-------------------Generate noise: based on Sebastian's code------------------
     
     % -----Noise default parameters-----
     NS = size(opt.signalArray,1); % Number of time samples
@@ -294,9 +285,9 @@ for s = 1:length(projectPath)
     if ~any(strcmp(Noisefield, 'Noise.mixing_type_pink_noise')), Noise.mixing_type_pink_noise = 'coh' ;end % coherent mixing of pink noise
     if ~any(strcmp(Noisefield, 'alpha_nodes')), Noise.alpha_nodes = 'all';end % for now I set it to all visual areas, later I can define ROIs for it
 
-    % -----Determine alpha nodes: This is temporary-----
-    alphaRoiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','wang_ROIs');% alpha noise is always placed in wang ROIs
-    [alpharoiChunk] = mrC.ChunkFromMesh(alphaRoiDir,size(fwdMatrix,2));% read the ROIs 
+    % -----Determine alpha nodes: This is temporary?-----
+    %alphaRoiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','wang_ROIs');% alpha noise is always placed in wang ROIs
+        alpharoiChunk = alphaRoi.ROI2mat(length(fwdMatrix));
     if strcmp(Noise.alpha_nodes,'all'), AlphaSrc = find(sum(alpharoiChunk,2)); end % for now: all nodes will show the same alpha power over whole visual cortex  
 
     disp ('Generating noise signal ...');
@@ -342,27 +333,28 @@ for s = 1:length(projectPath)
     
 %% write output to file 
     
-    if ~isempty(opt.SavePath)
+    if (opt.Save)
+        SavePath = projectPathfold;
         % prepare mrC simulation project
-        if ~exist(fullfile(opt.SavePath,subIDs{s}),'dir')
-            mkdir(fullfile(opt.SavePath,subIDs{s}));
+        if ~exist(fullfile(SavePath,subIDs{s}),'dir')
+            mkdir(fullfile(SavePath,subIDs{s}));
         end
         
         % Write axx files
-        if ~exist(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'),'dir')
-            mkdir(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'))
+        if ~exist(fullfile(SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'),'dir')
+            mkdir(fullfile(SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'))
         end
-        EEGAxx{s}.writetofile(fullfile(opt.SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg',sprintf('Axx_c0%02d.mat',opt.cndNmb)));
+        EEGAxx{s}.writetofile(fullfile(SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg',sprintf('Axx_c0%02d.mat',opt.cndNmb)));
         
         % Copy Inverse files
-        copyfile(fullfile(projectPath{s},'Inverses'),fullfile(opt.SavePath,subIDs{s},'Inverses'));
+        % copyfile(fullfile(projectPath{s},'Inverses'),fullfile(SavePath,subIDs{s},'Inverses'));
         
         % Write Original source Data
-        if ~exist(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul'),'dir')
-            mkdir(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul'));
+        if ~exist(fullfile(SavePath,subIDs{s},'Orig_Source_Simul'),'dir')
+            mkdir(fullfile(SavePath,subIDs{s},'Orig_Source_Simul'));
         end
         SourceDataOrigin = sourceDataOrigin{s};
-        save(fullfile(opt.SavePath,subIDs{s},'Orig_Source_Simul',sprintf('Source_c0%02d.mat',opt.cndNmb)),'SourceDataOrigin');
+        save(fullfile(SavePath,subIDs{s},'Orig_Source_Simul',sprintf('Source_c0%02d.mat',opt.cndNmb)),'SourceDataOrigin');
     end
 end
 
@@ -416,10 +408,13 @@ if (opt.plotting==1) && strcmp(opt.signalType,'SSVEP')
 end
 end
 
-function [ROIsArr,FullroiNames] = CheckROIsArray(ROIsArr)
+function [ROIsArr,FullroiNames,RSubID] = CheckROIsArray(ROIsArr)
     if sum(abs(diff(cellfun(@(x) x.ROINum,ROIsArr))))~=0
-        warning ('Number of ROIs in not the same for all subjects');
-        ROIsArr(cellfun(@(x) x.ROINum,ROIsArr)==0)=[];% remove the subjects
+        warning ('Number of ROIs is not the same for all subjects');
+        RSub = find(cellfun(@(x) x.ROINum,ROIsArr)==0);
+        RSubID = cellfun(@(x) x.subID,ROIsArr(RSub),'UniformOutput',false);
+        ROIsArr(RSub)=[];% remove the subjects
+        
     end
 
     [~,M] = max(cellfun(@(x) x.ROINum,ROIsArr));
@@ -427,12 +422,12 @@ function [ROIsArr,FullroiNames] = CheckROIsArray(ROIsArr)
     disp (['Number of ROIs :' num2str(ROIsArr{M}.ROINum)]);
     FullroiNames =ROIsArr{M}.getFullNames;
     disp(['ROI Names : ' cat(2,FullroiNames{:}) ]);
-    Inp = input('Is this information correct? press enter'); %% CORRECT THIS
-    if isempty(Inp),
-    else
-        ROIsArr = [];
-        return
-    end
+%     Inp = input('Is this information correct? press enter'); %% CORRECT THIS
+%     if isempty(Inp),
+%     else
+%         ROIsArr = [];
+%         return
+%     end
 
     % check the order of ROIs in subjects and make them consistent
     FNames = cellfun(@(x) x.getFullNames,ROIsArr,'UniformOutput',false);

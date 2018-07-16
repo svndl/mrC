@@ -27,7 +27,7 @@ for s = 1: len
     end
     
     Roi{s} = mrC.ROIs();
-    Roi{s} = Roi{s}.loadROIs(subIDs{s});
+    Roi{s} = Roi{s}.loadROIs(subIDs{s},anatDir);
 end
 
 end

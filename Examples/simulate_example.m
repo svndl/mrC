@@ -7,6 +7,7 @@
                 % freesurfer files are and meshes and ROIs are (check the Example folder)
                 
 % Elham Barzegaran 3/14/2018
+% Latest Modification: 7/16/2018
 
 %% Add latest mrC
 clear;clc
@@ -14,33 +15,44 @@ mrCFolder = fileparts(fileparts(mfilename('fullpath')));%'/Users/kohler/code/git
 addpath(genpath(mrCFolder));
 
 addpath(genpath('C:\Users\Elhamkhanom\Documents\Codes\Git\surfing'));% this tool can be found in github
-%% SSVEP signal can be simulated using ModelSourceSignal with defined parameters, otherwise Roisignal function will generate a default two source SSVEP signal 
-% a sample SSVEP signal...
-
-%[outSignal, FundFreq, SF]= mrC.Simulate.ModelSeedSignal('signalType','SSVEP','signalFreq',[2 3.5 5],'signalHarmonic',{[2,0,1],[0,1,0,2],[2, 2]},'signalPhase',{[.1,0,.2],[0,.3,0,.4],[.2,.5]});
-%[EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal);
 
 %% One subject mrC project and anatomy paths
+DestPath = fullfile(mrCFolder,'Examples','ExampleData');
+
+ProjectPath ='/Volumes/svndl/mrC_Projects/kohler/SYM_RT_LOCKED/SOURCE';
+% This is to make a portable copy of the project data (both anatomy and forward)
+[ProjectPath, AnatomyPath]  = mrC.Simulate.PrepareProjectSimulate(ProjectPath,DestPath ,'FwdFormat','mat');
 
 ProjectPath = '/Volumes/svndl/mrC_Projects/kohler/SYM_16GR/SOURCE';
+% This is to make a portable copy of the project data (both anatomy and forward)
+[ProjectPath, AnatomyPath]  = mrC.Simulate.PrepareProjectSimulate(ProjectPath,DestPath ,'FwdFormat','mat');
 
-% This is to make a portable copy of the project data (both anatomy and project)
-[ProjectPath, AnatomyPath]  = mrC.Simulate.PrepareProjectSimulate(ProjectPath,[],'FwdFormat','mat');
+
+ProjectPath = '/Volumes/svndl/mrC_Projects/Att_disc_annulus/Source';
+% This is to make a portable copy of the project data (both anatomy and forward)
+[ProjectPath, AnatomyPath]  = mrC.Simulate.PrepareProjectSimulate(ProjectPath,DestPath ,'FwdFormat','mat');
 
 %% Example subject
-% 10 subject in SYM_16 project have wang atlas ROIs
+% 16 subject have wang atlas ROIs
 
- AnatomyPath = fullfile(mrCFolder,'Examples','ExampleData','anatomy');
- ProjectPath = fullfile(mrCFolder,'Examples','ExampleData','FwdProject');
+ AnatomyPath = fullfile(DestPath,'anatomy');
+ ProjectPath = fullfile(DestPath,'FwdProject');
 
- %% Pre-select ROIs
-[RoiList,RoiListC,subIDs] = mrC.Simulate.GetRoiList(ProjectPath,AnatomyPath,'wang');% 13 subjects with Wang atlab 
- 
+% Pre-select ROIs
+[RoiList,subIDs] = mrC.Simulate.GetRoiClass(ProjectPath,AnatomyPath);% 13 subjects with Wang atlab 
+Wangs = cellfun(@(x) {x.getAtlasROIs('wang')},RoiList);
+Wangnums = cellfun(@(x) x.ROINum,Wangs)>0;
+
+%% SSVEP signal can be simulated using ModelSourceSignal with defined parameters, otherwise Roisignal function will generate a default two source SSVEP signal 
+% a simple SSVEP signal...
+
+[outSignal, FundFreq, SF]= mrC.Simulate.ModelSeedSignal('signalType','SSVEP','signalFreq',[2 3.5],'signalHarmonic',{[2,0,1],[1,1,0]},'signalPhase',{[.1,0,.2],[0,.3,0]});
+
 %% simulation functions
 noise.mu=3;
-noise.distanceType = 'Geodesic';
+RoisV2 = cellfun(@(x) x.searchROIs('V2d','wang'),RoiList,'UniformOutput',false);% % wang ROI
 
-[EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'roiType','wang','noiseParams',noise,'roiList',RoiList([31 10])');
+[EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'noiseParams',noise,'rois',RoisV2,'SavePath',savepath,'cndNum',1);
 
 
 
