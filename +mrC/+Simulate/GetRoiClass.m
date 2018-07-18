@@ -1,8 +1,16 @@
 function [Roi,subIDs] = GetRoiClass(projectPath,anatDir)
-% Get a project and anatomy path and roi atlas and returns the list of of
-% all ROIs in that atlas, and the list of subjects with this altas ROIs in
-% the project
-
+% Syntax: [Roi,subIDs] = GetRoiClass(projectPath,anatDir)
+% Description: Get a project and anatomy path and roi atlas and returns the list of of
+%           all ROIs in that atlas, and the list of subjects with this altas ROIs in
+%           the project
+% INPUT: 
+%       ProjectPath:    A link to mrC project
+%       anatDir:        The link to the anatomy forlder
+%
+% OUTPUT:   
+%       Roi:    A NSx1 cell array of ROIs class, where NS is the number of
+%       subjects in the project
+%       subIDs: A NSx1 array of strings, 
 %% Set defaults
 
 if ~exist('anatDir','var') || isempty(anatDir),

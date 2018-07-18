@@ -194,6 +194,13 @@ classdef ROIs
         
         function obj = mergROIs(obj,obj2)
             
+            if obj.ROINum==0 || obj2.ROINum==0
+                if obj.ROINum==0,
+                    obj = obj2;
+                end
+                return;
+            end
+            
             if ~strcmp(obj.subID,obj2.subID)
                 error('Merg is not possible, not the same subject');
             end
@@ -205,10 +212,12 @@ classdef ROIs
             [ind1,ind2] = find(cat(1,rep{:}));
            
             %(2) select the newer ones
-            date1 = {obj.ROIList.Date};date1 = date1(ind1);
-            date2 = {obj2.ROIList.Date};date2 = date2(ind2);
-            repl = cellfun(@(x,y) datenum(x)<datenum(y),date1,date2);
-            obj.ROIList(ind1(repl))= obj2.ROIList(ind2(repl));
+            if ~isempty(ind1)
+                date1 = {obj.ROIList.Date};date1 = date1(ind1);
+                date2 = {obj2.ROIList.Date};date2 = date2(ind2);
+                repl = cellfun(@(x,y) datenum(x)<datenum(y),date1,date2);
+                obj.ROIList(ind1(repl))= obj2.ROIList(ind2(repl));
+            end
             
             % add the newer ones
             aind = 1:numel(list2);aind(ind2)=[];
@@ -218,8 +227,13 @@ classdef ROIs
         
         %--------------------------Search ROIs-----------------------------
         function [obj, ROIInd, ROIinfo] = searchROIs(obj,ROIname,Atlas,Hemi)
-            % ROIname is a string or an array of strings.
-            % atlas is an optional input indicate atlas name to look in
+            % Syntax:  [obj, ROIInd, ROIinfo] = obj.searchROIs(ROIname,Atlas,Hemi)
+            %
+            % ROIname: is a string or an array of strings.
+            % atlas: is an optional input indicate atlas name to look in
+            % Hemi: is an optional input indicate the hemisphere to search,
+            %       can be an string or an array of strings, L(for left),
+            %       R (for right) and B (for both)
             %-----------------------------------
             List = obj.ROIList;
             if isempty(List),% if the ROI class is empty

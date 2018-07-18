@@ -1,7 +1,8 @@
 function EEGAxx= CreateAxx(EEGData,opt)
+% syntax: EEGAxx= CreateAxx(EEGData,opt)
 % This function converts the simulated EEG into Axx format
 % INPUTS:
-    % EEGDATA: ....
+    % EEGDATA: the output of SrcSigMtx function
     
 % OUTPUTS:
     % EEGAxx: a mrC.Axx structure containing EEGData
@@ -68,6 +69,6 @@ if ~isempty(opt.signalFF)
 end
 % Other axx parameteres
 EEGAxx.DataUnitStr = 'Simulation';
-EEGAxx.cndNmb = opt.cndNmb;
+EEGAxx.cndNmb = opt.cndNum;
 
 end

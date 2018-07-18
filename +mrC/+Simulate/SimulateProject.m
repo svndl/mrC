@@ -1,5 +1,6 @@
 function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     
+    % Syntax: [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     % Description:	This function gets the path for a mrc project and simulate
     % EEG with activity (seed signal as input) in specific ROIs (input),
     % and pink and alpha noises (noise parameters can be set as input)
@@ -81,7 +82,13 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     
 
   % (Save Parameters)
-    %       SavePath:       The folder to save simulated data in axx format
+    %       Save:           If true, save the simulated data in axx format
+    %                       in project folder, for each subject like:
+    %                       Projectfolder/nl-00xx/Exp_MATL_HCN_128_Avg/
+    %                       The results of all subjects are also saved in a
+    %                       file in project folder as Raw_c00x.mat the
+    %                       condition number is according to cndNum
+    %                       parameter
     %
     %       cndNum:         The condition number for simulated EEG
   
@@ -130,14 +137,14 @@ opt	= ParseArgs(varargin,...
     'signalsf'      , 100 ,... 
     'signalType'    , 'SSVEP',...
     'signalFF'      , [],...
-    'noiseParams'   , struct,...
+    'NoiseParams'   , struct,...
     'sensorFig'     , true,...
     'doSource'      , false,...
     'figFolder'     , [],...
     'anatomyPath'   , [],...   
     'plotting'      , 0 ,...
     'Save'          ,true,...
-    'cndNmb'        ,1 ...
+    'cndNum'        ,1 ...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -229,6 +236,7 @@ for s = 1:length(projectPath)
     
     if sum(strcmp(subIDs{s},RSubID)) || (alphaRoi.ROINum ==0)
         EEGData{s}=[];EEGAxx{s}=[];sourceDataOrigin{s}=[];
+        warning(['Skip subject ' subIDs{s} '... ROIs can not be found for this subject! '])
         continue;
     end
     
@@ -275,11 +283,11 @@ for s = 1:length(projectPath)
     
     % -----Noise default parameters-----
     NS = size(opt.signalArray,1); % Number of time samples
-    Noise = opt.noiseParams;
+    Noise = opt.NoiseParams;
     Noisefield = fieldnames(Noise);
     
     if ~any(strcmp(Noisefield, 'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
-    if ~any(strcmp(Noisefield, 'lamda')),Noise.lambda = 1/NS/2;end % power distribution between signal and 'total noise' (SNR)
+    if ~any(strcmp(Noisefield, 'lambda')),Noise.lambda = 1/NS/2;end % power distribution between signal and 'total noise' (SNR)
     if ~any(strcmp(Noisefield, 'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% 'active_nodes'/['all_nodes']
     if ~any(strcmp(Noisefield, 'distanceType')),Noise.distanceType = 'Euclidean';end
     if ~any(strcmp(Noisefield, 'Noise.mixing_type_pink_noise')), Noise.mixing_type_pink_noise = 'coh' ;end % coherent mixing of pink noise
@@ -316,14 +324,12 @@ for s = 1:length(projectPath)
     %visualizeNoise(noiseSignal, spat_dists, surfData,opt.signalsf) % Just to visualize noise on the cortical surface 
     %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
     % 
-%------------------------PLACE SIGNAL IN THE ROIs--------------------------
+%------------------------ADD THE SIGNAL IN THE ROIs--------------------------
     
     disp('Generating EEG signal ...'); 
  
-    %[EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(roiDir,masterList,fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
-    
     subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
-    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % noiseParams
+    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
        
     %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format
@@ -344,7 +350,7 @@ for s = 1:length(projectPath)
         if ~exist(fullfile(SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'),'dir')
             mkdir(fullfile(SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg'))
         end
-        EEGAxx{s}.writetofile(fullfile(SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg',sprintf('Axx_c0%02d.mat',opt.cndNmb)));
+        EEGAxx{s}.writetofile(fullfile(SavePath,subIDs{s},'Exp_MATL_HCN_128_Avg',sprintf('Axx_c0%02d.mat',opt.cndNum)));
         
         % Copy Inverse files
         % copyfile(fullfile(projectPath{s},'Inverses'),fullfile(SavePath,subIDs{s},'Inverses'));
@@ -354,10 +360,13 @@ for s = 1:length(projectPath)
             mkdir(fullfile(SavePath,subIDs{s},'Orig_Source_Simul'));
         end
         SourceDataOrigin = sourceDataOrigin{s};
-        save(fullfile(SavePath,subIDs{s},'Orig_Source_Simul',sprintf('Source_c0%02d.mat',opt.cndNmb)),'SourceDataOrigin');
+        save(fullfile(SavePath,subIDs{s},'Orig_Source_Simul',sprintf('Source_c0%02d.mat',opt.cndNum)),'SourceDataOrigin');
     end
 end
 
+%% save simulated EEG of all subjects in one file
+
+save(fullfile(projectPathfold,sprintf('SimulatedEEG_c0%02d.mat',opt.cndNum)),'EEGData','EEGAxx','subIDs','masterList');
 
 %% =======================PLOT FIGURES=====================================
 if (opt.plotting==1) && strcmp(opt.signalType,'SSVEP')
@@ -415,6 +424,8 @@ function [ROIsArr,FullroiNames,RSubID] = CheckROIsArray(ROIsArr)
         RSubID = cellfun(@(x) x.subID,ROIsArr(RSub),'UniformOutput',false);
         ROIsArr(RSub)=[];% remove the subjects
         
+    else
+        RSubID = [];
     end
 
     [~,M] = max(cellfun(@(x) x.ROINum,ROIsArr));
@@ -422,12 +433,6 @@ function [ROIsArr,FullroiNames,RSubID] = CheckROIsArray(ROIsArr)
     disp (['Number of ROIs :' num2str(ROIsArr{M}.ROINum)]);
     FullroiNames =ROIsArr{M}.getFullNames;
     disp(['ROI Names : ' cat(2,FullroiNames{:}) ]);
-%     Inp = input('Is this information correct? press enter'); %% CORRECT THIS
-%     if isempty(Inp),
-%     else
-%         ROIsArr = [];
-%         return
-%     end
 
     % check the order of ROIs in subjects and make them consistent
     FNames = cellfun(@(x) x.getFullNames,ROIsArr,'UniformOutput',false);

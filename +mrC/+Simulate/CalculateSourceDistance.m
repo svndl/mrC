@@ -1,6 +1,6 @@
 function [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
-
-% This function calculates the distances between the sources using the
+% Syntax: [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
+% Description: This function calculates the distances between the sources using the
 % distanceType method
 
 %--------------------------------------------------------------------------
@@ -17,7 +17,7 @@ function [spat_dists, Euc_dist] = CalculateSourceDistance(MDATA,distanceType)
 %--------------------------------------------------------------------------
 % Author: Elham Barzegaran
 % Latest modification: 03.13.2018
-% NOTE: This function is a part of mrC toolboxs
+
 
 %%
     Euc_dist = squareform(pdist(MDATA.vertices')) ;
