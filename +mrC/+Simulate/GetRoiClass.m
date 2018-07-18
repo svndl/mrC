@@ -34,7 +34,7 @@ for s = 1: len
         subIDs{s} = subIDs{s}(1:SI-2);% -2 because there is a _ before session number
     end
     
-    Roi{s} = mrC.ROIs();
+    Roi{s} = mrC.ROIs([],anatDir);
     Roi{s} = Roi{s}.loadROIs(subIDs{s},anatDir);
 end
 

@@ -231,7 +231,7 @@ for s = 1:length(projectPath)
     end
     
     % check if the ROIs and Wang atlas (used for alpha noise) exist for this subject
-    alphaRoi = mrC.ROIs();alphaRoi = alphaRoi.loadROIs(subIDs{s},anatDir);
+    alphaRoi = mrC.ROIs([],anatDir);alphaRoi = alphaRoi.loadROIs(subIDs{s},anatDir);
     alphaRoi = alphaRoi.getAtlasROIs('wang');
     
     if sum(strcmp(subIDs{s},RSubID)) || (alphaRoi.ROINum ==0)
