@@ -134,5 +134,7 @@ function [results] = tSquaredFourierCoefs(xyData,varargin)
     results.mahalanobisD = mahaD;
     if twoSamples
         results.cohenNonOverlap = nonOverlap;
+    else
+    end
 end
 
