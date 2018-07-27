@@ -1,7 +1,7 @@
 
 function [ForwardPath, AnatomyPath]  = PrepareProjectSimulate(ProjectPath,DestPath,varargin)
-% This function get a mrC project folder and copy the necessary forward,
-% ROI and surface data to another destination to make a smaller input data
+% This function get a mrC project folder and copy the necessary data including forward,
+% ROI and surface  and inverse files to another destination to make a smaller input data
 % for mrC.simulate 
 % INPUTS:
     % ProjectPath: the path to mrCProject, if [], you can select with
@@ -14,8 +14,11 @@ function [ForwardPath, AnatomyPath]  = PrepareProjectSimulate(ProjectPath,DestPa
         %             files, .mat files are much smaller than fif files
         %             ['fif']/'mat'
         
-        % CopyInv:    if true, copies the available inverses for each
+        % CopyInv:    If true, copies the available inverses for each
                       % subject, true/[false]
+                      
+        % CopyROIClass: If ture, copies the ROI classeds for each subject
+        
     
 % OUTPUTS:
     % ForwardPath: The path of Project that contains forward models
@@ -26,7 +29,8 @@ function [ForwardPath, AnatomyPath]  = PrepareProjectSimulate(ProjectPath,DestPa
 %%
 opt	= ParseArgs(varargin,...
     'FwdFormat'		, 'fif', ...
-    'CopyInv'       , false ...
+    'CopyInv'       , false, ...
+    'CopyROIClass'  ,true ...
     );
 display ('Copy project and anatomy files to a local folder...')
 
@@ -42,7 +46,7 @@ if isempty(ProjectPath) || ~ischar(ProjectPath2),
     return
 end
 
-DestPath2 = uigetdir([],'Select the destination forlder');% Get destination location
+DestPath2 = uigetdir(DestPath,'Select the destination forlder');% Get destination location
 if ~strcmp(DestPath2,DestPath) && ischar(DestPath2)
     DestPath = DestPath2;
 end
@@ -120,18 +124,30 @@ for s = 1:length(projectPath)
     else
     end
     roiDir = fullfile(anatDir,subIDs{s},'Standard','meshes');
-    roiDirsub = subfolders(roiDir,0);
     roiDirDest = fullfile(DestPath,'anatomy',subIDs{s},'Standard','meshes');
-     
-    for d = 1:numel(roiDirsub) % copy all available ROIs, except the folder containing all ROIs ("ROIs")
-        if ~strcmpi(roiDirsub{d},'ROIs')
-            if~exist(fullfile(roiDirDest,roiDirsub{d}),'dir'),
+    if ~exist(roiDirDest,'dir'), mkdir(roiDirDest);end
+    
+    
+    if opt.CopyROIClass % copies only the ROI Class for the subjects
+        roiDirClass = fullfile(roiDir,'ROIsClass.mat');
+        if ~exist(roiDirClass,'file')
+            Roitemp = mrC.ROIs();
+            Roitemp = Roitemp.loadROIs(subIDs{s});
+        end
+        copyfile(roiDirClass,roiDirDest);
+        
+    else % copies the individual ROI files
+        roiDirsub = subfolders(roiDir,0);  
+        for d = 1:numel(roiDirsub) % copy all available ROIs, except the folder containing all ROIs ("ROIs")
+            if ~exist(fullfile(roiDirDest,roiDirsub{d}),'dir'),
                 mkdir(fullfile(roiDirDest,roiDirsub{d}));
             end
-            copyfile(fullfile(roiDir,roiDirsub{d}),fullfile(roiDirDest,roiDirsub{d})); % copy ROIs
+            if ~strcmpi(roiDirsub{d},'ROIs')
+                copyfile(fullfile(roiDir,roiDirsub{d}),fullfile(roiDirDest,roiDirsub{d})); % copy ROIs
+            end
         end
     end
-    
+    % Copy cortex surface file
     copyfile(fullfile(roiDir,'defaultCortex.mat'),roiDirDest);
 end
 

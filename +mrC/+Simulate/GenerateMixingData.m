@@ -1,9 +1,9 @@
 function noise_mixing_data = GenerateMixingData(spat_dists)
-
-% This function get the spatial distance between sources and loads the
+% Syntax: noise_mixing_data = GenerateMixingData(spat_dists)
+% Description: This function get the spatial distance between sources and loads the
 % spatial decay model for coherenc and generates the mixing matrix for noise
 
-%--------------------------------------------------------------------------
+%% --------------------------------------------------------------------------
 
 % preparing mixing matrices
     load('spatial_decay_models_coherence')% this is located in simulate/private folder, it can be obtained by run the code 'spatial_decay_of_coherence.m'

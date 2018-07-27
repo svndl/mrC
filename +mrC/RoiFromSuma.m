@@ -221,13 +221,17 @@ function RoiFromSuma(subId,varargin)
                     label = zeros(1,length(FSvL));
                     label(tempIndices)=1;
                     ROIs(iROI).meshIndices = kL(label(iL)==1);
-                    ROIs(iROI).eccData = eccData(label(iL)==1)';
+                    %ROIs(iROI).eccData = eccData(label(iL)==1)';
+                    IL = zeros(size(label));IL(iL) =  1;                   
+                    ROIs(iROI).eccData =  eccData((label .*IL)==1)';
                 elseif strcmp(hemi,'R')
                     nROI(2) = nROI(2)+1;
                     label = zeros(1,length(FSvR));
                     label(tempIndices)=1;
                     ROIs(iROI).meshIndices = kR(label(iR)>0);
-                    ROIs(iROI).eccData = eccData(label(iR)==1)';
+%                     ROIs(iROI).eccData = eccData(label(iR)==1)';
+                    IR = zeros(size(label));IR(iR) =  1;
+                    ROIs(iROI).eccData =  eccData((label .*IR)==1)';
                 else
                     error('ERROR: Hemisphere could not be deduced from ROI name!')
                 end

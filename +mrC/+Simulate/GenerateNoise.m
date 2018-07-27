@@ -1,21 +1,27 @@
 function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
-% GENERATE_NOISE Returns noise of unit variance as a combination of alpha
-% activity (bandpass filtered white noise) and spatially coherent pink
-% noise (spectrally shaped white noise)
-% f_sampling:                   sampling frequency
-% n_samples:                    number of temporal samples to be generated
-% n_nodes:                      number of nodes/vertices to be generated
-% mu:                           power of pink noise/power of alpha activity ('noise-to-noise' ratio)
-% alpha_nodes:                  indices of nodes/vertices carrying alpha activity
-% noise_mixing_data:            data necessary to impose a statistical spatial
-%                               relation on the poink noise
-% spatial_normalization_type:   spatial reference to normalize the
-%                               different noises to
-%                               'all_nodes': normalize to total number of nodes
-%                               'active_nodes': normalize only to nodes where a specific noise has any activity
-% returns a matrix of size [n_samples,n_nodes]
+% Syntax: [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
+% Desciption: GENERATE_NOISE Returns noise of unit variance as a combination of alpha
+%               activity (bandpass filtered white noise) and spatially coherent pink
+%               noise (spectrally shaped white noise)
+% INPUT:
+    % f_sampling:                   sampling frequency
+    % n_samples:                    number of temporal samples to be generated
+    % n_nodes:                      number of nodes/vertices to be generated
+    % mu:                           power of pink noise/power of alpha activity ('noise-to-noise' ratio)
+    % alpha_nodes:                  indices of nodes/vertices carrying alpha activity
+    % noise_mixing_data:            data necessary to impose a statistical spatial
+    %                               relation on the poink noise
+    % spatial_normalization_type:   spatial reference to normalize the
+    %                               different noises to
+    %                               'all_nodes': normalize to total number of nodes
+    %                               'active_nodes': normalize only to nodes where a specific noise has any activity
+% OUTPUT:
+    % noise: returns a matrix of size [n_samples,n_nodes]
+    % pink_noise
+    % ..
 
 % Author: Sebastian Bosse
+% Latest Modification: EB, 07/17/2018
 
 %% ---------------------------- generate alpha noise------------------------
     %  

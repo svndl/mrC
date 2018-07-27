@@ -1,7 +1,8 @@
 function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)% ROIsig %NoiseParams
+
     % Description:	Generate Seed Signal within specified ROIs
     %
-    % Syntax:	
+    % Syntax: [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)
     
     % INPUT:
     %   roiDir - string, path to ROI directory
@@ -47,22 +48,6 @@ end
 roiChunk = zeros(size(fwdMatrix,2),rois.ROINum);
 for r = 1:rois.ROINum % Read each Roi and check if they exist
     roiChunk(rois.ROIList(r).meshIndices,r)=1;
-%     [roichunk, tempList] = mrC.ChunkFromMesh(rois{r}.roiDir,size(fwdMatrix,2));
-%     Ind1 = strfind(tempList,'_');Ind2 = strfind(tempList,'-');
-%     shortList = (cellfun(@(x,y,z) z(x+1:y-1),Ind1,Ind2,tempList,'UniformOutput',false));
-%     hemi = (cellfun(@(y,z) z(y+1:y+1),Ind2,tempList,'UniformOutput',false));
-%     if sum(strcmp(rois{r}.Hemi,{'R','L'}))>0 
-%         Ind = strcmp(shortList,rois{r}.Name) .* strcmp(hemi,rois{r}.Hemi);
-%     elseif strcmp(rois{r}.Hemi,'B')
-%         Ind = strcmp(shortList,rois{r}.Name) .* (strcmp(hemi,'R')+strcmp(hemi,'L'));
-%     else
-%         Ind =0;
-%     end
-%     if sum(Ind)>0,
-%         roiChunk(:,r)= sum(roichunk(:,find(Ind)),2);
-%     else
-%         warning(['ROI ' rois{r}.Name '_' rois{r}.Hemi 'is not found in' rois{r}.Type 'atlas']);
-%     end
 end
 
 if size(roiChunk,2)~= size(signalArray,2)
@@ -80,7 +65,7 @@ if ~isempty(roiChunk)
     % Note: I consider here that the ROI labels in shortList are unique (L or R are considered separetly)
     % Adjust Roi size, prepare spatial function (weights) and plot ROIs
 
-    plotRoi = 1;
+    plotRoi = 0;
     %RoiSize = 200;
     spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,[],funcType,plotRoi);
 
@@ -106,7 +91,7 @@ else
 end
 
 % Adds noise to source signal
-pow = .7;
+pow = 1;
 sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
 sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
 

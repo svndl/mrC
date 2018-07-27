@@ -29,7 +29,7 @@ function CreateProject(varargin)
     
     while ~projectDone
         sIdx = sIdx+1;
-        if strcmp(opt.mode,'source')
+        if strcmpi(opt.mode,'source')
             tempID = inputdlg('Subject ID?','SOURCE PROJECT',1);
         else
             tempNum = inputdlg('Subject number?','SENSOR PROJECT',1,{num2str(sIdx)});
@@ -65,7 +65,7 @@ function CreateProject(varargin)
             mkdir([projectDir,'/',subID{sIdx},'/Polhemus']);
             mkdir([projectDir,'/',subID{sIdx},'/Exp_MATL_HCN_128_Avg']);
             %% POLHEMUS
-            if strcmp(opt.mode,'source')
+            if strcmpi(opt.mode,'source')
                 [polFile{sIdx},polPath{sIdx}] = uigetfile([polPath{end},'/*.elp'],[subID{sIdx},' Polhemus file?']);
                 copyfile(fullfile(polPath{sIdx},polFile{sIdx}),fullfile(projectDir,subID{sIdx},'Polhemus'));
             else
@@ -95,7 +95,7 @@ function CreateProject(varargin)
             projectDone = true;
         end
     end
-    if strcmp(opt.mode,'source')
+    if strcmpi(opt.mode,'source')
         disp('SOURCE space project created! Proceed to generating inverses!');
     else
         disp('SENSOR space project created! Project can now be viewed using mrC.GUI!');

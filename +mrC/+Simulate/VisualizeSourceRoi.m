@@ -1,4 +1,4 @@
-function [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction)
+function [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction,hemi)
 % gets the subject ID and anatomy folder and plots the
 % ROIs on the subjects default cortex...
 % Elham Barzegaran, 5.25.2018
@@ -8,8 +8,13 @@ if ~exist('anatDir','var')||isempty(anatDir),
     anatDir = getpref('mrCurrent','AnatomyFolder');
 end
 
-if ~exist('direction','var'),
+if ~exist('direction','var')||isempty(direction),
     direction = 'anterior';
+end
+
+
+if ~exist('hemi','var')
+    hemi = 'B';
 end
 
 %%
@@ -23,11 +28,29 @@ faces = (msh.data.triangles+1)';
 vertices = vertices(:,[1 3 2]);vertices(:,3)=200-vertices(:,3);
 
 %% plot brain surface
+if hemi=='L'
+    Rind = round(length(vertices)/2)+1:length(vertices);
+    [~,i1] = intersect(faces(:,1),Rind);[~,i2] = intersect(faces(:,2),Rind);[~,i3] = intersect(faces(:,3),Rind);
+    I = ([i1; i2; i3]);
+    faces(I,:)=[];
+    [~,i1] = intersect(faces(:,1),Rind);[~,i2] = intersect(faces(:,2),Rind);[~,i3] = intersect(faces(:,3),Rind);
+    I = ([i1; i2; i3]);
+    faces(I,:)=[];
+elseif hemi=='R'
+    Lind = 1:round(length(vertices)/2);
+    [~,i1] = intersect(faces(:,1),Lind);[~,i2] = intersect(faces(:,2),Lind);[~,i3] = intersect(faces(:,3),Lind);
+    I = unique([i1; i2; i3]);
+    faces(I,:)=[];
+    [~,i1] = intersect(faces(:,1),Lind);[~,i2] = intersect(faces(:,2),Lind);[~,i3] = intersect(faces(:,3),Lind);
+    I = unique([i1; i2; i3]);
+    faces(I,:)=[];
+end
 
-Fhandler= figure,
+
+Fhandler= figure;
 
 patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
-     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.65);
+     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.55,'facelighting','gouraud');
 
 %colormap(cmap);
 
@@ -48,25 +71,38 @@ axis  off vis3d equal
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .45, 0.65]);
 
 %% plot ROIs on the brain
-RoiDir = fullfile(anatDir,subID,'Standard','meshes',[RoiType '_ROIs']); 
-[chunks,RoiList] = mrC.ChunkFromMesh(RoiDir,size(vertices,1),1);
+% RoiDir = fullfile(anatDir,subID,'Standard','meshes',[RoiType '_ROIs']); 
+% [chunks,RoiList] = mrC.ChunkFromMesh(RoiDir,size(vertices,1),1);
+
+Rois = mrC.ROIs(subID,anatDir);
+Rois = Rois.getAtlasROIs(RoiType);
+Rois = Rois.searchROIs('all',[],hemi);
+chunks = Rois.ROI2mat(length(vertices));
+RoiList = Rois.getFullNames('noatlas');
 
 if ~exist('RoiIdx','var')||isempty(RoiIdx),
     RoiIdx = 1:size(chunks,2);
+% else
+%     RoiList = RoiList(RoiIdx);
 end
 
 
-cmap = colormap(lines(256));
+cmap = hsv(Rois.ROINum);
+%cmap = lines(Rois.ROINum);
+cmap = cmap(randperm(Rois.ROINum),:);
+isem = zeros(1,numel(RoiIdx));
 for i = 1:numel(RoiIdx)
     [RoiV, RoiF] = SurfSubsample(vertices, faces,find(chunks(:,RoiIdx(i))),'union');  
-    C=cmap(i*floor(255/numel(RoiIdx)),:);
+    C = cmap(i,:);
     if ~isempty(RoiF),
         hold on; patch('faces',RoiF,'vertices',RoiV,'edgecolor','k','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
-            'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1);
-        scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
+            'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+        %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
+    else
+        isem(i) = 1;
     end
 end
-
+legend([{''}, RoiList(RoiIdx(~isem))]);
 end
 
 function [nvertices, nfaces,vertIdx2] = SurfSubsample(vertices, faces,vertIdx,type)
