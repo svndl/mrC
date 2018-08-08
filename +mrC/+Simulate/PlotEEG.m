@@ -1,4 +1,4 @@
-function h = PlotEEG(ASDEEG,Freq,savepath,subID, masterList,signalFF,SignalType,jcolors,Mode,EOI,FOI)
+function h = PlotEEG(ASDEEG,Freq,savepath,subID, masterList,signalFF,SignalType,jcolors,Mode,EOI,FOI,A)
 % This function provides a dual plot of electrode amplitude/phase spectrum and topographic
 % map of amplitude/phase at a specific frequency (similar to powerDiva)
 
@@ -26,9 +26,10 @@ function h = PlotEEG(ASDEEG,Freq,savepath,subID, masterList,signalFF,SignalType,
     
 % Written by ELham Barzegaran,3.7.2018
 % Latest modification: 6.6.2018
+% modified by sebastian bosse 8.8.2018
 
 %% set parameters
-if ~exist('SignalType','var')% plot phase or amp
+if ~exist('SignalType','var')|| isempty(SignalType) % plot phase or amp
     if min(ASDEEG(:))>0
         SignalType = 'Amplitude';
     else
@@ -60,6 +61,16 @@ FOI = FFI(1);
 if ~exist('Mode','var') || isempty(Mode)
    Mode = 'Interact';
 end
+
+% allow for visualization of spatial filters
+% what do we need?
+if ~exist('A','var') || isempty(Mode)
+    space = 'chann';
+else
+    space = 'comp';
+    EOI = 1 ; % start with the first component
+end
+
 %% Plot prepration
 Probs{1} = {'facecolor','none','edgecolor','none','markersize',10,'marker','o','markerfacecolor','g' ,'MarkerEdgeColor','k','LineWidth',.5};% plotting parameters
 if ~exist('jcolors','var') || isempty(jcolors)
@@ -81,6 +92,7 @@ set(h,'PaperPositionMode','manual')
 
 
 subplot(2,2,2),axis off;% Show simulated signal information
+
 nrs = max(numel(masterList),3);
 text(.1,1,['' subID],'fontsize',FS+1,'fontweight','bold');
 for i= 1:numel(masterList)
@@ -98,19 +110,27 @@ N = 1;
 I = 1;    
 while(I)
     if strcmp(SignalType,'Amplitude')
-        if N == 1, colorbarLimits = [-0 max(ASDEEG(FOI,:))];
-        else colorbarLimits = [-0 max(ASDEEG(:))];
+        if strcmpi(space,'comp') 
+            colorbarLimits = [-0 max(A(:,EOI)*ASDEEG(FOI,EOI)')];
+        else
+            if N == 1, colorbarLimits = [-0 max(ASDEEG(FOI,:))];
+            else colorbarLimits = [-0 max(ASDEEG(:))];
+            end
         end
     elseif strcmp(SignalType,'Phase')
         colorbarLimits = [min(ASDEEG(:)) max(ASDEEG(:))];
     end
     
     if exist('sp1','var'),delete(sp1);end % topography map plot
-    sp1 = subplot(1,2,1);
-    if strcmpi(Mode,'Interact'),
+        sp1 = subplot(1,2,1);
+    if strcmpi(Mode,'Interact') && ~strcmpi(space,'comp'),
         mrC.plotOnEgi(ASDEEG(FOI,:)',colorbarLimits,false,EOI,false,Probs); 
     else
-        mrC.plotOnEgi(ASDEEG(FOI,:)',colorbarLimits,false,[],false,Probs); 
+        if strcmpi(space,'comp') 
+            mrC.plotOnEgi(A(:,EOI)*ASDEEG(FOI,EOI)',colorbarLimits,false,[],false,Probs); 
+        else
+            mrC.plotOnEgi(ASDEEG(FOI,:)',colorbarLimits,false,[],false,Probs); 
+        end
     end
     title(['Frequency = ' num2str(Freq(FOI)) 'Hz'],'fontsize',FS);
     set(sp1,'tag',num2str(1));
@@ -118,7 +138,7 @@ while(I)
     colorbar;
     
     if exist('sp2','var'),delete(sp2);end % spectrum plot
-    sp2 = subplot(2,2,4); 
+        sp2 = subplot(2,2,4); 
     bar(Freq(1:Fmax), ASDEEG(1:Fmax,EOI),.15); 
     xlim([Freq(1) Freq(Fmax)]);
     xlabel('Frequency(Hz)','fontsize',FS-2);
@@ -132,8 +152,19 @@ while(I)
     set(sp2,'tag',num2str(2));
     hold on; 
     bar(Freq(FOI), ASDEEG(FOI,EOI),.4,'FaceColor','g','EdgeColor','g'); 
-    title(['Electrode ' num2str(num2str(EOI))],'fontsize',FS);
     
+    % draw buttons for channel selection
+    if strcmpi(space,'comp')
+        popup = uicontrol('Style', 'popup',...
+                          'String', string(1:size(A,1)),...
+                          'Position', [20 340 100 50],...
+                          'Callback',@set_component);
+    end
+    if strcmpi(space,'comp')
+        title(['Component ' num2str(num2str(EOI))],'fontsize',FS);
+    else
+        title(['Electrode ' num2str(num2str(EOI))],'fontsize',FS);
+    end
     %% Reads keyboard or mouse click
     if strcmpi(Mode,'Interact')
         w = waitforbuttonpress;
@@ -159,10 +190,11 @@ while(I)
           % update location
           switch SPI
             case '1'
-                Epos2= repmat([x y],[128 1]);
-                dis = sqrt(sum((tEpos-Epos2).^2,2));
-                [~,EOI] = min(dis);
-
+                if ~strcmpi(space,'comp')
+                    Epos2= repmat([x y],[128 1]);
+                    dis = sqrt(sum((tEpos-Epos2).^2,2));
+                    [~,EOI] = min(dis);
+                end
             case '2'
                 [~,FOI] = min(abs(repmat(x,[1 size(ASDEEG,1)])-Freq));
           end
@@ -171,6 +203,11 @@ while(I)
         I = 0;
     end
 end
+
+    function set_component(source,event)
+        EOI = source.Value ;
+    end
+
 
 %print(fullfile(savepath,['SimEEG_Subject' subID 'Electrode' num2str(EOI) '_Freq' num2str(Freq(FOI)) 'Hz_' SignalType  '.tif']),'-dtiff','-r300');% Later I can update this to contain the simulation parameters
 end
