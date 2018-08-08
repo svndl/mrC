@@ -17,7 +17,7 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
     %   
     %   signalArray: ns x n matrix: Containing the signals for the ROIs
     %   
-    %   noise: ns x nsrc matrix: Containing the noises signal in source space
+    %   noise: ns x nsrc x ntrls matrix: Containing the noises signal in source space
     %   
     %   lambda: Parameter for defining of SNR: How to add noise and signal
     %   
@@ -34,6 +34,7 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
   % Elham Barzegaran 2.27.2018
     
   % Updated EB, 6.5.2018
+  % Modified SB, 8/2/2018
 %%
 
 if ~exist('RoiSize','var'), RoiSize = [];end
@@ -70,33 +71,47 @@ if ~isempty(roiChunk)
     spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,[],funcType,plotRoi);
 
     % place seed signal array in source space
-    sourceTemp = zeros(size(noise));
+    
+    sourceTemp = zeros(size(noise,1),size(noise,2));
     for s = 1: size(signalArray,2)% place the signal for each seed 
         sourceTemp = sourceTemp + repmat (signalArray(:,s),[1 size(sourceTemp,2)]).*(repmat(spatfunc(:,s),[1 size(sourceTemp,1)])');
     end
 
     % Normalize the source signal
     if strcmp(spatial_normalization_type,'active_nodes')
-    n_active_nodes_signal = sum(sum(abs(sourceTemp))~=0) ;
+    n_active_nodes_signal = squeeze(sum(sum(abs(sourceTemp))~=0) ) ;
         sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
     elseif strcmp(spatial_normalization_type,'all_nodes')
         sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
     else
         error('%s is not implemented as spatial normalization method', spatial_normalization_type)
     end
-        
-        
 else
     sourceTemp = zeros(size(noise));
+end
+
+if ndims(noise) == 3
+    sourceTemp = repmat(sourceTemp,[1,1,size(noise,3)]);
 end
 
 % Adds noise to source signal
 pow = 1;
 sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
-sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
 
-% Generate EEG data by multiplication to forward matrix
-EEGData = sourceData*fwdMatrix';
+if ndims(sourceData) == 3
+    EEGData = zeros(size(sourceData,1),size(fwdMatrix,1),size(sourceData,3)) ;
+    for trial_idx = 1:size(sourceData,3)
+        sourceData(:,:,trial_idx) = sourceData(:,:,trial_idx)/norm(sourceData(:,:,trial_idx),'fro') ;% signal and noise are correlated randomly (not on average!). dirty workaround: normalize sum
+        % Generate EEG data by multiplication to forward matrix
+        EEGData(:,:,trial_idx) = sourceData(:,:,trial_idx)*fwdMatrix';
+
+    end
+else
+    sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
+    % Generate EEG data by multiplication to forward matrix
+    EEGData = sourceData*fwdMatrix';
+
+end
 
 % there should be another step: add measurement noise to EEG?
 end
@@ -131,7 +146,10 @@ spatfunc = zeros(size(roiChunk,1),numel(RoiIdx));
 for i = 1:numel(RoiIdx)
     vertIdx_orig = find(roiChunk(:,RoiIdx(i)));
     [RoiV, RoiF,vertIdx] = SurfSubsample(vertices, faces,vertIdx_orig,'union');
-    [RoiVertices{i}, RoiFaces{i},vertIdxR,~,RoiDist,radius] = ResizeRoi(RoiV,RoiF,vertIdx,RoiSize,'geodesic');
+    %[RoiVertices{i}, RoiFaces{i},vertIdxR,~,RoiDist,radius] = ResizeRoi(RoiV,RoiF,vertIdx,RoiSize,'geodesic');
+    % TODO: just a quick hack by sb, since surfing (and thus geodesic distance
+    % type) is not available on my machine
+    [RoiVertices{i}, RoiFaces{i},vertIdxR,~,RoiDist,radius] = ResizeRoi(RoiV,RoiF,vertIdx,RoiSize,'euclidean');
     if (~isempty(vertIdx)) && (~isempty(vertIdxR))
         switch funcType
             case 'uniform'
