@@ -9,6 +9,7 @@ function EEGAxx= CreateAxx(EEGData,opt)
 %==========================================================
 
 % Author: Elham Barzegaran, 3/26/2018
+% modified by sebastian bosse 8/4/2018
 
 %%
 EEGAxx = mrC.axx();
@@ -47,7 +48,7 @@ EEGAxx.Wave = squeeze(permute(mean(reshape(EEGData(1:NumEp*WLT,:),[WLT NumEp siz
 EEGAxx.dTms = 1000/opt.signalsf;
 
 % calculate spectrum
-EEGAxx.nTrl = size(EEGAxx.Wave,4);
+EEGAxx.nTrl = size(EEGAxx.Wave,3);
 NumEp = floor(size(EEGData,1)/WLF);
 EEGSPEC = fft(squeeze(permute(mean(reshape(EEGData(1:NumEp*WLF,:),[WLF NumEp size(EEGData,2) size(EEGData,3)]),2),[1 3 2 4])),WLF,1);
 f = opt.signalsf*(0:(WLF/2))/WLF; % frequencies
