@@ -30,6 +30,7 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %       
     %       signalFF:       a seedNum x 1 vector: determines the fundamental
     %                       frequencis of sources
+    %       nTrials:        Number of trials. Noise is redrawn for each trial.
   
   % (ROI Parameters)
     %       rois            a cell array of roi structure that can be
@@ -122,6 +123,7 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
 %--------------------------------------------------------------------------
  % The function was originally written by Peter Kohler, ...
  % Latest modification: Elham Barzegaran, 03.26.2018
+ % Modifications: Sebastian Bosse 8/2/2018
  % NOTE: This function is a part of mrC toolboxs
 
 %% =====================Prepare input variables============================
@@ -144,7 +146,8 @@ opt	= ParseArgs(varargin,...
     'anatomyPath'   , [],...   
     'plotting'      , 0 ,...
     'Save'          ,true,...
-    'cndNum'        ,1 ...
+    'cndNum'        ,1, ...
+    'nTrials'       ,1 ...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -319,8 +322,11 @@ for s = 1:length(projectPath)
     
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
-    [noiseSignal, pink_noise,~, alpha_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
-    
+    noise_signal = zeros(NS, size(spat_dists,1), opt.nTrials);
+    for trial_id =1:opt.nTrials % this could be solved more elegantly in GenerateNoise as well..
+        [thisNoiseSignal, pink_noise,~, alpha_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+        noiseSignal(:,:,trial_id) = thisNoiseSignal ;
+    end
     %visualizeNoise(noiseSignal, spat_dists, surfData,opt.signalsf) % Just to visualize noise on the cortical surface 
     %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
     % 
