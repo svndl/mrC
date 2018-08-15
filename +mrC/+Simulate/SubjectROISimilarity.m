@@ -1,4 +1,4 @@
-function [subRoi, Similarity] = SubjectROISimilarity(projectPath,varargin)
+function [subRoi, subRoiDist] = SubjectROISimilarity(projectPath,varargin)
 % Description:	This function gets the path for a mrc project and
 % generates Resolution and Crosstalk matrices 
 %
@@ -184,10 +184,10 @@ for roi = 1:2:size(allNorm,1)
 end
 
 %% calculate distance between ROIs using the forward model
-for roi = 1:numel(NameList)%%%% correct NameLIST???????????????????????????
-    SubRoiDist(roi,:,:)=squareform(pdist(squeeze(RoiFwdStack(roi,:,:))'));
+
+RoiFwdStack = cellfun(@(x) x.RoiFwd,subRoi,'uni',false); RoiFwdStack = cat(3,RoiFwdStack{:});
+subRoiDist = arrayfun(@(x) squareform(pdist(squeeze(RoiFwdStack(x,:,:))')),1:numel(NameList),'uni',false);
+subRoiDist = cat(3, subRoiDist{:});
+
 end
 
-figure,imagesc(squeeze(sum(SubRoiDist(:,:,:),2)));
-
-end
