@@ -71,3 +71,4 @@ axis  off vis3d equal
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .45, 0.65]);
 
 end
+
