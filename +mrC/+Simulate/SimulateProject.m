@@ -31,6 +31,12 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %       signalFF:       a seedNum x 1 vector: determines the fundamental
     %                       frequencis of sources
     %       nTrials:        Number of trials. Noise is redrawn for each trial.
+    %
+    %       originsource    If true, the original source signal will be
+    %                       returned in the output, otherwise it will be
+    %                       empty. Be careful about using it, if too many
+    %                       trials are requested, you might run out of
+    %                       memory.
   
   % (ROI Parameters)
     %       rois            a cell array of roi structure that can be
@@ -147,7 +153,8 @@ opt	= ParseArgs(varargin,...
     'plotting'      , 0 ,...
     'Save'          ,true,...
     'cndNum'        ,1, ...
-    'nTrials'       ,1 ...
+    'nTrials'       ,1, ...
+    'originsource'  ,false...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -219,7 +226,7 @@ end
 projectPathfold = projectPath;
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
 
-for s = 1:length(projectPath)
+for s = 1:2%length(projectPath)
     %--------------------------READ FORWARD SOLUTION---------------------------  
     % Read forward
     [~,subIDs{s}] = fileparts(projectPath{s});
@@ -322,21 +329,27 @@ for s = 1:length(projectPath)
     
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
-    noise_signal = zeros(NS, size(spat_dists,1), opt.nTrials);
+%     tic
+%     noise_signal = mrC.Simulate.GenerateNoise_2(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type,opt.nTrials);   
+%     toc
     for trial_id =1:opt.nTrials % this could be solved more elegantly in GenerateNoise as well..
-        [thisNoiseSignal, pink_noise,~, alpha_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
-        noiseSignal(:,:,trial_id) = thisNoiseSignal ;
+        disp(['Trail # ' num2str(trial_id)])
+        [thisNoiseSignal] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+        noise_signal(:,:,trial_id) = thisNoiseSignal ;
     end
-    %visualizeNoise(noiseSignal, spat_dists, surfData,opt.signalsf) % Just to visualize noise on the cortical surface 
-    %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
-    % 
 %------------------------ADD THE SIGNAL IN THE ROIs--------------------------
     
     disp('Generating EEG signal ...'); 
  
     subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
-    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
+    [EEGData{s},sourceData] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noise_signal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
        
+    if (opt.nTrials==1) || (opt.originsource) % this is to avoid memory problem
+        sourceDataOrigin{s} = sourceData;
+    else
+        sourceDataOrigin{s} = [];
+    end
+    
     %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format
     if strcmp(opt.signalType,'SSVEP')
