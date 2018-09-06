@@ -20,7 +20,7 @@ addpath(genpath('C:\Users\Elhamkhanom\Documents\Codes\Git\surfing'));% this tool
 % SAVED THE SAMPLE ANATOMY AND PROJECT FOLDER. YOU CAN DOWNLOAD THOSE FILES
 % FROM MY DROPBOX: https://www.dropbox.com/sh/ypjrwjjw3003c2f/AABYO1JEjcdwkH3auBOon6UVa?dl=0
 %
- DestPath = fullfile(mrCFolder,'Examples','ExampleData');
+ DestPath = fullfile(mrCFolder,'Examples','Example3');
 % 
 % ProjectPath ='/Volumes/svndl/mrC_Projects/kohler/SYM_RT_LOCKED/SOURCE';
 % % This is to make a portable copy of the project data (both anatomy and forward)
@@ -60,6 +60,9 @@ Rois1 = cellfun(@(x) x.searchROIs('V2d','wang','R'),RoiList,'UniformOutput',fals
 Rois2 = cellfun(@(x) x.searchROIs('V3d','wang','L'),RoiList,'UniformOutput',false);% % wang ROI
 RoisI = cellfun(@(x,y) x.mergROIs(y),Rois1,Rois2,'UniformOutput',false);
 [EEGData1,EEGAxx1,~,masterList1,subIDs1] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'signalFF',FundFreq,'signalsf',SF,'NoiseParams',Noise,'rois',RoisI,'Save',true,'cndNum',1);
+freq = 0:EEGAxx1{1}.dFHz:EEGAxx1{1}.dFHz*(EEGAxx1{1}.nFr-1); 
+mrC.Simulate.PlotEEG(EEGAxx1{1}.Amp, freq , [],subIDs1{1},masterList1,FundFreq,'Amplitude');
+%PlotEEG(ASDEEG,Freq,savepath,subID, masterList,signalFF,SignalType,jcolors,Mode,EOI,FOI)
 close all;
 
 %--------------------------Cond2: V1d_L, V2d_L-----------------------------
