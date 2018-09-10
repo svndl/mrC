@@ -1,10 +1,9 @@
 function [CrossTalk,CrossTalkN,ROISource,LIST,subIDs] = ResolutionMatrices(projectPath,varargin)
     
-    % Description:	This function gets the path for a mrc project and simulate
-    % EEG with activity (seed signal as input) in specific ROIs (input),
-    % and pink and alpha noises (noise parameters can be set as input)
+    % Description:	This function gets the path for a mrc project and
+    % generates Resolution and Crosstalk matrices 
     %
-    % Syntax:	[EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = mrC.RoiDemo(projectPath,varargin)
+    % Syntax:	[CrossTalk,CrossTalkN,ROISource,LIST,subIDs] = ResolutionMatrices(projectPath,varargin)
     % 
 %--------------------------------------------------------------------------    
 % INPUT:
@@ -14,98 +13,10 @@ function [CrossTalk,CrossTalkN,ROISource,LIST,subIDs] = ResolutionMatrices(proje
     % 
     %
   %   <options>:
-    %
-  % (Source Signal Parameters)
-    %       signalArray:    a NS x seedNum matrix, where NS is the number of
-    %                       time samples and seedNum is the number of seed sources
-    %                       [NS x 2 SSVEP sources] -> for these two, the
-    %                       random ROIs in functional
-    %                       roitype is selected
-    %
-    %       signalsf:       sampling frequency of the input source signal
-    %
-    %       signalType:     type of simulated signal (visualization might differ for different signals)
-    %                       
-    %       
-    %       signalFF:       a seedNum x 1 vector: determines the fundamental
-    %                       frequencis of sources
-  
-  % (ROI Parameters)
-    %       rois            Array of ROI class
-    %
-    %       roiType:        THIS IS NOT NEEDED IF YOU GIVE THE rois INPUT.  
-    %                       string specifying the roitype to use. 
-    %                       'main' indicates that the main ROI folder
-    %                       /Volumes/svndl/anatomy/SUBJ/standard/meshes/ROIs
-    %                       is to be used. ('func'/'wang'/'glass'/'kgs'/'benson'/'wangkgs').
-    %
-    %
-    %       roiSpatfunc     a string indicating which spatial function
-    %                       will be used to put the seed signal in ROI
-    %                       [uniform]/gaussian
-    %       roiSize         number of vertices in each ROI
-    %
-    %       anatomyPath:  The folder should be for the same subject as
-    %                       projectPath points to. It should have ROI forders, default
-    %                       cortex file, ..
-    
-  % (Noise Parameters), all this parameters are defined inside "NoiseParam." structure
-    %
-    %       mu: This number determines the ratio of pink noise to alpha noise
-    %
-    %       lambda: This number determines the ratio of signal to noise
-    %       
-    %       alpha nodes: for now the only option is 'all' which means all visual areas  (maybe later a list of ROIs to put alpha in)
-    %
-    %       mixing_type_pink_noise: for now only 'coh' is implemented, which is default value
-    %
-    %       spatial_normalization_type: How to normalize noise and generated signal ['active_nodes']/ 'all_nodes'
-    %
-    %       distanceType: how to calculate source distances ['Euclidean']/'Geodesic', Geodesic is not implemented yet
-    
-  % (Plotting Parametes)
-    %       sensorFig:      logical indicating whether to draw topo plots of
-    %                       the simulated ROI data in sensor space. [true]/false
-    %       figFolder:        string specifying folder in which to save sensor
-    %                       figs. [Users' Desktop]
-    
-
-  % (Save Parameters)
-    %       SavePath:       The folder to save simulated data in axx format
-    %
-    %       cndNum:         The condition number for simulated EEG
-  
-  % (Inverse Parameters) .... should be corrected
-    %       inverse:        a string specifying the inverse name to use
-    %                       [latest inverse]
-    %       doSource:       logical indicating whether to use the inverse to push
-    %                       the simulated ROI data back into source space
-    %                       true/[false]
-    %
-% OUTPUT:
-    %       EEGData:        a NS x e matrix, containing simulated EEG,
-    %                       where NSs is number of time samples and e is the
-    %                       number of the electrodes
-    %
-    %
-    %       EEGAxx:         A cell array containing Axx structure of each
-    %                       subject's simulated EEG. This output is
-    %                       available if the signal type is SSVEP
-    %
-    %       sourceDataOrigin: a NS x srcNum matrix, containing simulated
-    %                           EEG in source space before converting to
-    %                           sensor space EEG, where srcNum is the
-    %                           number of source points on the cortical
-    %                           meshe
-    %
-    %       masterList:     a 1 x seedNum cell of strings, indicating ROI names
-    %
-    %       subIDs:         a 1 x s cell of strings, indicating subjects IDs
-    %
+% 
 %--------------------------------------------------------------------------
- % Latest modification: Elham Barzegaran, 06.13.2018
- % NOTE: This function is a part of mrC toolboxs
-
+ % Latest modification: Elham Barzegaran, 08.12.2018
+ 
 %% =====================Prepare input variables============================
  
 %--------------------------set up default values---------------------------
@@ -161,7 +72,7 @@ end
 
 
 
-%% ===========================GENERATE EEG signal==========================
+%% ===========================GET ROIS==========================
 projectPathfold = projectPath;
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
 if isempty(opt.rois)
