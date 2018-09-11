@@ -47,7 +47,7 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
         % force noise to be spatially coherent within 'hard' frequency
         % ranges
         % for details see: DOI: 10.1121/1.2987429
-        f = [-0.5:1/n_samples:0.5-1/n_samples]*f_sampling; % frequncy range
+        f = ifft([-0.5:1/n_samples:0.5-1/n_samples]*f_sampling); % frequncy range
 
         pink_noise_spec = fft(pink_noise,[],1);  
         for band_idx = 1:length(noise_mixing_data.band_freqs)
