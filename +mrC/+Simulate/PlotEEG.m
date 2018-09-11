@@ -155,12 +155,6 @@ while(I)
     
     % draw buttons for channel selection
     if strcmpi(space,'comp')
-        popup = uicontrol('Style', 'popup',...
-                          'String', string(1:size(A,1)),...
-                          'Position', [20 340 100 50],...
-                          'Callback',@set_component);
-    end
-    if strcmpi(space,'comp')
         title(['Component ' num2str(num2str(EOI))],'fontsize',FS);
     else
         title(['Electrode ' num2str(num2str(EOI))],'fontsize',FS);
@@ -180,34 +174,71 @@ while(I)
               print(fullfile(savepath,['SimEEG_Subject' subID 'Electrode' num2str(EOI) '_Freq' num2str(Freq(FOI)) 'Hz.tif']),'-dtiff','-r300');% Later I can update this to contain the simulation parameters
           elseif strcmp(key,'n')||strcmp(key,'N') % if n or N is pressed -> change head plot normalization
               if N==1, N=0; else N=1;end
+          
+          elseif key==28 && strcmpi(space,'comp')  % cursor left
+              EOI = mod(EOI-1,size(A,2)+1) ;
+              if EOI==0 % 0 is not valid
+                  EOI = mod(EOI-1,size(A,2)+1) ;
+              end
+          elseif key==29 && strcmpi(space,'comp') % cursor right
+              EOI = mod(EOI+1,size(A,2)+1) ;
+              if EOI==0 % 0 is not valid
+                  EOI = mod(EOI+1,size(A,2)+1) ;
+              end
+          elseif key==30 && strcmpi(space,'comp')  % cursor up
+              EOI = mod(EOI+10,size(A,2)+1) ;
+              if EOI==0 % 0 is not valid
+                  EOI = mod(EOI+1,size(A,2)+1) ;
+              end
+          elseif key==31 && strcmpi(space,'comp')  % cursor down
+              EOI = mod(EOI-10,size(A,2)+1) ;
+              if EOI==0 % 0 is not valid
+                  EOI = mod(EOI-1,size(A,2)+1) ;
+              end
+          elseif key=='a' 
+              FOI = mod(FOI-1,Fmax+1) ;
+              if FOI==0 % 0 is not valid
+                  FOI = mod(FOI-1,Fmax+1) ;
+              end
+          elseif key=='d' 
+              FOI = mod(FOI+1,Fmax+1) ;
+              if FOI==0 % 0 is not valid
+                  FOI = mod(FOI+1,Fmax+1) ;
+              end
+          elseif key=='w' 
+              FOI = mod(FOI+10,Fmax+1) ;
+              if FOI==0 % 0 is not valid
+                  FOI = mod(FOI+1,Fmax+1) ;
+              end
+          elseif key=='s' 
+              FOI = mod(FOI-10,Fmax+1) ;
+              if FOI==0 % 0 is not valid
+                  FOI = mod(FOI-1,Fmax+1) ;
+              end
           end
 
         case 0 % mouse click 
-          mousept = get(gca,'currentPoint');
-          SPI = get(gca,'tag');
-          x = mousept(1,1);
-          y = mousept(1,2);
-          % update location
-          switch SPI
-            case '1'
-                if ~strcmpi(space,'comp')
-                    Epos2= repmat([x y],[128 1]);
-                    dis = sqrt(sum((tEpos-Epos2).^2,2));
-                    [~,EOI] = min(dis);
-                end
-            case '2'
-                [~,FOI] = min(abs(repmat(x,[1 size(ASDEEG,1)])-Freq));
-          end
+             
+            mousept = get(gca,'currentPoint');
+            SPI = get(gca,'tag');
+            x = mousept(1,1);
+            y = mousept(1,2);
+            % update location
+            switch SPI
+                case '1'
+                    if ~strcmpi(space,'comp')
+                        Epos2= repmat([x y],[128 1]);
+                        dis = sqrt(sum((tEpos-Epos2).^2,2));
+                        [~,EOI] = min(dis);
+                    end
+                case '2'
+                    [~,FOI] = min(abs(repmat(x,[1 size(ASDEEG,1)])-Freq));
+            end
         end
     else
         I = 0;
     end
 end
-
-    function set_component(source,event)
-        EOI = source.Value ;
-    end
-
 
 %print(fullfile(savepath,['SimEEG_Subject' subID 'Electrode' num2str(EOI) '_Freq' num2str(Freq(FOI)) 'Hz_' SignalType  '.tif']),'-dtiff','-r300');% Later I can update this to contain the simulation parameters
 end
