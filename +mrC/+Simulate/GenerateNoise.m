@@ -54,7 +54,7 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
             % calc coherence for band
             C = noise_mixing_data.matrices{band_idx}; 
             freq_bin_idxs = (noise_mixing_data.band_freqs{band_idx}(1)<abs(f))&(abs(f)<noise_mixing_data.band_freqs{band_idx}(2));
-            pink_noise_spec(freq_bin_idxs,:) = (C' * pink_noise_spec(freq_bin_idxs,:)')'; 
+            pink_noise_spec(freq_bin_idxs,:) =  pink_noise_spec(freq_bin_idxs,:)*C; 
         end
 
         pink_noise = real(ifft(pink_noise_spec,[],1));
@@ -130,9 +130,7 @@ function pink_noise = GetPinkNoise(n_samples,n_nodes)
     M = n_samples + rem(n_samples,2) ;
     n = 1:M ;
     scalings = sqrt(1./n);
-    scalings = repmat(scalings,[n_nodes,1])';
-        
-    noise_spec = fft(randn(M,n_nodes)).*scalings ;
+    noise_spec = fft(randn(M,n_nodes)).*scalings' ;
     pink_noise = real(ifft(noise_spec))  ;
     pink_noise = pink_noise(1:n_samples,:) ;
 end
