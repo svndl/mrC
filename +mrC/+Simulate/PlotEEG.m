@@ -63,12 +63,12 @@ if ~exist('Mode','var') || isempty(Mode)
 end
 
 % allow for visualization of spatial filters
-% what do we need?
 if ~exist('A','var') || isempty(Mode)
-    space = 'chann';
+    space = 'chan';
 else
     space = 'comp';
     EOI = 1 ; % start with the first component
+    A = abs(A) ; % visualization in amplitude domain
 end
 
 %% Plot prepration
