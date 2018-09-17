@@ -91,7 +91,8 @@ else
 end
 
 if ndims(noise) == 3
-    sourceTemp = repmat(sourceTemp,[1,1,size(noise,3)]);
+    % add a signal (amplitude) variation between trials
+    sourceTemp = repmat(sourceTemp,[1,1,size(noise,3)]).* permute(repmat(1-randn(size(noise,3),1)/5,[1 size(noise,1) size(noise,2)]),[2 3 1]);%%%%%% what should be the variance?
 end
 
 % Adds noise to source signal
@@ -107,7 +108,7 @@ if ndims(sourceData) == 3
 
     end
 else
-    sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
+    sourceData = sourceData/norm(sourceData,'fro');% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
     % Generate EEG data by multiplication to forward matrix
     EEGData = sourceData*fwdMatrix';
 
