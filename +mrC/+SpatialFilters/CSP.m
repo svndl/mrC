@@ -58,7 +58,6 @@ for class_idx = 1:length(InAxxs)
 end
 
 if opt.do_whitening % and deflate matrix dimensionality
-    disp('whitening')
     [V, D] = eig(sum(C,3));
     [ev, desc_idxs] = sort(diag(D), 'descend');
     V = V(:,desc_idxs);

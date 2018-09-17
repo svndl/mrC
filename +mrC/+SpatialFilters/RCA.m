@@ -81,7 +81,6 @@ C_yy = real(C_yy);
 C_xy = real(C_xy);
 
 if opt.do_whitening % and deflate matrix dimensionality
-    disp('whitening')
     [V, D] = eig(C_xy+C_xx+C_yy);
     [ev, desc_idxs] = sort(diag(D), 'descend');
     V = V(:,desc_idxs);
