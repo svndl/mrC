@@ -63,22 +63,80 @@ Noise.lambda = 1/length(outSignal);
 Rois1 = cellfun(@(x) x.searchROIs('V2d','wang','R'),RoiList,'UniformOutput',false);% % wang ROI
 Rois2 = cellfun(@(x) x.searchROIs('V3d','wang','L'),RoiList,'UniformOutput',false);% % wang ROI
 RoisI = cellfun(@(x,y) x.mergROIs(y),Rois1,Rois2,'UniformOutput',false);
-[EEGData1,EEGAxx1,~,masterList1,subIDs1] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'signalFF',FundFreq,'signalsf',SF,'NoiseParams',Noise,'rois',RoisI,'Save',true,'cndNum',1,'nTrials',40);
+[EEGData1,EEGAxx1,~,masterList1,subIDs1] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'signalFF',FundFreq,'signalsf',SF,'NoiseParams',Noise,'rois',RoisI,'Save',true,'cndNum',1,'nTrials',100);
 close all;
 
 %--------------------------Cond2: V1d_L, V2d_L-----------------------------
 Rois1 = cellfun(@(x) x.searchROIs('V1d','wang','L'),RoiList,'UniformOutput',false);% % wang ROI
 Rois2 = cellfun(@(x) x.searchROIs('V2d','wang','L'),RoiList,'UniformOutput',false);% % wang ROI
 RoisI = cellfun(@(x,y) x.mergROIs(y),Rois1,Rois2,'UniformOutput',false);
-[EEGData2,EEGAxx2,~,masterList2,subIDs2] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'signalFF',FundFreq,'signalsf',SF,'NoiseParams',Noise,'rois',RoisI,'Save',true,'cndNum',2,'nTrials',40);
+[EEGData2,EEGAxx2,~,masterList2,subIDs2] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'signalFF',FundFreq,'signalsf',SF,'NoiseParams',Noise,'rois',RoisI,'Save',true,'cndNum',2,'nTrials',100);
 close all;
+%%
 
-%% PCA
-[PCAAxx,W,A] = mrC.SpatialFilters.PCA(EEGAxx1{1});
-MASDEEG_comp = mean(PCAAxx.Amp,3);
-mrC.Simulate.PlotEEG(MASDEEG_comp,freq,[],'average over all  ',masterListP,fundfreq(1:numel(masterListP)),[],[],[],[],[],A);
 
-%% SSD
-[PCAAxx,W,A] = mrC.SpatialFilters.SSD(EEGAxx1{1},[2,3]);
-MASDEEG_comp = mean(PCAAxx.Amp,3);
-mrC.Simulate.PlotEEG(MASDEEG_comp,freq,[],'average over all  ',masterListP,fundfreq(1:numel(masterListP)),[],[],[],[],[],A);
+%% 
+do_whitening = true;
+freq = EEGAxx1{1}.dFHz*[0:(EEGAxx1{1}.nFr-1)];
+
+sigFreqs = {[2,6],[3,6]} ;
+fundFreqs = [2,3] ;
+masterListP = [masterList1, masterList2] ;
+%%
+MASDEEG_raw_comp = mean(EEGAxx1{1}.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_raw_comp,freq,[],'raw  condition 1',masterList1,fundFreqs);
+%%
+MASDEEG_raw_comp = mean(EEGAxx2{1}.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_raw_comp,freq,[],'raw  condition 2',masterList2,fundFreqs);
+%% PCA on full freq range
+[PCAAxx,W,A,D] = mrC.SpatialFilters.PCA(EEGAxx1{1},'freq_range',freq);
+MASDEEG_pca_comp = mean(PCAAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_pca_comp,freq,[],'PCA on full freq. range ',masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% PCA on 1st stim freq
+[PCAAxx,W,A,D] = mrC.SpatialFilters.PCA(EEGAxx1{1},'freq_range',fundFreqs(1));
+MASDEEG_pca_comp = mean(PCAAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_pca_comp,freq,[], sprintf('PCA on %0.1f Hz', fundFreqs(1)), masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% PCA on 2st stim freq
+[PCAAxx,W,A,D] = mrC.SpatialFilters.PCA(EEGAxx1{1},'freq_range',fundFreqs(2));
+MASDEEG_pca_comp = mean(PCAAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_pca_comp,freq,[], sprintf('PCA on %0.1f Hz', fundFreqs(2)), masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% SSD on 1st stim freq
+[SSDAxx,W,A,D] = mrC.SpatialFilters.SSD(EEGAxx1{1},fundFreqs(1),'do_whitening',true);
+MASDEEG_ssd_comp = mean(SSDAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_ssd_comp,freq,[],sprintf('SSD on %0.1f Hz', fundFreqs(1)),masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% SSD on 2nd stim freq
+[SSDAxx,W,A,D] = mrC.SpatialFilters.SSD(EEGAxx1{1},fundFreqs(2),'do_whitening',true);
+MASDEEG_ssd_comp = mean(SSDAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_ssd_comp,freq,[],sprintf('SSD on %0.1f Hz', fundFreqs(2)),masterList1,fundFreqs,[],[],[],[],[],A);
+
+
+%% CSP
+[CSPAxx,W,A,D] = mrC.SpatialFilters.CSP({EEGAxx1{1},EEGAxx2{1}},'freq_range',[2,3],'do_whitening',do_whitening);
+class_vis = 1;
+MASDEEG_csp_comp = mean(CSPAxx{class_vis}.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_csp_comp,freq,[],'CSP on fundFreqs ',masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% CSP
+[CSPAxx,W,A,D] = mrC.SpatialFilters.CSP({EEGAxx1{1},EEGAxx2{1}},'do_whitening',do_whitening);
+class_vis = 1;
+MASDEEG_csp_comp = mean(CSPAxx{class_vis}.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_csp_comp,freq,[],'CSP on all freqs ',masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% RCA
+[RCAAxx,W,A,D] = mrC.SpatialFilters.RCA(EEGAxx1{1},'freq_range',[2,3],'do_whitening',do_whitening);
+MASDEEG_rca_comp = mean(RCAAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_rca_comp,freq,[],'RCA on fundFreqs ',masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% RCA
+[RCAAxx,W,A,D] = mrC.SpatialFilters.RCA(EEGAxx1{1},'freq_range',[2,3],'do_whitening',do_whitening, 'model_type','cartesian');
+MASDEEG_rca_comp = mean(RCAAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_rca_comp,freq,[],'RCA on fundFreqs, indep. cplx comps. ',masterList1,fundFreqs,[],[],[],[],[],A);
+
+%% RCA
+[RCAAxx,W,A,D] = mrC.SpatialFilters.RCA(EEGAxx1{1},'do_whitening',do_whitening);
+MASDEEG_rca_comp = mean(RCAAxx.Amp,3);
+mrC.Simulate.PlotEEG(MASDEEG_rca_comp,freq,[],'RCA on all freqs ',masterList1,fundFreqs,[],[],[],[],[],A);
