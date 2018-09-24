@@ -79,7 +79,7 @@ if ~isempty(roiChunk)
 
     % Normalize the source signal
     if strcmp(spatial_normalization_type,'active_nodes')
-    n_active_nodes_signal = squeeze(sum(sum(abs(sourceTemp))~=0) ) ;
+        n_active_nodes_signal = squeeze(sum(sum(abs(sourceTemp))~=0) ) ;
         sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
     elseif strcmp(spatial_normalization_type,'all_nodes')
         sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
@@ -90,10 +90,10 @@ else
     sourceTemp = zeros(size(noise));
 end
 
-if ndims(noise) == 3
-    % add a signal (amplitude) variation between trials
-    sourceTemp = repmat(sourceTemp,[1,1,size(noise,3)]).* permute(repmat(1-randn(size(noise,3),1)/5,[1 size(noise,1) size(noise,2)]),[2 3 1]);%%%%%% what should be the variance?
-end
+% if ndims(noise) == 3
+%     % add a signal (amplitude) variation between trials
+%     sourceTemp = repmat(sourceTemp,[1,1,size(noise,3)]).* permute(repmat(1-randn(size(noise,3),1)/5,[1 size(noise,1) size(noise,2)]),[2 3 1]);%%%%%% what should be the variance?
+% end
 
 % Adds noise to source signal
 pow = 1;
