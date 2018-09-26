@@ -2,6 +2,10 @@ function noise_mixing_data = GenerateMixingData(spat_dists)
 % Syntax: noise_mixing_data = GenerateMixingData(spat_dists)
 % Description: This function get the spatial distance between sources and loads the
 % spatial decay model for coherenc and generates the mixing matrix for noise
+% see ﻿10.1121/1.2987429.
+% We use the Cholesky decomposition due to complexity considerations. This
+% is appropriate as all sources have (approx.) identical PSD and no
+% 'perceptual effects' are expected
 
 %% --------------------------------------------------------------------------
 
