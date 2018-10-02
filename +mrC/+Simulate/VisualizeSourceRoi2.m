@@ -1,4 +1,4 @@
-function [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction,hemi)
+function [Fhandler,RoiList] = VisualizeSourceRoi2(subID,anatDir,RoiType,RoiIdx,direction,hemi,cmap)
 % gets the subject ID and anatomy folder and plots the
 % ROIs on the subjects default cortex...
 % Elham Barzegaran, 5.25.2018
@@ -46,11 +46,55 @@ elseif hemi=='R'
     faces(I,:)=[];
 end
 
-
+%% plot ROIs on the brain
+% RoiDir = fullfile(anatDir,subID,'Standard','meshes',[RoiType '_ROIs']); 
+% [chunks,RoiList] = mrC.ChunkFromMesh(RoiDir,size(vertices,1),1);
 Fhandler= figure;
 
-patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
-     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.65,'facelighting','gouraud');
+
+Rois = mrC.ROIs([],anatDir);
+Rois = Rois.loadROIs(subID,anatDir);
+Rois = Rois.getAtlasROIs(RoiType);
+Rois = Rois.searchROIs('all',[],hemi);
+chunks = Rois.ROI2mat(length(vertices));
+RoiList = Rois.getFullNames('noatlas');
+
+if ~exist('RoiIdx','var')||isempty(RoiIdx)
+    RoiIdx = 1:size(chunks,2);
+% else
+%     RoiList = RoiList(RoiIdx);
+end
+
+if ~exist('cmap','var')
+    cmap = distinguishable_colors(numel(RoiIdx),[.7 .7 .7]);
+end
+% cmap = cmap(randperm(numel(RoiIdx)),:);
+isem = zeros(1,numel(RoiIdx));
+for i = 1:numel(RoiIdx)
+    [RoiV, RoiF] = SurfSubsample(vertices, faces,find(chunks(:,RoiIdx(i))),'union');  
+    C = cmap(i,:);
+    if ~isempty(RoiF)
+        hold on; patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
+            'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+        %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
+        %shading interp
+    else
+        isem(i) = 1;
+    end
+end
+legend([RoiList(RoiIdx(~isem))]);
+
+
+%%
+[r,c] = find(chunks(:,RoiIdx));
+ROIvers = sort(unique(r));
+v1 = ismember(faces(:,1),ROIvers);
+v2 = ismember(faces(:,2),ROIvers);
+v3 = ismember(faces(:,3),ROIvers);
+RemovVers = v1 .* v2 .*v3;
+
+patch('faces',faces(~RemovVers,:),'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
+     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.55,'facelighting','gouraud');
 
 %colormap(cmap);
 
@@ -70,41 +114,6 @@ end
 axis  off vis3d equal
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .45, 0.65]);
 
-%% plot ROIs on the brain
-% RoiDir = fullfile(anatDir,subID,'Standard','meshes',[RoiType '_ROIs']); 
-% [chunks,RoiList] = mrC.ChunkFromMesh(RoiDir,size(vertices,1),1);
-
-Rois = mrC.ROIs([],anatDir);
-Rois = Rois.loadROIs(subID,anatDir);
-Rois = Rois.getAtlasROIs(RoiType);
-Rois = Rois.searchROIs('all',[],hemi);
-chunks = Rois.ROI2mat(length(vertices));
-RoiList = Rois.getFullNames('noatlas');
-
-if ~exist('RoiIdx','var')||isempty(RoiIdx)
-    RoiIdx = 1:size(chunks,2);
-% else
-%     RoiList = RoiList(RoiIdx);
-end
-
-
-%cmap = hsv(Rois.ROINum);
-cmap = distinguishable_colors(Rois.ROINum);
-%cmap = lines(Rois.ROINum);
-cmap = cmap(randperm(Rois.ROINum),:);
-isem = zeros(1,numel(RoiIdx));
-for i = 1:numel(RoiIdx)
-    [RoiV, RoiF] = SurfSubsample(vertices, faces,find(chunks(:,RoiIdx(i))),'union');  
-    C = cmap(i,:);
-    if ~isempty(RoiF)
-        hold on; patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
-            'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
-        %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
-    else
-        isem(i) = 1;
-    end
-end
-legend([{''}, RoiList(RoiIdx(~isem))]);
 end
 
 function [nvertices, nfaces,vertIdx2] = SurfSubsample(vertices, faces,vertIdx,type)

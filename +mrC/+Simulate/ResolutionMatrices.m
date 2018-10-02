@@ -32,7 +32,8 @@ opt	= ParseArgs(varargin,...
     'figFolder'     , [],...
     'plotting'      , false,...
     'anatomyPath'   , [],...
-    'doScalpMap'    ,false ...
+    'doScalpMap'    ,false,...
+    'doScalpNorm'   ,false...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -157,6 +158,9 @@ for s = 1:length(projectPath)
     %Resolution = fwdMatrix'*curInv;
     ScalpData{s} = roiChunk.'*fwdMatrix';
     
+    if opt.doScalpNorm
+        ScalpData{s} = ScalpData{s}./repmat(sum(abs(ScalpData{s}),2),[1 size(ScalpData{s},2)]);
+    end
     
     if ~opt.doScalpMap
         % cross talk matrix
@@ -165,7 +169,7 @@ for s = 1:length(projectPath)
         % individual figure
         INVname = opt.inverse; ind = strfind(INVname,'_');
 
-        if opt.plotting ==1,
+        if opt.plotting ==1
             figure,
             subplot(2,2,1),mrC.Simulate.VisualizeSourceData(subIDs{s},roiChunk(:,1),anatDir,jmaColors('coolhot')); 
             caxis([-1 1]);title(['V1d 0-2 ' subIDs{s} ' Original']);
