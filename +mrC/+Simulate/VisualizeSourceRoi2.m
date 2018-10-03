@@ -1,4 +1,4 @@
-function [Fhandler,RoiList] = VisualizeSourceRoi2(subID,anatDir,RoiType,RoiIdx,direction,hemi,cmap)
+function [Fhandler,RoiList] = VisualizeSourceRoi2(subID,anatDir,RoiType,RoiIdx,direction,hemi,cmap,RoiLeg)
 % gets the subject ID and anatomy folder and plots the
 % ROIs on the subjects default cortex...
 % Elham Barzegaran, 5.25.2018
@@ -11,7 +11,6 @@ end
 if ~exist('direction','var')||isempty(direction)
     direction = 'anterior';
 end
-
 
 if ~exist('hemi','var')
     hemi = 'B';
@@ -57,32 +56,40 @@ Rois = Rois.loadROIs(subID,anatDir);
 Rois = Rois.getAtlasROIs(RoiType);
 Rois = Rois.searchROIs('all',[],hemi);
 chunks = Rois.ROI2mat(length(vertices));
-RoiList = Rois.getFullNames('noatlas');
+RoiList = Rois.getFullNames('noatlashemi');
 
 if ~exist('RoiIdx','var')||isempty(RoiIdx)
     RoiIdx = 1:size(chunks,2);
-% else
-%     RoiList = RoiList(RoiIdx);
 end
-
+if ~exist('RoiLeg','var')||isempty(RoiLeg)% which ROI to present in legend: index of RoiIdx
+    RoiLeg = 1:numel(RoiIdx);
+end
 if ~exist('cmap','var')
     cmap = distinguishable_colors(numel(RoiIdx),[.7 .7 .7]);
 end
 % cmap = cmap(randperm(numel(RoiIdx)),:);
 isem = zeros(1,numel(RoiIdx));
+pind = 1;
 for i = 1:numel(RoiIdx)
     [RoiV, RoiF] = SurfSubsample(vertices, faces,find(chunks(:,RoiIdx(i))),'union');  
     C = cmap(i,:);
     if ~isempty(RoiF)
-        hold on; patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
-            'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
-        %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
-        %shading interp
+        hold on; 
+        if ismember(i,RoiLeg)
+            leg(pind) = patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
+                 'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+             pind = pind+1;
+        else
+            patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
+                'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+            %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
+        end
     else
         isem(i) = 1;
     end
 end
-legend([RoiList(RoiIdx(~isem))]);
+%legend(leg,RoiList(RoiIdx(~isem))));
+
 
 
 %%
@@ -114,6 +121,8 @@ end
 axis  off vis3d equal
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .45, 0.65]);
 
+legend(leg,RoiList(RoiIdx(RoiLeg)));
+set(gca,'fontsize',12)
 end
 
 function [nvertices, nfaces,vertIdx2] = SurfSubsample(vertices, faces,vertIdx,type)

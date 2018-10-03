@@ -1,4 +1,4 @@
-function [CrossTalk,CrossTalkN,ROISource,ScalpData,LIST,subIDs] = ResolutionMatrices(projectPath,varargin)
+function [CrossTalk,Errors,ROISource,ScalpData,LIST,subIDs] = ResolutionMatrices(projectPath,varargin)
     
     % Description:	This function gets the path for a mrc project and simulate
     % EEG with activity (seed signal as input) in specific ROIs (input),
@@ -33,7 +33,8 @@ opt	= ParseArgs(varargin,...
     'plotting'      , false,...
     'anatomyPath'   , [],...
     'doScalpMap'    ,false,...
-    'doScalpNorm'   ,false...
+    'doScalpNorm'   ,false,...
+    'doAUC'         ,false ...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -102,9 +103,9 @@ for s = 1:length(projectPath)
     end
     
     % To avoid repeatition for subjects with several sessions
-    if s>1, 
+    if s>1
         SUBEXIST = strcmpi(subIDs,subIDs{s});
-        if sum(SUBEXIST(1:end-1))==1,
+        if sum(SUBEXIST(1:end-1))==1
             disp('EEG simulation for this subject has been run before');
             continue
         end
@@ -163,12 +164,58 @@ for s = 1:length(projectPath)
     end
     
     if ~opt.doScalpMap
-        % cross talk matrix
+        % calculate inverse and then normalize
         ROISource{s} = ScalpData{s}*curInv;
-
-        % individual figure
+        ROISource{s} = ROISource{s}./repmat(max(abs(ROISource{s}),[],2),[1 size(ROISource{s},2)]);
+        %------------------------Localization Errors-----------------------
+        % These Errors are implemented accroding to Cottereau,B.R., Ales, J.M., Norcia, A.M. Human brain mapping(2012)
+        % Relative energy
+        Errors{s}.Relative = sum(abs(ROISource{s}).*roiChunk',2)./sum(abs(ROISource{s}),2);
+        
+        % Focalization
+        Errors{s}.Focalization = sum(((ROISource{s}.*roiChunk')-roiChunk').^2,2)./sum((roiChunk').^2,2);
+        
+        %AUC
+        if opt.doAUC
+            % load or calculate distance matrix
+            if ~exist(fullfile(anatDir,subIDs{s},'Standard','meshes' ,'Distance_Euclidean.mat'),'file')
+                load(fullfile(anatDir,subIDs{s},'Standard','meshes','defaultCortex.mat'));
+                surfData = msh.data; surfData.VertexLR = msh.nVertexLR;
+                clear msh;
+                spat_dists = mrC.Simulate.CalculateSourceDistance(surfData,'Euclidean');
+                %save(fullfile(anatDir,subIDs{s},'Standard','meshes' ,'Distance_Euclidean.mat'),'spat_dists','-v7.3');
+            else
+                load(fullfile(anatDir,subIDs{s},'Standard','meshes' ,'Distance_Euclidean.mat'))
+            end
+            for r = 1:size(roiChunk,2) % find far and close neighbors and compute AUC
+                Roi_verts = find(roiChunk(:,r)>0);
+                roisize = numel(Roi_verts);
+                rdists = min(spat_dists(Roi_verts,:));
+                [~, rdist_ind] = sort(rdists);
+                
+                Neibor_c = rdist_ind(roisize+1:2*roisize); % close neibours
+                Vals = ROISource{s}(r,:);Vals(1:2*roisize)=0;
+                [Val,Neibor_f] = sort(abs(Vals),'descend');% far neibors
+                Neibor_f = Neibor_f(1:roisize);
+                
+                th = 1:-0.01:0;
+                for t = 1:numel(th)
+                    TP = sum(abs(ROISource{s}(r,Roi_verts))>=th(t));
+                    FP_c = sum(abs(ROISource{s}(r,Neibor_c))>=th(t));
+                    FP_f = sum(abs(ROISource{s}(r,Neibor_f))>=th(t));
+                    
+                    TPR(r,t) = TP./roisize;
+                    FPR_c(r,t) = FP_c ./roisize;
+                    FPR_f(r,t) = FP_f ./roisize;
+                end
+            end
+            Errors{s}.TPR = TPR;
+            Errors{s}.FPR_c = FPR_c;
+            Errors{s}.FPR_f = FPR_f;
+        end
+        
+        %---------------------individual figure----------------------------
         INVname = opt.inverse; ind = strfind(INVname,'_');
-
         if opt.plotting ==1
             figure,
             subplot(2,2,1),mrC.Simulate.VisualizeSourceData(subIDs{s},roiChunk(:,1),anatDir,jmaColors('coolhot')); 
@@ -183,13 +230,14 @@ for s = 1:length(projectPath)
             Data = ROISource{s}(13,:);
             caxis([-max(Data) max(Data)]);title(['V1d 2-10 ' subIDs{s} ' ' INVname(ind(end)+1:end)]);
         end
-
+        %---------------------cross talk matrix----------------------------
         CrossTalk{s} = ROISource{s}*roiChunk;
         CrossTalkN{s} = CrossTalk{s}./repmat(max(CrossTalk{s},[],2),[1 length(CrossTalk{s})]);
     else
         CrossTalk{s}=[];
         CrossTalkN{s}=[];
         ROISource{s}=[];
+        Errors{s} = [];
     end
     
     LIST = NameList;
