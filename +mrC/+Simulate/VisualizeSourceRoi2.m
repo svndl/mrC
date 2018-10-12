@@ -48,7 +48,7 @@ end
 %% plot ROIs on the brain
 % RoiDir = fullfile(anatDir,subID,'Standard','meshes',[RoiType '_ROIs']); 
 % [chunks,RoiList] = mrC.ChunkFromMesh(RoiDir,size(vertices,1),1);
-Fhandler= figure;
+% Fhandler= figure;
 
 
 Rois = mrC.ROIs([],anatDir);
@@ -61,7 +61,7 @@ RoiList = Rois.getFullNames('noatlashemi');
 if ~exist('RoiIdx','var')||isempty(RoiIdx)
     RoiIdx = 1:size(chunks,2);
 end
-if ~exist('RoiLeg','var')||isempty(RoiLeg)% which ROI to present in legend: index of RoiIdx
+if ~exist('RoiLeg','var')% which ROI to present in legend: index of RoiIdx
     RoiLeg = 1:numel(RoiIdx);
 end
 if ~exist('cmap','var')
@@ -113,16 +113,20 @@ lightangle(50,0)
 switch direction
     case 'ventral'
         lightangle(-90,-90);
-        view(90,-90)
+        view(-90,-90)
     case 'anterior'
         view (90,-10)
 end
 
-axis  off vis3d equal
+axis  off vis3d equal;
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .45, 0.65]);
-
-legend(leg,RoiList(RoiIdx(RoiLeg)));
-set(gca,'fontsize',12)
+if exist('leg','var') && ~isempty(leg)
+    l = legend(leg,RoiList(RoiIdx(RoiLeg)),'location','west');
+    set(gca,'fontsize',10)
+    lp = get(l,'position');
+    set(l,'position',[0.0134    0.2423    0.1384    0.5504])
+   % set(gca, 'position', get(gca,'position')+[0 0 lp(3:4)]);
+end
 end
 
 function [nvertices, nfaces,vertIdx2] = SurfSubsample(vertices, faces,vertIdx,type)
