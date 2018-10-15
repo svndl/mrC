@@ -46,10 +46,10 @@ elseif hemi=='R'
 end
 
 
-Fhandler= figure;
+%Fhandler= figure;
 
 patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
-     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.55,'facelighting','gouraud');
+     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.50,'facelighting','gouraud');
 
 %colormap(cmap);
 
@@ -86,7 +86,7 @@ end
 if ~exist('RoiLeg','var')% which ROI to present in legend: index of RoiIdx
     RoiLeg = 1:numel(RoiIdx);
 end
-if ~exist('cmap','var')
+if ~exist('cmap','var') || isempty(cmap)
     cmap = distinguishable_colors(numel(RoiIdx),[.7 .7 .7]);
 end
 %cmap = distinguishable_colors(Rois.ROINum);
