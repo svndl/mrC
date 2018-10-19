@@ -13,7 +13,7 @@ function Inverses = ReadInverses(ProjectPath,InvName)
     for s = 1:numel(projectPaths)
         invPaths = fullfile(projectPaths{s},'Inverses',inversename);
         if exist(invPaths,'file')
-            Inverses{s} = mrC_readEMSEinvFile(invPaths);
+            Inverses{s} = mrC.Simulate.mrC_readEMSEinvFile(invPaths);
         else
             Inverses{s}=[];
         end

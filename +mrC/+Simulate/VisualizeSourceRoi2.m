@@ -64,6 +64,12 @@ end
 if ~exist('RoiLeg','var')% which ROI to present in legend: index of RoiIdx
     RoiLeg = 1:numel(RoiIdx);
 end
+
+
+if iscell(RoiIdx) && (ischar(RoiIdx{1}) || isstring(RoiIdx{1}))
+    RoiIdx = find(contains(RoiList,RoiIdx));
+end
+
 if ~exist('cmap','var')
     cmap = distinguishable_colors(numel(RoiIdx),[.7 .7 .7]);
 end
@@ -77,11 +83,11 @@ for i = 1:numel(RoiIdx)
         hold on; 
         if ismember(i,RoiLeg)
             leg(pind) = patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
-                 'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+                 'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',.95,'facelighting','gouraud');
              pind = pind+1;
         else
             patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
-                'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+                'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',.95,'facelighting','gouraud');
             %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
         end
     else
@@ -100,8 +106,8 @@ v2 = ismember(faces(:,2),ROIvers);
 v3 = ismember(faces(:,3),ROIvers);
 RemovVers = v1 .* v2 .*v3;
 
-patch('faces',faces(~RemovVers,:),'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
-     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.55,'facelighting','gouraud');
+patch('faces',faces(~RemovVers,:),'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.72,.7,.7],size(vertices,1),1),...
+     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.95,'facelighting','gouraud');
 
 %colormap(cmap);
 
@@ -122,9 +128,9 @@ axis  off vis3d equal;
 set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .45, 0.65]);
 if exist('leg','var') && ~isempty(leg)
     l = legend(leg,RoiList(RoiIdx(RoiLeg)),'location','west');
-    set(gca,'fontsize',10)
+    set(gca,'fontsize',20)
     lp = get(l,'position');
-    set(l,'position',[0.0134    0.2423    0.1384    0.5504])
+    %set(l,'position',[0.0134    0.2423    0.1384    0.5504])
    % set(gca, 'position', get(gca,'position')+[0 0 lp(3:4)]);
 end
 end

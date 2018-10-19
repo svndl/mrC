@@ -83,6 +83,11 @@ RoiList = Rois.getFullNames('noatlashemi');
 if ~exist('RoiIdx','var')||isempty(RoiIdx)
     RoiIdx = 1:size(chunks,2);
 end
+
+if iscell(RoiIdx) && (ischar(RoiIdx{1}) || isstring(RoiIdx{1}))
+    RoiIdx = find(contains(RoiList,RoiIdx));
+end
+
 if ~exist('RoiLeg','var')% which ROI to present in legend: index of RoiIdx
     RoiLeg = 1:numel(RoiIdx);
 end
