@@ -4,11 +4,11 @@ function Fhandler = VisualizeSourceData(subID,data,anatDir,cmap,direction,hemi)
 % Elham Barzegaran, 5.22.2018
 %% default variables
 
-if ~exist('anatDir','var') ||isempty(anatDir),
+if ~exist('anatDir','var') ||isempty(anatDir)
     anatDir = getpref('mrCurrent','AnatomyFolder');
 end
 
-if ~exist('direction','var') || isempty(direction),
+if ~exist('direction','var') || isempty(direction)
     direction = 'anterior';
 end
 

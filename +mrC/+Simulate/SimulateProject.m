@@ -128,6 +128,7 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
  
 %--------------------------set up default values---------------------------
 opt	= ParseArgs(varargin,...
+    'subSelect'        ,[],...
     'inverse'		, [], ...
     'rois'          , [], ...
     'roiType'       , 'wang',...
@@ -144,7 +145,8 @@ opt	= ParseArgs(varargin,...
     'anatomyPath'   , [],...   
     'plotting'      , 0 ,...
     'Save'          ,true,...
-    'cndNum'        ,1 ...
+    'cndNum'        ,1, ...
+    'VisualizeNoise',false...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -214,12 +216,22 @@ end
 
 %% ===========================GENERATE EEG signal==========================
 projectPathfold = projectPath;
+subIDs = subfolders(projectPathfold,0);
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
+
+if isempty(opt.subSelect)
+    opt.subSelect = subIDs;
+end
+
+Inds = ismember(subIDs,opt.subSelect);
+subIDs = subIDs(Inds);
+projectPath = cellfun(@(x) fullfile(projectPathfold,x),subIDs,'uni',false);
 
 for s = 1:length(projectPath)
     %--------------------------READ FORWARD SOLUTION---------------------------  
     % Read forward
-    [~,subIDs{s}] = fileparts(projectPath{s});
+    %[~,subIDs{s}] = fileparts(projectPath{s});
+    
     disp (['Simulating EEG for subject ' subIDs{s}]);
     
     fwdPath = fullfile(projectPath{s},'_MNE_',[subIDs{s}]);
@@ -242,9 +254,9 @@ for s = 1:length(projectPath)
     
     
     % To avoid repeatition for subjects with several sessions
-    if s>1, 
+    if s>1
         SUBEXIST = strcmpi(subIDs,subIDs{s});
-        if sum(SUBEXIST(1:end-1))==1,
+        if sum(SUBEXIST(1:end-1))==1
             disp('EEG simulation for this subject has been run before');
             continue
         end
@@ -319,10 +331,11 @@ for s = 1:length(projectPath)
     
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
-    [noiseSignal, pink_noise,~, alpha_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
-    
-    %visualizeNoise(noiseSignal, spat_dists, surfData,opt.signalsf) % Just to visualize noise on the cortical surface 
-    %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
+    [noiseSignal] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+    if opt.VisualizeNoise
+        visualizeNoise(subIDs{s},noiseSignal, spat_dists, opt.anatomyPath,opt.signalsf,opt.figFolder); % Just to visualize noise on the cortical surface 
+        %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
+    end
     % 
 %------------------------ADD THE SIGNAL IN THE ROIs--------------------------
     
