@@ -97,11 +97,11 @@ set(gca,'tag','info');
 N = 1;
 I = 1;    
 while(I)
-    if strcmp(SignalType,'Amplitude')
+    if strcmpi(SignalType,'Amplitude')
         if N == 1, colorbarLimits = [-0 max(ASDEEG(FOI,:))];
         else colorbarLimits = [-0 max(ASDEEG(:))];
         end
-    elseif strcmp(SignalType,'Phase')
+    elseif strcmpi(SignalType,'Phase')
         colorbarLimits = [min(ASDEEG(:)) max(ASDEEG(:))];
     end
     

@@ -34,6 +34,7 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
   % Elham Barzegaran 2.27.2018
     
   % Updated EB, 6.5.2018
+  
 %%
 
 if ~exist('RoiSize','var'), RoiSize = [];end

@@ -196,7 +196,8 @@ for s = 1:length(projectPath)
                 Neibor_c = rdist_ind(roisize+1:2*roisize); % close neibours
                 Vals = ROISource{s}(r,:);Vals(1:2*roisize)=0;
                 [Val,Neibor_f] = sort(abs(Vals),'descend');% far neibors
-                Neibor_f = Neibor_f(1:roisize);
+                N = 5;
+                Neibor_f = Neibor_f(1:roisize*N);
                 
                 th = 1:-0.01:0;
                 for t = 1:numel(th)
@@ -206,7 +207,7 @@ for s = 1:length(projectPath)
                     
                     TPR(r,t) = TP./roisize;
                     FPR_c(r,t) = FP_c ./roisize;
-                    FPR_f(r,t) = FP_f ./roisize;
+                    FPR_f(r,t) = FP_f ./(roisize*N);
                 end
             end
             Errors{s}.TPR = TPR;
