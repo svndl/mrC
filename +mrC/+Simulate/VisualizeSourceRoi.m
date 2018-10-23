@@ -1,6 +1,7 @@
 function [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction,hemi,cmap,RoiLeg)
 % gets the subject ID and anatomy folder and plots the
 % ROIs on the subjects default cortex...
+% [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction,hemi,cmap,RoiLeg)
 % Elham Barzegaran, 5.25.2018
 %% default variables
 
