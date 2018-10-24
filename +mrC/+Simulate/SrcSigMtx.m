@@ -209,7 +209,7 @@ if isempty(distanceType), distanceType='geodesic';end
 if ~exist('RoiC','var'),RoiC = [];end
 
 if RoiSize>numel(vertIdx)
-    warning('RoiSize is bigger than the number of vertices in this ROI');
+    %warning('RoiSize is bigger than the number of vertices in this ROI');
     RoiSize = numel(vertIdx);
 end
 if isempty(RoiSize)

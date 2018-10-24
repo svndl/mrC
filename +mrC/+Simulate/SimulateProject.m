@@ -255,7 +255,7 @@ for s = 1:length(projectPath)
     
     % To avoid repeatition for subjects with several sessions
     if s>1
-        SUBEXIST = strcmpi(subIDs,subIDs{s});
+        SUBEXIST = strcmpi(subIDs(1:s-1),subIDs{s});
         if sum(SUBEXIST(1:end-1))==1
             disp('EEG simulation for this subject has been run before');
             continue
