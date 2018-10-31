@@ -20,7 +20,7 @@ opt = ParseArgs(varargin,...
  %% calculate cross spectrum density
  
  for tr = 1:size(Data,3)
-     disp(['Calculating CSD trial #' num2str(tr)]);
+     %disp(['Calculating CSD trial #' num2str(tr)]);
      % calculating cross spectrums
      Data1 = squeeze(Data(:,:,tr));
      switch (opt.Type)

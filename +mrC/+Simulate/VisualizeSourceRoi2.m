@@ -67,7 +67,7 @@ end
 
 
 if iscell(RoiIdx) && (ischar(RoiIdx{1}) || isstring(RoiIdx{1}))
-    RoiIdx = find(contains(RoiList,RoiIdx));
+    RoiIdx = cellfun(@(x) find(contains(RoiList,x)),RoiIdx);
 end
 
 if ~exist('cmap','var')
