@@ -1,6 +1,6 @@
 function Fhander = visualizeNoise(subID,noise,spat_dists,anatDir,SR,FigPath)
     % This function is just to visuaize the noise 
-    FS = 21;
+    FS = 22;
     %% Surface plot of noise at a specific frequency
     Fhandler = figure;
     S1 = subplot(1,2,1);
@@ -27,7 +27,7 @@ function Fhander = visualizeNoise(subID,noise,spat_dists,anatDir,SR,FigPath)
     xlim([0 30])
     %%
     set(Fhandler,'PaperPosition',[1 1 10 6]);
-    print(fullfile(FigPath,['NoiseSignal_' subID '.tif']),'-r300','-dtiff');
+    print(fullfile(FigPath,['NoiseSignal_' subID '.tif']),'-r400','-dtiff');
     %% Plot the spatial coherence decay using one source point (ROI) (Similar to figrue 4 in kellis et al., 2016)
 %     [MSCOH, f]= mscohere(noise(:,ROI),noise(:,1:1000),100,[],[],100);
 %     dists = spat_dists(ROI,1:1000);

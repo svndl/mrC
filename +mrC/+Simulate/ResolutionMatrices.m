@@ -170,7 +170,8 @@ for s = 1:length(projectPath)
         %------------------------Localization Errors-----------------------
         % These Errors are implemented accroding to Cottereau,B.R., Ales, J.M., Norcia, A.M. Human brain mapping(2012)
         % Relative energy
-        Errors{s}.Relative = sum(abs(ROISource{s}).*roiChunk',2)./sum(abs(ROISource{s}),2);
+        E = abs(ROISource{s});for x = 1:size(E,1), E(x,E(x,:)<(max(E(x,:))/5))=0;end% get rid of the noise
+        Errors{s}.Relative = sum(E.*roiChunk',2)./sum(E,2);
         
         % Focalization
         Errors{s}.Focalization = sum(((ROISource{s}.*roiChunk')-roiChunk').^2,2)./sum((roiChunk').^2,2);
