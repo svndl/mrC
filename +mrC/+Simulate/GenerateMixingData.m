@@ -31,22 +31,24 @@ end
        
     for freq_band_idx = 1:length(band_freqs)
         this_spatial_decay_model = best_model.(band_names{freq_band_idx}) ;
-        mixing_matrix = zeros(size(spat_dists,1),size(spat_dists,2)) ;
-        
-        
-        this_coh = this_spatial_decay_model.fun(this_spatial_decay_model.model_params,spat_dists);
-        this_coh = min(max(this_coh,0),1) ;
+        mixing_matrix = zeros(size(spat_dists,1),size(spat_dists,2)/2) ;
+        for hemisphere_idx = 1:2
+            this_spat_dists = spat_dists((hemisphere_idx-1)*size(spat_dists,1)/2+(1:size(spat_dists,1)/2),...
+                                (hemisphere_idx-1)*size(spat_dists,2)/2+(1:size(spat_dists,2)/2));
+            this_coh = this_spatial_decay_model.fun(this_spatial_decay_model.model_params,this_spat_dists);
+            this_coh = min(max(this_coh,0),1) ;
                 
-        if strcmpi(decomp_algo,'cholesky')
-            this_mixing_matrix =  chol(this_coh) ;
-        elseif strcmpi(decomp_algo,'eigenvalue')
-            [V,D] =eig(this_coh);
-            this_mixing_matrix = sqrt(D)*V' ;
-        else
-            error('decomposition method not implemented')
+            if strcmpi(decomp_algo,'cholesky')
+                this_mixing_matrix =  chol(this_coh) ;
+            elseif strcmpi(decomp_algo,'eigenvalue')
+                [V,D] =eig(this_coh);
+                this_mixing_matrix = sqrt(D)*V' ;
+            else
+                error('decomposition method not implemented')
+            end
+            mixing_matrix((hemisphere_idx-1)*size(spat_dists,1)/2+(1:size(spat_dists,1)/2),:) = this_mixing_matrix;
         end
-        
-        noise_mixing_data.matrices{freq_band_idx} = this_mixing_matrix;
+        noise_mixing_data.matrices{freq_band_idx} = mixing_matrix;
         waitbar(freq_band_idx/length(band_freqs));
     end       
     close(hWait);

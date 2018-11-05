@@ -53,9 +53,10 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
             % calc coherence for band
             C = noise_mixing_data.matrices{band_idx}; 
             freq_bin_idxs = (noise_mixing_data.band_freqs{band_idx}(1)<=abs(f))&(abs(f)<noise_mixing_data.band_freqs{band_idx}(2));
-            
-            pink_noise_spec(freq_bin_idxs,:) =  pink_noise_spec(freq_bin_idxs,:)*C; 
-            
+            for hemi = 1:2 % hemisphere by hemisphere
+                source_idxs = (hemi-1)*size(C,2)+1:hemi*size(C,2) ;
+                pink_noise_spec(freq_bin_idxs,source_idxs) =  pink_noise_spec(freq_bin_idxs,source_idxs)*C(source_idxs,:); 
+            end
         end
 
         pink_noise = real(ifft(pink_noise_spec,[],1));
