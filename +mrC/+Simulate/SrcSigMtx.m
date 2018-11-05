@@ -1,4 +1,4 @@
-function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)% ROIsig %NoiseParams
+function [EEGData,EEGData_signal, sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)% ROIsig %NoiseParams
 
     % Description:	Generate Seed Signal within specified ROIs
     %
@@ -25,6 +25,9 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
     %
     % OUTPUT:
     % 	EEGData: ns x ne matrix: simulated EEG signal
+    %
+    %   EEGData_signal: fwd projection of the signal only (without noise
+    %   components)
     %   
     %   sourceData: ns x nsrc Matrix: simulated signal in source space
     %
@@ -111,8 +114,9 @@ else
     sourceData = sourceData/norm(sourceData,'fro');% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
     % Generate EEG data by multiplication to forward matrix
     EEGData = sourceData*fwdMatrix';
-
 end
+
+EEGData_signal = sourceTemp*fwdMatrix';
 
 % there should be another step: add measurement noise to EEG?
 end
