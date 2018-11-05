@@ -40,24 +40,29 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
     
     
 %% -----------------------------generate pink noise------------------------
-    pink_noise = GetPinkNoise(n_samples, n_nodes );pink_noise_uncoh = pink_noise;
-
+    pink_noise = GetPinkNoise(n_samples, n_nodes );
     % impose coherence on pink noise
     if strcmp(noise_mixing_data.mixing_type,'coh') % just in case we want to add other mixing mechanisms
         % force noise to be spatially coherent within 'hard' frequency
         % ranges
         % for details see: DOI:10.1121/1.2987429
         f = fftshift([-0.5:1/n_samples:0.5-1/n_samples]*f_sampling); % frequncy range
-
+        
         pink_noise_spec = fft(pink_noise,[],1);  
         for band_idx = 1:length(noise_mixing_data.band_freqs)
             % calc coherence for band
             C = noise_mixing_data.matrices{band_idx}; 
-            freq_bin_idxs = (noise_mixing_data.band_freqs{band_idx}(1)<abs(f))&(abs(f)<noise_mixing_data.band_freqs{band_idx}(2));
+            freq_bin_idxs = (noise_mixing_data.band_freqs{band_idx}(1)<=abs(f))&(abs(f)<noise_mixing_data.band_freqs{band_idx}(2));
+            
             pink_noise_spec(freq_bin_idxs,:) =  pink_noise_spec(freq_bin_idxs,:)*C; 
+            
         end
 
         pink_noise = real(ifft(pink_noise_spec,[],1));
+        % mixing matrix is not necessarily unitarian -> normalize
+        % source node-wise variance!
+        pink_noise = pink_noise./sqrt(mean(abs(pink_noise).^2));
+        % TODO: test for coherence
         else
         error('%s is not implemented as a mixing method',noise_mixing_data.mixing_type)
     end
@@ -72,7 +77,8 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
     end
 %% --------------------combine different types of noise--------------------
     noise = sqrt(mu/(1+mu))*pink_noise + sqrt(1/(1+mu))*alpha_noise ;
-    noise = noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum
+    % TODO: add sensor noise as AWGN
+    noise = noise/norm(noise,'fro') ;% pink noise and alpha noise are uncorrelated randomly. dirty hack: normalize sum
 %% ---------------------------show resulting noise-------------------------
     if false % just to take a look at the noise components
         f = [-0.5:1/n_samples:0.5-1/n_samples]*f_sampling; % frequncy range
@@ -117,7 +123,8 @@ y = filter(b,a, x);
 
 % ensure zero mean value
 y = y - repmat(mean(y),[n_samples,1]) ;
-
+%normalize to unit variance
+y = y./sqrt(mean(abs(y).^2));
 end
 
 function pink_noise = GetPinkNoise(n_samples,n_nodes)
@@ -133,5 +140,6 @@ function pink_noise = GetPinkNoise(n_samples,n_nodes)
     noise_spec = fft(randn(M,n_nodes)).*scalings' ;
     pink_noise = real(ifft(noise_spec))  ;
     pink_noise = pink_noise(1:n_samples,:) ;
+    pink_noise = pink_noise./sqrt(mean(abs(pink_noise).^2)) ;
 end
 
