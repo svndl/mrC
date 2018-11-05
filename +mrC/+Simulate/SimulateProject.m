@@ -1,4 +1,4 @@
-function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
+function [EEGData,EEGAxx,EEGData_signal,EEGAxx_signal,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     
     % Syntax: [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     % Description:	This function gets the path for a mrc project and simulate
@@ -114,6 +114,17 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %
     %       EEGAxx:         A cell array containing Axx structure of each
     %                       subject's simulated EEG. This output is
+    %                       available if the signal type is SSVEP
+    %
+    %       EEGData_signal: a NS x e matrix, containing simulated EEG
+    %                       signal without the noise components,
+    %                       where NSs is number of time samples and e is the
+    %                       number of the electrodes
+    %
+    %
+    %       EEGAxx_signal:  A cell array containing Axx structure of each
+    %                       subject's simulated EEG signal without the
+    %                       noise components. This output is
     %                       available if the signal type is SSVEP
     %
     %       sourceDataOrigin: a NS x srcNum matrix, containing simulated
@@ -314,16 +325,19 @@ for s = 1:length(projectPath)
     load(fullfile(anatDir,subIDs{s},'Standard','meshes','defaultCortex.mat'));
     surfData = msh.data; surfData.VertexLR = msh.nVertexLR;
     clear msh;
-    spat_dists = mrC.Simulate.CalculateSourceDistance(surfData,Noise.distanceType);
+    
     
     % -----This part calculate mixing matrix for coherent noise-----
     if strcmp(Noise.mixing_type_pink_noise,'coh')
         mixDir = fullfile(anatDir,subIDs{s},'Standard','meshes',['noise_mixing_data_' Noise.distanceType '.mat']);
+        spat_dists = mrC.Simulate.CalculateSourceDistance(surfData,Noise.distanceType);
         if ~exist(mixDir,'file')% if the mixing data is not calculated already
+            disp(['Calculating mixing matrix for coherent pink noise ...'])
             noise_mixing_data = mrC.Simulate.GenerateMixingData(spat_dists);
-            save(mixDir,'noise_mixing_data');
+            save(mixDir,'noise_mixing_data','-v7.3');
         else
-            load(mixDir);
+            disp(['Reading mixing matrix for coherent pink noise ...'])
+            load(mixDir,'noise_mixing_data');
         end
     end
     
@@ -333,8 +347,8 @@ for s = 1:length(projectPath)
 %     noise_signal = mrC.Simulate.GenerateNoise_2(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type,opt.nTrials);   
 %     toc
     noise_signal = zeros(NS, size(spat_dists,1), opt.nTrials); 
-    for trial_id =1:opt.nTrials % this could be solved more elegantly in GenerateNoise as well..
-        disp(['Trail # ' num2str(trial_id)])
+    for trial_id =1:opt.nTrials 
+        disp(['Trial # ' num2str(trial_id)])
         [thisNoiseSignal] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
         noise_signal(:,:,trial_id) = thisNoiseSignal ;
     end
@@ -343,7 +357,7 @@ for s = 1:length(projectPath)
     disp('Generating EEG signal ...'); 
  
     subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
-    [EEGData{s},sourceData] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noise_signal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
+    [EEGData{s},EEGData_signal{s},sourceData] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noise_signal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
        
     if (opt.nTrials==1) || (opt.originsource) % this is to avoid memory problem
         sourceDataOrigin{s} = sourceData;
@@ -355,6 +369,7 @@ for s = 1:length(projectPath)
     %% convert EEG to axx format
     if strcmp(opt.signalType,'SSVEP')
         EEGAxx{s}= mrC.Simulate.CreateAxx(EEGData{s},opt);% Converts the simulated signal to Axx format  
+        EEGAxx_signal{s}= mrC.Simulate.CreateAxx(EEGData_signal{s},opt);% Converts the simulated signal to Axx format  
     end
     
 %% write output to file 
