@@ -127,13 +127,121 @@ if strcmpi(space,'comp')
                   'Position', [20 300 100 50],...
                   'Callback',@set_weight);
 end
-
-
-%% Loop over plots
-
 N = 1;
-I = 1;    
-while(I)
+colorbarLimits = [] ;
+
+
+
+setColorbar()
+%---------------------------HEAD PLOT----------------------------------
+plot_topog();
+%---------------------------SPECTRUM PLOT------------------------------
+plot_spectrum();
+%----------------------------------------------------------------------
+
+%% ----------------Reads keyboard or mouse click-----------------------
+if strcmpi(Mode,'Interact')
+    set(h, 'WindowKeyPressFcn',@keyPressCallback);
+    set(h, 'WindowButtonDownFcn', @buttonPressCallback);
+end
+
+
+%----------------------------------------------------------------------
+    function set_component(source,event)
+        EOI = get(source,'value');
+        plot_topog();
+        plot_spectrum();
+    end
+
+    function set_weight(source,event)
+        weight = get(source,'value');
+        plot_topog();
+    end
+    
+    function keyPressCallback(source, eventdata)
+        key = eventdata.Key;
+        if key==27 % (Esc key) -> close the plot and return
+            close;
+            h=[];
+            return
+        elseif key==13 % (Enter key) -> save the current figure
+            set(h, 'PaperPosition',[1 1 12 5]);
+            print(fullfile(savepath,['SimEEG_Subject' subID 'Electrode' num2str(EOI) '_Freq' num2str(Freq(FOI)) 'Hz.tif']),'-dtiff','-r300');% Later I can update this to contain the simulation parameters
+        elseif strcmp(key,'n')||strcmp(key,'N') % if n or N is pressed -> change head plot normalization
+            if N==1, N=0; else N=1;end
+
+        elseif strcmpi(key,'leftarrow') && strcmpi(space,'comp')  % cursor left
+            EOI = mod(EOI-1,size(A,2)+1) ;
+            if EOI==0 % 0 is not valid
+                 EOI = mod(EOI-1,size(A,2)+1) ;
+            end
+        elseif strcmpi(key,'rightarrow') && strcmpi(space,'comp') % cursor right
+            EOI = mod(EOI+1,size(A,2)+1) ;
+            if EOI==0 % 0 is not valid
+            	EOI = mod(EOI+1,size(A,2)+1) ;
+            end
+        elseif strcmpi(key,'uparrow') && strcmpi(space,'comp')  % cursor up
+            EOI = mod(EOI+10,size(A,2)+1) ;
+            if EOI==0 % 0 is not valid
+              EOI = mod(EOI+1,size(A,2)+1) ;
+            end
+        elseif strcmpi(key,'downarrow') && strcmpi(space,'comp')  % cursor down
+            EOI = mod(EOI-10,size(A,2)+1) ;
+            if EOI==0 % 0 is not valid
+                EOI = mod(EOI-1,size(A,2)+1) ;
+            end
+        elseif key=='a' 
+            FOI = mod(FOI-1,Fmax+1) ;
+            if FOI==0 % 0 is not valid
+                FOI = mod(FOI-1,Fmax+1) ;
+            end
+        elseif key=='d' 
+            FOI = mod(FOI+1,Fmax+1) ;
+            if FOI==0 % 0 is not valid
+                FOI = mod(FOI+1,Fmax+1) ;
+            end
+        elseif key=='w' 
+            FOI = mod(FOI+10,Fmax+1) ;
+            if FOI==0 % 0 is not valid
+                FOI = mod(FOI+1,Fmax+1) ;
+            end
+        elseif key=='s' 
+          FOI = mod(FOI-10,Fmax+1) ;
+          if FOI==0 % 0 is not valid
+                FOI = mod(FOI-1,Fmax+1) ;
+          end
+        end
+        % update plots
+        setColorbar();
+        plot_topog();
+        plot_spectrum();
+    end
+    
+    function buttonPressCallback(source, eventdata)
+        mousept = get(gca,'currentPoint');
+        SPI = get(gca,'tag');
+        x = mousept(1,1);
+        y = mousept(1,2);
+        % update location
+        switch SPI
+
+        case '1'
+            if ~strcmpi(space,'comp')
+                Epos2= repmat([x y],[128 1]);
+                dis = sqrt(sum((tEpos-Epos2).^2,2));
+                [~,EOI] = min(dis);
+            end
+        case '2'
+            [~,FOI] = min(abs(repmat(x,[1 size(ASDEEG,1)])-Freq));
+        end
+        % update plots
+        setColorbar();
+        plot_topog();
+        plot_spectrum();
+    end
+    
+%--------------------------------------------------------------------------
+   function setColorbar()
     if strcmpi(SignalType,'Amplitude')
         if strcmpi(space,'comp') 
             colorbarLimits = [-0 max(A(:,EOI)*ASDEEG(FOI,EOI)')];
@@ -145,111 +253,8 @@ while(I)
     elseif strcmpi(SignalType,'Phase')
         colorbarLimits = [min(ASDEEG(:)) max(ASDEEG(:))];
     end
+   end
 
-
-    %---------------------------HEAD PLOT----------------------------------
-    plot_topog();
-    %---------------------------SPECTRUM PLOT------------------------------
-    plot_spectrum();
-    %----------------------------------------------------------------------
-    if strcmpi(space,'comp')
-        title(['Component ' num2str(num2str(EOI))],'fontsize',FS);
-    else
-        title(['Electrode ' num2str(num2str(EOI))],'fontsize',FS);
-    end
-    %% ----------------Reads keyboard or mouse click-----------------------
-    if strcmpi(Mode,'Interact')
-        w = waitforbuttonpress;
-        switch w 
-        case 1 % keyboard 
-          key = get(h,'currentcharacter'); 
-          if key==27 % (Esc key) -> close the plot and return
-              close;
-              h=[];
-              return
-          elseif key==13 % (Enter key) -> save the current figure
-              set(h, 'PaperPosition',[1 1 12 5]);
-              print(fullfile(savepath,['SimEEG_Subject' subID 'Electrode' num2str(EOI) '_Freq' num2str(Freq(FOI)) 'Hz.tif']),'-dtiff','-r300');% Later I can update this to contain the simulation parameters
-          elseif strcmp(key,'n')||strcmp(key,'N') % if n or N is pressed -> change head plot normalization
-              if N==1, N=0; else N=1;end
-          
-          elseif key==28 && strcmpi(space,'comp')  % cursor left
-              EOI = mod(EOI-1,size(A,2)+1) ;
-              if EOI==0 % 0 is not valid
-                  EOI = mod(EOI-1,size(A,2)+1) ;
-              end
-          elseif key==29 && strcmpi(space,'comp') % cursor right
-              EOI = mod(EOI+1,size(A,2)+1) ;
-              if EOI==0 % 0 is not valid
-                  EOI = mod(EOI+1,size(A,2)+1) ;
-              end
-          elseif key==30 && strcmpi(space,'comp')  % cursor up
-              EOI = mod(EOI+10,size(A,2)+1) ;
-              if EOI==0 % 0 is not valid
-                  EOI = mod(EOI+1,size(A,2)+1) ;
-              end
-          elseif key==31 && strcmpi(space,'comp')  % cursor down
-              EOI = mod(EOI-10,size(A,2)+1) ;
-              if EOI==0 % 0 is not valid
-                  EOI = mod(EOI-1,size(A,2)+1) ;
-              end
-          elseif key=='a' 
-              FOI = mod(FOI-1,Fmax+1) ;
-              if FOI==0 % 0 is not valid
-                  FOI = mod(FOI-1,Fmax+1) ;
-              end
-          elseif key=='d' 
-              FOI = mod(FOI+1,Fmax+1) ;
-              if FOI==0 % 0 is not valid
-                  FOI = mod(FOI+1,Fmax+1) ;
-              end
-          elseif key=='w' 
-              FOI = mod(FOI+10,Fmax+1) ;
-              if FOI==0 % 0 is not valid
-                  FOI = mod(FOI+1,Fmax+1) ;
-              end
-          elseif key=='s' 
-              FOI = mod(FOI-10,Fmax+1) ;
-              if FOI==0 % 0 is not valid
-                  FOI = mod(FOI-1,Fmax+1) ;
-              end
-          end
-
-        case 0 % mouse click 
-             
-            mousept = get(gca,'currentPoint');
-            SPI = get(gca,'tag');
-            x = mousept(1,1);
-            y = mousept(1,2);
-            % update location
-            switch SPI
-
-                case '1'
-                    if ~strcmpi(space,'comp')
-                        Epos2= repmat([x y],[128 1]);
-                        dis = sqrt(sum((tEpos-Epos2).^2,2));
-                        [~,EOI] = min(dis);
-                    end
-                case '2'
-                    [~,FOI] = min(abs(repmat(x,[1 size(ASDEEG,1)])-Freq));
-              end
-            end
-    else
-        I = 0;
-    end
-end
-
-    %----------------------------------------------------------------------
-    function set_component(source,event)
-        EOI = get(source,'value');
-        plot_topog();
-        plot_spectrum();
-    end
-
-    function set_weight(source,event)
-        weight = get(source,'value');
-        plot_topog();
-    end
 %--------------------------------------------------------------------------
     function plot_topog()
         % topography map plot
@@ -297,5 +302,10 @@ end
         
         if strcmpi(Mode ,'Interact'),hold on;  bar(Freq(FOI), SPEC(FOI),.4,'FaceColor','g','EdgeColor','g'); end
 
+        if strcmpi(space,'comp')
+            title(['Component ' num2str(num2str(EOI))],'fontsize',FS);
+        else
+            title(['Electrode ' num2str(num2str(EOI))],'fontsize',FS);
+        end
     end
 end
