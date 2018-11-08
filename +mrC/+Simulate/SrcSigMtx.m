@@ -1,4 +1,4 @@
-function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)% ROIsig %NoiseParams
+function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,opt,noise,lambda,spatial_normalization_type)% ROIsig %NoiseParams
 
     % Description:	Generate Seed Signal within specified ROIs
     %
@@ -31,16 +31,22 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
     %	roiSet: a 1 x nROIs cell of node indices
     
     
-  % Elham Barzegaran 2.27.2018
+  % Authors: Elham Barzegaran, Sebastian Bosse, 2.27.2018
     
-  % Updated EB, 6.5.2018
+  % Updated EB, 6/5/2018
+  % Latest Update EB,11/7/2018
   
-%%
+%% Organize the inputs
+signalArray = opt.signalArray;
+RoiSize = opt.roiSize;
+funcType = opt.roiSpatfunc;
+signalsf = opt.signalsf;
+SNRFreqBand = opt.signalSNRFreqBand;
 
 if ~exist('RoiSize','var'), RoiSize = [];end
 if ~exist('funcType','var'), funcType = [];end
 
-if isempty(rois),% if roi is empty ofr this subject
+if isempty(rois)% if roi is empty ofr this subject
     EEGData=[];sourceData=[];roiSet=[];
     warning('No ROI found, no simulated EEG is generated');
     return
@@ -60,9 +66,9 @@ if size(roiChunk,2)~= size(signalArray,2)
         % error('Number of ROIs is not equal to number of source signals');
 end
 
-%
+%% Put the signal in ROIs
 if ~isempty(roiChunk)
-    %% seed ROIs
+    % seed ROIs
     % Note: I consider here that the ROI labels in shortList are unique (L or R are considered separetly)
     % Adjust Roi size, prepare spatial function (weights) and plot ROIs
 
@@ -91,7 +97,32 @@ else
     sourceTemp = zeros(size(noise));
 end
 
-% Adds noise to source signal
+%% Adjust source level SNR according to the frequency band of interest, for each ROI(active sources)
+% like formula 5 in Haufe et al, 2016 paper but in source space.
+if ~isempty(roiChunk)
+    F = 0:signalsf/size(sourceTemp,1):(signalsf/2-signalsf/size(sourceTemp,1));
+    if ~exist('SNRFreqBand','var') || isempty(SNRFreqBand)
+        % do the brod band
+        SNRFreqBand = repmat([min(F) max(F)],[size(roiChunk,2) 1]);
+    end
+    for r = 1:size(roiChunk,2)
+        FInds = (F>=SNRFreqBand(r,1)) & (F<=SNRFreqBand(r,2));
+        % fft of signal
+        sig = sourceTemp(:,roiChunk(:,r)>0);
+        Fsig = abs(fft(sig));
+        signalM = max(mean(Fsig(FInds,:)));% max of signal
+
+        % fft of noise
+        noi = noise(:,roiChunk(:,r)>0);
+        Fnoi = abs(fft(noi));
+        noiM = mean(mean(Fnoi(FInds,:)));% % mean of noise
+
+        SRatio = noiM/signalM;
+        sourceTemp(:,roiChunk(:,r)>0) = sourceTemp(:,roiChunk(:,r)>0).*SRatio;
+    end
+end
+
+%% Adds noise to source signal
 pow = 1;
 sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
 sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum

@@ -30,6 +30,9 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %       
     %       signalFF:       a seedNum x 1 vector: determines the fundamental
     %                       frequencis of sources
+    %       signalSNRFreqBand   a seedNum x 2 matrix, each row determines the
+    %                           frequency range that SNR is defined for the signal in the ROI,
+    %                           default is all frequencies: [0 maxfrequency]
   
   % (ROI Parameters)
     %       rois            a cell array of roi structure that can be
@@ -138,6 +141,7 @@ opt	= ParseArgs(varargin,...
     'signalsf'      , 100 ,... 
     'signalType'    , 'SSVEP',...
     'signalFF'      , [],...
+    'signalSNRFreqBand' ,[],...
     'NoiseParams'   , struct,...
     'sensorFig'     , true,...
     'doSource'      , false,...
@@ -298,9 +302,9 @@ for s = 1:length(projectPath)
     Noise = opt.NoiseParams;
     Noisefield = fieldnames(Noise);
     
-    if ~any(strcmp(Noisefield, 'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
+    if ~any(strcmp(Noisefield, 'mu')),Noise.mu = 2;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
     if ~any(strcmp(Noisefield, 'lambda')),Noise.lambda = 1/NS/2;end % power distribution between signal and 'total noise' (SNR)
-    if ~any(strcmp(Noisefield, 'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% 'active_nodes'/['all_nodes']
+    if ~any(strcmp(Noisefield, 'spatial_normalization_type')),Noise.spatial_normalization_type = 'active_nodes';end% 'active_nodes'/['all_nodes']
     if ~any(strcmp(Noisefield, 'distanceType')),Noise.distanceType = 'Euclidean';end
     if ~any(strcmp(Noisefield, 'Noise.mixing_type_pink_noise')), Noise.mixing_type_pink_noise = 'coh' ;end % coherent mixing of pink noise
     if ~any(strcmp(Noisefield, 'alpha_nodes')), Noise.alpha_nodes = 'all';end % for now I set it to all visual areas, later I can define ROIs for it
@@ -342,7 +346,7 @@ for s = 1:length(projectPath)
     disp('Generating EEG signal ...'); 
  
     subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
-    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
+    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt,noiseSignal,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % NoiseParams
        
     %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format

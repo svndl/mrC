@@ -1,3 +1,4 @@
+
 % This script generates an example simulated EEG with SSVEP signals
 % for this script to run correctly you need three paths:
     % mrCpath: The latest mrC package
@@ -20,7 +21,7 @@ addpath(genpath('C:\Users\Elhamkhanom\Documents\Codes\Git\surfing'));% this tool
 % SAVED THE SAMPLE ANATOMY AND PROJECT FOLDER. YOU CAN DOWNLOAD THOSE FILES
 % FROM MY DROPBOX: https://www.dropbox.com/sh/ypjrwjjw3003c2f/AABYO1JEjcdwkH3auBOon6UVa?dl=0
 %
- DestPath = fullfile(mrCFolder,'Examples','Example3');
+ DestPath = fullfile(mrCFolder,'Examples','ExampleData');
 % 
 % ProjectPath ='/Volumes/svndl/mrC_Projects/kohler/SYM_RT_LOCKED/SOURCE';
 % % This is to make a portable copy of the project data (both anatomy and forward)
@@ -52,14 +53,17 @@ Wangnums = cellfun(@(x) x.ROINum,Wangs)>0;
 [outSignal, FundFreq, SF]= mrC.Simulate.ModelSeedSignal('signalType','SSVEP','signalFreq',[2 3],'signalHarmonic',{[2,0,1],[1,1,0]},'signalPhase',{[.1,0,.2],[0,.3,0]});
 
 %% simulating EEGs with different ROIs as different conditions
-Noise.mu=2;
-Noise.lambda = 1/length(outSignal)*2;
+Noise.mu=3;% ratio of pink and alpha noises
+Noise.lambda = 1;%ratio of signal and noise
 
 %--------------------------Cond1: V2d_R, V3d_L-----------------------------
 Rois1 = cellfun(@(x) x.searchROIs('V2d','wang','R'),RoiList,'UniformOutput',false);% % wang ROI
 Rois2 = cellfun(@(x) x.searchROIs('V3d','wang','L'),RoiList,'UniformOutput',false);% % wang ROI
 RoisI = cellfun(@(x,y) x.mergROIs(y),Rois1,Rois2,'UniformOutput',false);
-[EEGData1,EEGAxx1,~,masterList1,subIDs1] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,'signalArray',outSignal,'signalFF',FundFreq,'signalsf',SF,'NoiseParams',Noise,'rois',RoisI,'Save',true,'cndNum',1);
+[EEGData1,EEGAxx1,~,masterList1,subIDs1] = mrC.Simulate.SimulateProject(ProjectPath,'anatomyPath',AnatomyPath,...
+    'signalArray',outSignal,'signalFF',FundFreq,'signalsf',SF,'NoiseParams',Noise,'rois',RoisI,'Save',true,...
+    'cndNum',1);
+
 freq = 0:EEGAxx1{1}.dFHz:EEGAxx1{1}.dFHz*(EEGAxx1{1}.nFr-1); 
 mrC.Simulate.PlotEEG(EEGAxx1{1}.Amp, freq , [],subIDs1{1},masterList1,FundFreq,'Amplitude');
 close all;

@@ -29,7 +29,7 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
     alpha_noise(:,alpha_nodes)  = repmat(GetAlphaActivity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
     
     if strcmp(spatial_normalization_type,'active_nodes')
-        n_active_nodes_alpha = sum(sum(abs(alpha_noise))~=0) ;
+        n_active_nodes_alpha = size(alpha_noise,2);%sum(sum(abs(alpha_noise))~=0) ;
         alpha_noise = n_active_nodes_alpha*alpha_noise/norm(alpha_noise,'fro') ;
     elseif strcmp(spatial_normalization_type,'all_nodes')
         alpha_noise = alpha_noise/norm(alpha_noise,'fro') ;
@@ -71,30 +71,10 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
         error('%s is not implemented as spatial normalization method', spatial_normalization_type)
     end
 %% --------------------combine different types of noise--------------------
-    noise = sqrt(mu/(1+mu))*pink_noise + sqrt(1/(1+mu))*alpha_noise ;
-    noise = noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum
-%% ---------------------------show resulting noise-------------------------
-    if false % just to take a look at the noise components
-        f = [-0.5:1/n_samples:0.5-1/n_samples]*f_sampling; % frequncy range
-        t = [0:n_samples-1]/f_sampling ;
-        subplot(3,2,1)
-        plot(t, pink_noise(:,1:50:end));xlim([0 2]);
-        subplot(3,2,2)
-        plot(f, abs(fftshift(fft(pink_noise(:,1:50:end)))));xlim([0 max(f)]);
-        %ylim([0 .2]);
+    pow =1;
+    noise = ((mu/(1+mu)).^pow)*pink_noise + ((1/(1+mu)).^pow)*alpha_noise ;
+    noise = n_active_nodes_pink*noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum
 
-        subplot(3,2,3)
-        plot(t, alpha_noise(:,1:50:end));xlim([0 2]);
-        subplot(3,2,4)
-        plot(f, abs(fftshift(fft(alpha_noise(:,1:50:end)))));xlim([0 max(f)]);
-        %ylim([0 .2]);
-
-        subplot(3,2,5)
-        plot(t, noise(:,1:50:end)); xlim([0 2]);
-        subplot(3,2,6)
-        plot(f, abs(fftshift(fft(noise(:,1:50:end)))));xlim([0 max(f)]);
-        %ylim([0 .2]);
-    end
 end
 
 function y = GetAlphaActivity(n_samples,sampling_freq,freq_band)
