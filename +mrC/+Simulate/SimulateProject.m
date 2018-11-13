@@ -330,8 +330,9 @@ for s = 1:length(projectPath)
     % -----This part calculate mixing matrix for coherent noise-----
     if strcmp(Noise.mixing_type_pink_noise,'coh')
         mixDir = fullfile(anatDir,subIDs{s},'Standard','meshes',['noise_mixing_data_' Noise.distanceType '.mat']);
-        spat_dists = mrC.Simulate.CalculateSourceDistance(surfData,Noise.distanceType);
+        
         if ~exist(mixDir,'file')% if the mixing data is not calculated already
+            spat_dists = mrC.Simulate.CalculateSourceDistance(surfData,Noise.distanceType);
             disp(['Calculating mixing matrix for coherent pink noise ...'])
             noise_mixing_data = mrC.Simulate.GenerateMixingData(spat_dists);
             save(mixDir,'noise_mixing_data','-v7.3');
@@ -340,16 +341,16 @@ for s = 1:length(projectPath)
             load(mixDir,'noise_mixing_data');
         end
     end
-    
+    nSources = size(noise_mixing_data.matrices{1},1);
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
 %     tic
 %     noise_signal = mrC.Simulate.GenerateNoise_2(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type,opt.nTrials);   
 %     toc
-    noise_signal = zeros(NS, size(spat_dists,1), opt.nTrials); 
+    noise_signal = zeros(NS, nSources, opt.nTrials); 
     for trial_id =1:opt.nTrials 
         disp(['Trial # ' num2str(trial_id)])
-        [thisNoiseSignal] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+        [thisNoiseSignal] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, nSources, Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
         noise_signal(:,:,trial_id) = thisNoiseSignal ;
     end
 %------------------------ADD THE SIGNAL IN THE ROIs--------------------------
