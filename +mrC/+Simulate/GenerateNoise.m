@@ -1,4 +1,4 @@
-function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
+function [noiseSource,noiseElectrode, pink_noise, alpha_noise] = GenerateNoise(fwdMatrix,f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
 % Syntax: [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sampling, n_samples, n_nodes, mu, alpha_nodes, noise_mixing_data, spatial_normalization_type)
 % Desciption: GENERATE_NOISE Returns noise of unit variance as a combination of alpha
 %               activity (bandpass filtered white noise) and spatially coherent pink
@@ -23,8 +23,11 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
 % Author: Sebastian Bosse
 % Latest Modification: EB, 07/17/2018
 
-%% ---------------------------- generate alpha noise------------------------
-    %  
+%% -----------------------generate sensor level noise----------------------
+noiseElectrode = randn(n_samples,size(fwdMatrix,1)); % uncorrelated white noise
+
+%% ---------------------------- generate alpha noise-----------------------
+    %  placed on the visual ROIs
     alpha_noise = zeros(n_samples,n_nodes);
     alpha_noise(:,alpha_nodes)  = repmat(GetAlphaActivity(n_samples,f_sampling,[8,12]),[1,length(alpha_nodes )]); 
     
@@ -37,10 +40,8 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
         error('%s is not implemented as spatial normalization method', spatial_normalization_type)
     end
     
-    
-    
 %% -----------------------------generate pink noise------------------------
-    pink_noise = GetPinkNoise(n_samples, n_nodes );pink_noise_uncoh = pink_noise;
+    pink_noise = GetPinkNoise(n_samples, n_nodes ); pink_noise_uncoh = pink_noise;
 
     % impose coherence on pink noise
     if strcmp(noise_mixing_data.mixing_type,'coh') % just in case we want to add other mixing mechanisms
@@ -61,7 +62,7 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
         else
         error('%s is not implemented as a mixing method',noise_mixing_data.mixing_type)
     end
-
+    
     if strcmp(spatial_normalization_type,'active_nodes')
         n_active_nodes_pink = sum(sum(abs(pink_noise))~=0) ;
         pink_noise = n_active_nodes_pink * pink_noise/norm(pink_noise,'fro') ;
@@ -70,10 +71,23 @@ function [noise, pink_noise, pink_noise_uncoh, alpha_noise] = GenerateNoise(f_sa
     else
         error('%s is not implemented as spatial normalization method', spatial_normalization_type)
     end
+%% ---------------------------find noise parameters--------------------    
+% Three parameters to find, 
+    %   Par1: ratio of pink noise, 
+    %   Par2: ratio of alpha noise,
+    %   Par3: ratio of white noise,
+% 1) load resting state average data (EEG spectrum: REC and REO)    
+
+% 2) define loss function as the mean squared error of noise spectra in
+% sensor space to real data
+
+% 3) search to find the parameters
+    
 %% --------------------combine different types of noise--------------------
     pow =1;
     noise = ((mu/(1+mu)).^pow)*pink_noise + ((1/(1+mu)).^pow)*alpha_noise ;
-    noise = n_active_nodes_pink*noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum
+    %noiseSource = n_active_nodes_pink*noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum
+    noiseSource = noise/norm(noise,'fro') ;% pink noise and alpha noise are correlated randomly. dirty hack: normalize sum  
 
 end
 

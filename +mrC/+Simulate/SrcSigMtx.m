@@ -1,4 +1,4 @@
-function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,opt,noise,lambda,spatial_normalization_type)% ROIsig %NoiseParams
+function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,opt,noiseSource, noiseSensor,lambda,spatial_normalization_type)% ROIsig %NoiseParams
 
     % Description:	Generate Seed Signal within specified ROIs
     %
@@ -77,7 +77,7 @@ if ~isempty(roiChunk)
     spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,[],funcType,plotRoi);
 
     % place seed signal array in source space
-    sourceTemp = zeros(size(noise));
+    sourceTemp = zeros(size(noiseSource));
     for s = 1: size(signalArray,2)% place the signal for each seed 
         sourceTemp = sourceTemp + repmat (signalArray(:,s),[1 size(sourceTemp,2)]).*(repmat(spatfunc(:,s),[1 size(sourceTemp,1)])');
     end
@@ -97,40 +97,38 @@ else
     sourceTemp = zeros(size(noise));
 end
 
-%% Adjust source level SNR according to the frequency band of interest, for each ROI(active sources)
+%% Adjust sensor level SNR according to the frequency band of interest, for each ROI(active sources)
 % like formula 5 in Haufe et al, 2016 paper but in source space.
 if ~isempty(roiChunk)
     F = 0:signalsf/size(sourceTemp,1):(signalsf/2-signalsf/size(sourceTemp,1));
     if ~exist('SNRFreqBand','var') || isempty(SNRFreqBand)
         % do the brod band
-        SNRFreqBand = repmat([min(F) max(F)],[size(roiChunk,2) 1]);
+        SNRFreqBand = [min(F) max(F)];
     end
-    for r = 1:size(roiChunk,2)
-        FInds = (F>=SNRFreqBand(r,1)) & (F<=SNRFreqBand(r,2));
-        % fft of signal
-        sig = sourceTemp(:,roiChunk(:,r)>0);
-        Fsig = abs(fft(sig));
-        signalM = max(mean(Fsig(FInds,:)));% max of signal
+    FInds = (F>=SNRFreqBand(1)) & (F<=SNRFreqBand(2));
+       
+     % fft of signal
+    sig = sourceTemp*fwdMatrix';
+    Fsig = abs(fft(sig)).^2;
+    signalM = max(mean(Fsig(FInds,:)));% max of signal
 
-        % fft of noise
-        noi = noise(:,roiChunk(:,r)>0);
-        Fnoi = abs(fft(noi));
-        noiM = mean(mean(Fnoi(FInds,:)));% % mean of noise
+    % fft of noise
+    noi = noiseSource*fwdMatrix'+noiseSensor;
+    Fnoi = abs(fft(noi)).^2;
+    noiM = mean(mean(Fnoi(FInds,:)));% % mean of noise
 
-        SRatio = noiM/signalM;
-        sourceTemp(:,roiChunk(:,r)>0) = sourceTemp(:,roiChunk(:,r)>0).*SRatio;
-    end
+    SRatio = noiM/signalM;
+    sourceTemp(:,roiChunk(:,r)>0) = sourceTemp(:,roiChunk(:,r)>0).*SRatio;
 end
 
 %% Adds noise to source signal
-pow = 1;
-sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
+pow = 1/2;
+sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noiseSource;
 sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
 
-% Generate EEG data by multiplication to forward matrix
-EEGData = sourceData*fwdMatrix';
+% Generate EEG data by multiplication to forward matrix and add sensor level noise
+EEGData = sourceData*fwdMatrix'+noiseSensor;
 
-% there should be another step: add measurement noise to EEG?
 end
 
 function spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,Hem,funcType,plotRoi)

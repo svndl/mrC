@@ -30,8 +30,8 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %       
     %       signalFF:       a seedNum x 1 vector: determines the fundamental
     %                       frequencis of sources
-    %       signalSNRFreqBand   a seedNum x 2 matrix, each row determines the
-    %                           frequency range that SNR is defined for the signal in the ROI,
+    %       signalSNRFreqBand   a vector of length two, which determines the
+    %                           frequency range that SNR is defined,
     %                           default is all frequencies: [0 maxfrequency]
   
   % (ROI Parameters)
@@ -335,7 +335,7 @@ for s = 1:length(projectPath)
     
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
-    [noiseSignal] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+    [noiseSource,noiseElectrode] = mrC.Simulate.GenerateNoise(fwdMatrix,opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
     if opt.VisualizeNoise
         visualizeNoise(subIDs{s},noiseSignal, spat_dists, opt.anatomyPath,opt.signalsf,opt.figFolder); % Just to visualize noise on the cortical surface 
         %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
@@ -346,7 +346,7 @@ for s = 1:length(projectPath)
     disp('Generating EEG signal ...'); 
  
     subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
-    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt,noiseSignal,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % NoiseParams
+    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt,noiseSource,noiseElectrode,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % NoiseParams
        
     %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format

@@ -2,3 +2,5 @@
 *~
 Examples/ExampleData*
 external/fieldtrip*
+*.asv
+external/refinepatch_version2b/
