@@ -355,7 +355,24 @@ classdef ROIs
                 obj = mrC.ROIs(subID,anatDir);
                 obj.saveROIs(anatDir);
             end
-         end
+        end
+        function s = saveobj(obj)
+            s.ROIList = obj.ROIList ;
+            s.subID = obj.subID ;
+        end
     end
+         
+    methods(Static)
+      function obj = loadobj(s)
+            if isstruct(s)
+                newObj = mrC.ROIs() ;
+                newObj.ROIList = s.ROIList ;
+                newObj.subID = s.subID ;
+                obj = newObj ;
+            else
+                obj = s ;
+            end
+      end
+  end
     
 end
