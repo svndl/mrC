@@ -39,26 +39,6 @@ classdef axx
     end
     
     methods
-        function s = saveobj(obj)
-            s.cndNmb = obj.cndNmb ;
-            s.nTrl = obj.nTrl ;
-            s.nT = obj.nT ;
-            s.nCh = obj.nCh ;
-            s.dTms = obj.dTms ;
-            s.dFHz = obj.dFHz ;
-            s.nFr   = obj.nFr ;
-            s.i1F1  = obj.i1F1 ;
-            s.i1F2  = obj.i1F2 ;
-            s.DataUnitStr = obj.DataUnitStr;
-            s.Amp  = obj.Amp ;
-            s.Cos  = obj.Cos ;
-            s.Sin  = obj.Sin ;
-            s.SpecPValue = obj.SpecPValue ;
-            s.SpecStdErr = obj.SpecStdErr ;
-            s.Cov = obj.Cov ;
-            s.Wave  = obj.Wave;
-        end
-        
         function obj = axx(axxStrct,AVR)
             if nargin<2
                 AVR=1;% average over trials?
@@ -148,6 +128,25 @@ classdef axx
                 eval(['Sstruct.' Fields{f} '=' 'thisAxx.' Fields{f} ';']);
             end
             save(FilePath,'-struct','Sstruct');
+        end
+        function s = saveobj(obj)
+            s.cndNmb = obj.cndNmb ;
+            s.nTrl = obj.nTrl ;
+            s.nT = obj.nT ;
+            s.nCh = obj.nCh ;
+            s.dTms = obj.dTms ;
+            s.dFHz = obj.dFHz ;
+            s.nFr   = obj.nFr ;
+            s.i1F1  = obj.i1F1 ;
+            s.i1F2  = obj.i1F2 ;
+            s.DataUnitStr = obj.DataUnitStr;
+            s.Amp  = obj.Amp ;
+            s.Cos  = obj.Cos ;
+            s.Sin  = obj.Sin ;
+            s.SpecPValue = obj.SpecPValue ;
+            s.SpecStdErr = obj.SpecStdErr ;
+            s.Cov = obj.Cov ;
+            s.Wave  = obj.Wave;
         end
     end
     
