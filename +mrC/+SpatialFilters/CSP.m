@@ -17,6 +17,7 @@ function [OutAxxs,W,A,D] = CSP(InAxxs,varargin)
     % 
     % Written by Sebastian Bosse, 10.8.2018
 
+    
 opt	= ParseArgs(varargin,...
     'do_whitening', true, ...
     'rank_ratio', 10^-4, ... 
@@ -31,6 +32,15 @@ if InAxxs{1}.nFr~=InAxxs{2}.nFr
 end
 if InAxxs{1}.dFHz~=InAxxs{2}.dFHz
     error('CSP: Frequency resolution not identical in the two given classes')
+end
+if InAxxs{1}.nT ~= InAxxs{2}.nT
+    error('number of time points differs between classes') ;
+end
+if InAxxs{1}.nCh ~= InAxxs{2}.nCh
+    error('number of channels differs between classes') ;
+end
+if InAxxs{1}.nTrl ~= InAxxs{2}.nTrl
+    warning('number of trials differs between classes') ;
 end
 
 cmplx_signal = cell(length(InAxxs),1) ;
