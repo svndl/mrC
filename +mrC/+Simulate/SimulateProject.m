@@ -1,4 +1,4 @@
-function [EEGData,EEGAxx,EEGData_signal,EEGAxx_signal,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
+function [EEGData,EEGAxx,EEGData_signal,EEGAxx_signal,sourceDataOrigin,masterList,subIDs,allSubjFwdMatrices,allSubjRois] = SimulateProject(projectPath,varargin)
     
     % Syntax: [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     % Description:	This function gets the path for a mrc project and simulate
@@ -236,7 +236,7 @@ end
 %% ===========================GENERATE EEG signal==========================
 projectPathfold = projectPath;
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
-
+allFwdMatrices = {} ;
 for s = 1:length(projectPath)
     %--------------------------READ FORWARD SOLUTION---------------------------  
     % Read forward
@@ -283,6 +283,7 @@ for s = 1:length(projectPath)
         srcStrct = readDefaultSourceSpace(subIDs{s}); % Read source structure from freesurfer
         fwdMatrix = makeForwardMatrixFromMne(fwdStrct ,srcStrct); % Generate Forward matrix
     end
+    allSubjFwdMatrices{s} = fwdMatrix ;
     
     % ---------------------------Default ROIs----------------------------------
     seedNum = size(opt.signalArray,2); % Number of seed sources
@@ -306,7 +307,7 @@ for s = 1:length(projectPath)
     NS = size(opt.signalArray,1); % Number of time samples
     Noise = opt.NoiseParams;
     Noisefield = fieldnames(Noise);
-    
+    % TODO: update tests
     if ~any(strcmp(Noisefield, 'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
     if ~any(strcmp(Noisefield, 'lambda')),Noise.lambda = 1/NS/2;end % power distribution between signal and 'total noise' (SNR)
     if ~any(strcmp(Noisefield, 'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% 'active_nodes'/['all_nodes']
@@ -341,24 +342,50 @@ for s = 1:length(projectPath)
             load(mixDir,'noise_mixing_data');
         end
     end
+    
+    
     nSources = size(noise_mixing_data.matrices{1},1);
     % ----- Generate noise-----
     % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
 %     tic
 %     noise_signal = mrC.Simulate.GenerateNoise_2(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type,opt.nTrials);   
 %     toc
-    noise_signal = zeros(NS, nSources, opt.nTrials); 
+    %noise_signal = zeros(NS, nSources, opt.nTrials); 
+    
+    % calculate coherence in channel space to reduced computational effort
+    % in every trial
+    for band_idx = 1:length(noise_mixing_data.band_freqs)
+        C = noise_mixing_data.matrices{band_idx}; 
+        
+        % normalize mixing matrices in order to avoid amplification
+        % NOTE: this if only valid if the 'input signal' is uncorrelated
+        % accross sources!!! (which is the case for pink Gaussian noise)
+        % this shold not be necessary (at least if decomposition is based
+        % on cholesky)
+        C = C./repmat(sqrt(sum((C.^2),1)),size(C,1),1);
+        C_chan = zeros(size(fwdMatrix'));
+        for hemi = 1:2 % hemisphere by hemisphere
+            source_idxs = (hemi-1)*size(C,2)+1:hemi*size(C,2) ;
+            C_chan(source_idxs,:) =  C(source_idxs,:)*fwdMatrix(:,source_idxs)'; 
+        end
+        noise_mixing_data.matrices_chanSpace{band_idx} = C_chan;    
+    end
+    
+    noise = zeros(NS, size(fwdMatrix,1), opt.nTrials) ;
     for trial_id =1:opt.nTrials 
         disp(['Trial # ' num2str(trial_id)])
-        [thisNoiseSignal] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, nSources, Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
-        noise_signal(:,:,trial_id) = thisNoiseSignal ;
+        [thisNoise,thisPinkNoise,thisAlphaNoise,thisSensorNoise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, nSources, Noise, noise_mixing_data,Noise.spatial_normalization_type,fwdMatrix);   
+        noise(:,:,trial_id) = thisNoise ;
     end
+
+
 %------------------------ADD THE SIGNAL IN THE ROIs--------------------------
     
     disp('Generating EEG signal ...'); 
  
     subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
-    [EEGData{s},EEGData_signal{s},sourceData] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noise_signal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
+    allSubjRois{s} = opt.rois{find(subInd)} ;
+    [EEGData{s},EEGData_signal{s},sourceData] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noise,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
        
     if (opt.nTrials==1) || (opt.originsource) % this is to avoid memory problem
         sourceDataOrigin{s} = sourceData;
