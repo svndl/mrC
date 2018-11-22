@@ -43,6 +43,7 @@ function [EEGData,EEGData_signal, sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,
 if ~exist('RoiSize','var'), RoiSize = [];end
 if ~exist('funcType','var'), funcType = [];end
 
+
 if isempty(rois),% if roi is empty ofr this subject
     EEGData=[];sourceData=[];roiSet=[];
     warning('No ROI found, no simulated EEG is generated');
@@ -53,6 +54,7 @@ roiChunk = zeros(size(fwdMatrix,2),rois.ROINum);
 for r = 1:rois.ROINum % Read each Roi and check if they exist
     roiChunk(rois.ROIList(r).meshIndices,r)=1;
 end
+
 
 if size(roiChunk,2)~= size(signalArray,2)
         EEGData=[]; 
@@ -75,50 +77,53 @@ if ~isempty(roiChunk)
 
     % place seed signal array in source space
     
-    sourceTemp = zeros(size(noise,1),size(noise,2));
+    sourceTemp = zeros(size(noise,1),size(fwdMatrix,2));
     for s = 1: size(signalArray,2)% place the signal for each seed 
         sourceTemp = sourceTemp + repmat (signalArray(:,s),[1 size(sourceTemp,2)]).*(repmat(spatfunc(:,s),[1 size(sourceTemp,1)])');
     end
 
     % Normalize the source signal
-    if strcmp(spatial_normalization_type,'active_nodes')
-        n_active_nodes_signal = squeeze(sum(sum(abs(sourceTemp))~=0) ) ;
-        sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
-    elseif strcmp(spatial_normalization_type,'all_nodes')
-        sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
-    else
-        error('%s is not implemented as spatial normalization method', spatial_normalization_type)
+    if size(sourceTemp,2)==size(noise,2)
+        if strcmp(spatial_normalization_type,'active_nodes')
+            n_active_nodes_signal = squeeze(sum(sum(abs(sourceTemp))~=0) ) ;
+            sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
+        elseif strcmp(spatial_normalization_type,'all_nodes')
+            sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
+        else
+            error('%s is not implemented as spatial normalization method', spatial_normalization_type)
+        end
     end
+    %else: we normalize in channel space
 else
     sourceTemp = zeros(size(noise));
 end
 
-% if ndims(noise) == 3
-%     % add a signal (amplitude) variation between trials
-%     sourceTemp = repmat(sourceTemp,[1,1,size(noise,3)]).* permute(repmat(1-randn(size(noise,3),1)/5,[1 size(noise,1) size(noise,2)]),[2 3 1]);%%%%%% what should be the variance?
-% end
-
 % Adds noise to source signal
-pow = 1;
-sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
+if size(sourceTemp,2)==size(noise,2)
+    pow = 1;
+    sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
+    % TODO: reasonable addition of signal and noise
+    if ndims(sourceData) == 3
+        EEGData = zeros(size(sourceData,1),size(fwdMatrix,1),size(sourceData,3)) ;
+        for trial_idx = 1:size(sourceData,3)
+            sourceData(:,:,trial_idx) = sourceData(:,:,trial_idx)/norm(sourceData(:,:,trial_idx),'fro') ;% signal and noise are correlated randomly (not on average!). dirty workaround: normalize sum
+            % Generate EEG data by multiplication to forward matrix
+            EEGData(:,:,trial_idx) = sourceData(:,:,trial_idx)*fwdMatrix';
 
-if ndims(sourceData) == 3
-    EEGData = zeros(size(sourceData,1),size(fwdMatrix,1),size(sourceData,3)) ;
-    for trial_idx = 1:size(sourceData,3)
-        sourceData(:,:,trial_idx) = sourceData(:,:,trial_idx)/norm(sourceData(:,:,trial_idx),'fro') ;% signal and noise are correlated randomly (not on average!). dirty workaround: normalize sum
+        end
+    else
+        sourceData = sourceData/norm(sourceData,'fro');% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
         % Generate EEG data by multiplication to forward matrix
-        EEGData(:,:,trial_idx) = sourceData(:,:,trial_idx)*fwdMatrix';
-
+        EEGData = sourceData*fwdMatrix';
     end
-else
-    sourceData = sourceData/norm(sourceData,'fro');% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
-    % Generate EEG data by multiplication to forward matrix
-    EEGData = sourceData*fwdMatrix';
+end
+% else: we add up in channel space
+EEGData_signal = sourceTemp*fwdMatrix';
+if size(EEGData_signal,2)==size(noise,2) % add up signal and noise in channel space
+    EEGData = sqrt(lambda/(lambda+1)) *EEGData_signal + sqrt(1/(lambda+1)) *noise;
+    sourceData = []; % data in source space is not available
 end
 
-EEGData_signal = sourceTemp*fwdMatrix';
-
-% there should be another step: add measurement noise to EEG?
 end
 
 function spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,Hem,funcType,plotRoi)
