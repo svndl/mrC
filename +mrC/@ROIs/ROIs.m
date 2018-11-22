@@ -19,6 +19,10 @@ classdef ROIs
     methods
         %-----------------------Initializing-------------------------------
         function obj = ROIs(subID,anatDir)
+            if nargin == 0
+                % just  loading
+                return
+            end
             % gets subject IDs and Anatomy Path and generate ROIs class
             % with all ROIs available for that subject
             %%%%%%%%%%%%%%%%%%%%%%%%this function should be later updated
