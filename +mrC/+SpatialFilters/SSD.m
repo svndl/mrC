@@ -1,4 +1,4 @@
-function [OutAxx,W,A,D] = SSD(InAxx,freqs,varargin)
+function [OutAxx,W,A,D] = SSD(InAxx,signal_freqs,varargin)
 
 % This function calculates finds a spatial filter based on the the SSD of
 % InAxx. The signal is assumed in freqs, noise is assumed in the
@@ -24,21 +24,17 @@ opt	= ParseArgs(varargin,...
     'rank_ratio', 10^-4 ...             
     );
 
-freq_range = 0:InAxx.dFHz:InAxx.dFHz*(InAxx.nFr-1);
-freq_idxs = find(ismember(freq_range,freqs));
 
-real_part_signal = InAxx.Cos(freq_idxs,:,:);
-imag_part_signal = InAxx.Sin(freq_idxs,:,:);
-cmplx_signal = cat(1, real_part_signal,real_part_signal) ... % even real part 
-                + 1i*cat(1, -imag_part_signal,imag_part_signal); % odd imag part
+freqs = [0:InAxx.nFr-2,InAxx.nFr-1:-1:1]*InAxx.dFHz;
+signal_locs = find(ismember(freqs,signal_freqs)) ;
+noise_locs = reshape(repmat(signal_locs,2,1)+[-1;+1],1,[]);
 
-real_part_noise = cat(1,InAxx.Cos(freq_idxs-1,:,:),InAxx.Cos(freq_idxs+1,:,:));
-imag_part_noise = cat(1,InAxx.Sin(freq_idxs-1,:,:),InAxx.Sin(freq_idxs+1,:,:));
-cmplx_noise = cat(1, real_part_noise,real_part_noise) ... % even real part 
-                + 1i*cat(1, -imag_part_noise,imag_part_noise); % odd imag part
-                        
-C_s =conj(reshape(permute(cmplx_signal,[2,1,3]),size(cmplx_signal,2),[]))*(reshape(permute(cmplx_signal,[2,1,3]),size(cmplx_signal,2),[])');
-C_n =conj(reshape(permute(cmplx_noise,[2,1,3]),size(cmplx_noise,2),[]))*(reshape(permute(cmplx_noise,[2,1,3]),size(cmplx_noise,2),[])');
+cmplx_full = [InAxx.Cos;InAxx.Cos(end-1:-1:2,:,:)] + 1i*[InAxx.Sin;-InAxx.Sin(end-1:-1:2,:,:)];
+cmplx_signal =  cmplx_full(signal_locs,:,:);
+cmplx_noise =  cmplx_full(noise_locs,:,:);
+
+C_s =reshape(permute(cmplx_signal,[2,1,3]),size(cmplx_signal,2),[])*reshape(permute(cmplx_signal,[2,1,3]),size(cmplx_signal,2),[])';
+C_n =reshape(permute(cmplx_noise,[2,1,3]),size(cmplx_noise,2),[])*reshape(permute(cmplx_noise,[2,1,3]),size(cmplx_noise,2),[])';
 
 if sum(abs(imag(C_n(:))))/sum(abs(real(C_n(:))))>10^-10
     error('SSD: Covariance matrix is complex')
@@ -52,7 +48,7 @@ C_s = real(C_s);
 
 
 if opt.do_whitening % and deflate matrix dimensionality
-    [V, D] = eig(C_s+C_n);
+    [V, D] = eig(C_s);
     [ev, desc_idxs] = sort(diag(D), 'descend');
     V = V(:,desc_idxs);
     
@@ -66,6 +62,18 @@ end
 C_s_w = P' * C_s * P;
 C_n_w = P' * C_n * P;
 
+
+if max(max(abs(C_s_w-C_s_w')))>10^-10
+    error('SSD: Whitened signal covariance matrix is not symmetric')
+end
+
+if max(max(abs(C_n_w-C_n_w')))>10^-10
+    error('SSD: Whitened noise covariance matrix is not symmetric')
+end
+
+C_s_w = (C_s_w+C_s_w')/2 ;
+C_n_w = (C_n_w+C_n_w')/2 ;
+
 [W,D] =eig(C_s_w,C_n_w);
 [D,sorted_idx] = sort(diag(D),'descend') ;
 W = W(:,sorted_idx);
@@ -74,14 +82,23 @@ W = P * W;
 
 A = C_s * W * pinv(W'*C_s*W);
 
+if max(imag(A(:)))>0
+    error('should not be complex!!!')
+end
+
 % project to ssd domain
 OutAxx = InAxx ;
+
 temp = W'*reshape(permute(InAxx.Cos,[2,1,3]),size(InAxx.Cos,2),[]);
 OutAxx.Cos = permute(reshape(temp,dims,size(InAxx.Cos,1),size(InAxx.Cos,3)),[2,1,3]);
+
 temp = W'*reshape(permute(InAxx.Sin,[2,1,3]),size(InAxx.Sin,2),[]);
 OutAxx.Sin = permute(reshape(temp,dims,size(InAxx.Sin,1),size(InAxx.Sin,3)),[2,1,3]);
+
 OutAxx.Amp = abs(OutAxx.Cos +1i *OutAxx.Sin);
 
+temp = W'*reshape(permute(InAxx.Wave,[2,1,3]),size(InAxx.Wave,2),[]);
+OutAxx.Wave = permute(reshape(temp,dims,size(InAxx.Wave,1),size(InAxx.Wave,3)),[2,1,3]);
 
     
     

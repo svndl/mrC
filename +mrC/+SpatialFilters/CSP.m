@@ -84,7 +84,17 @@ C_w = zeros(size(P,2),size(P,2),length(InAxxs)) ;
 
 for class_idx = 1:length(InAxxs)
     C_w(:,:,class_idx) = P' * C(:,:,class_idx) * P ;
+    
+    if max(max(abs(C(:,:,class_idx)-C(:,:,class_idx)')))>10^-10
+        error('CSP: Whitened  covariance matrix is not symmetric')
+    end
+    C_w(:,:,class_idx) = (C_w(:,:,class_idx)+C_w(:,:,class_idx)')/2 ;
 end
+
+
+
+
+
 
 if opt.do_whitening % calculation in 'white space'
     [W,D] = eig(C_w(:,:,1)-C_w(:,:,2)) ;
@@ -97,6 +107,11 @@ W = P * W;
 
 A = sum(C,3) * W *pinv(W'*sum(C,3)*W);
 
+if max(imag(A(:)))>0
+    error('should not be complex!!!')
+end
+
+
 OutAxxs = InAxxs ;
 for class_idx = 1:length(InAxxs)
     % project to csp domain
@@ -105,5 +120,8 @@ for class_idx = 1:length(InAxxs)
     temp = W'*reshape(permute(InAxxs{class_idx}.Sin,[2,1,3]),size(InAxxs{class_idx}.Sin,2),[]);
     OutAxxs{class_idx}.Sin = permute(reshape(temp,dims,size(InAxxs{class_idx}.Sin,1),size(InAxxs{class_idx}.Sin,3)),[2,1,3]);
     OutAxxs{class_idx}.Amp = abs(OutAxxs{class_idx}.Cos +1i *OutAxxs{class_idx}.Sin);
+    temp = W'*reshape(permute(InAxxs{class_idx}.Wave,[2,1,3]),size(InAxxs{class_idx}.Wave,2),[]);
+    OutAxxs{class_idx}.Wave = permute(reshape(temp,dims,size(InAxxs{class_idx}.Wave,1),size(InAxxs{class_idx}.Wave,3)),[2,1,3]);
+    
 end
 
