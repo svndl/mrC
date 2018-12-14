@@ -29,14 +29,14 @@ function [noise, pink_noise, alpha_noise,sensor_noise] = GenerateNoise(f_samplin
 
 %% ---------------------------- generate alpha noise------------------------
     %  
-    if exist('fwdMatrix','var')|| ~isempty(fwdMatrix)
-        doFwdProjection = true ;
+    if ~exist('fwdMatrix','var')|| isempty(fwdMatrix)
+        doFwdProjection = false;
     else
-        doFwdProjection = false ;
+        doFwdProjection = true ;
     end
     
     alpha_noise = zeros(n_samples,n_nodes);
-    alpha_noise(:,NoiseParams.alpha_nodes)  = repmat(GetAlphaActivity(n_samples,f_sampling,[8,12]),[1,length(NoiseParams.alpha_nodes )]); 
+    alpha_noise(:,NoiseParams.AlphaSrc)  = repmat(GetAlphaActivity(n_samples,f_sampling,[8,12]),[1,length(NoiseParams.AlphaSrc )]); 
     
     if doFwdProjection    
         alpha_noise = alpha_noise*fwdMatrix' ;
@@ -58,7 +58,7 @@ function [noise, pink_noise, alpha_noise,sensor_noise] = GenerateNoise(f_samplin
     
     
 %% -----------------------------generate pink noise------------------------
-    pink_noise = GetPinkNoise(n_samples, n_nodes );
+    pink_noise = GetPinkNoise(n_samples, n_nodes);
     % impose coherence on pink noise
     if strcmp(noise_mixing_data.mixing_type,'coh') % just in case we want to add other mixing mechanisms
         % force noise to be spatially coherent within 'hard' frequency
@@ -82,10 +82,12 @@ function [noise, pink_noise, alpha_noise,sensor_noise] = GenerateNoise(f_samplin
             end
             freq_bin_idxs = (noise_mixing_data.band_freqs{band_idx}(1)<=abs(f))&(abs(f)<noise_mixing_data.band_freqs{band_idx}(2));
             for hemi = 1:2 % hemisphere by hemisphere
-                source_idxs = (hemi-1)*size(C,2)+1:hemi*size(C,2) ;
+                
                 if doFwdProjection
+                    source_idxs = (hemi-1)*size(C,1)/2+1:hemi*size(C,1)/2 ;
                     pink_noise_spec_coh(freq_bin_idxs,:) = pink_noise_spec_coh(freq_bin_idxs,:)+pink_noise_spec(freq_bin_idxs,source_idxs)*C(source_idxs,:); 
                 else
+                    source_idxs = (hemi-1)*size(C,2)+1:hemi*size(C,2) ;
                     pink_noise_spec_coh(freq_bin_idxs,source_idxs) =  pink_noise_spec(freq_bin_idxs,source_idxs)*C(source_idxs,:); 
                 end
             end

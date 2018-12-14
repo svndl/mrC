@@ -318,7 +318,7 @@ for s = 1:length(projectPath)
     % -----Determine alpha nodes: This is temporary?-----
     %alphaRoiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','wang_ROIs');% alpha noise is always placed in wang ROIs
         alpharoiChunk = alphaRoi.ROI2mat(length(fwdMatrix));
-    if strcmp(Noise.alpha_nodes,'all'), AlphaSrc = find(sum(alpharoiChunk,2)); end % for now: all nodes will show the same alpha power over whole visual cortex  
+    if strcmp(Noise.alpha_nodes,'all'), Noise.AlphaSrc = find(sum(alpharoiChunk,2)); end % for now: all nodes will show the same alpha power over whole visual cortex  
 
     disp ('Generating noise signal ...');
     
@@ -431,53 +431,6 @@ end
 
 save(fullfile(projectPathfold,sprintf('SimulatedEEG_c0%02d.mat',opt.cndNum)),'EEGData','EEGAxx','subIDs','masterList');
 
-%% =======================PLOT FIGURES=====================================
-if (opt.plotting==1) && strcmp(opt.signalType,'SSVEP')
-    %-------------------Calculate EEG spectrum---------------------------------
-    sub1 = find(~cellfun(@isempty,EEGAxx),1);
-    freq = 0:EEGAxx{sub1}.dFHz:EEGAxx{sub1}.dFHz*(EEGAxx{sub1}.nFr-1); % frequncy labels, based on fft
-
-    for s = 1:length(projectPath)
-        if ~isempty(EEGData{s})
-            ASDEEG{s} = EEGAxx{s}.Amp;% it is important which n is considered for fft
-
-            % ------------------------FIRST PLOT: EEG and source spectra---------------
-            WL = 1000/(EEGAxx{sub1}.dTms*EEGAxx{sub1}.dFHz); % window length for FFT, based on AXX file
-            freq2 = (-0.5:1/(WL*4):0.5-1/(WL*4))*opt.signalsf;
-            figure,
-            subplot(3,1,1); % Plot signal ASD
-            plot(freq2,abs(fftshift(fft(opt.signalArray,WL*4),1)));
-            xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-            ylabel('Source signal','Fontsize',14);
-
-            subplot(3,1,2); % Plot noise ASD
-            plot(freq2,abs(fftshift(fft(noiseSignal(:,1:500:end),WL*4),1)));
-            xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-            ylabel('Noise signal','Fontsize',14);
-
-            subplot(3,1,3); % plot EEG ASD
-            %plot(freq2,abs(fftshift(fft(EEGData,WL*4),1)));
-            plot(freq,ASDEEG{s});
-            xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-            ylabel('EEG signal','Fontsize',14);
-
-            input('Press enter to continue....');
-            close all;
-            % --------------SECOND PLOT: interactive head and spectrum plots-----------
-            if isempty(opt.signalFF)
-                opt.signalFF = 1;
-            end
-
-             % Plot individuals
-             mrC.Simulate.PlotEEG(ASDEEG{s},freq,opt.figFolder,subIDs{s},masterList,opt.signalFF);
-        end 
-    end
-    
-    % Plot average over individuals
-    MASDEEG = mean(cat(4,ASDEEG{:}),4);
-    mrC.Simulate.PlotEEG(MASDEEG,freq,opt.figFolder,'average over all  ',masterList,opt.signalFF);
-
-end
 end
 
 function [ROIsArr,FullroiNames,RSubID] = CheckROIsArray(ROIsArr)
