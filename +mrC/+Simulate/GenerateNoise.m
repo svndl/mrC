@@ -93,7 +93,7 @@ function [noise, pink_noise, alpha_noise,sensor_noise] = GenerateNoise(f_samplin
             end
         end
         pink_noise = real(ifft(pink_noise_spec_coh,[],1));
-    else
+    elseif ~strcmp(noise_mixing_data.mixing_type,'none') 
         error('%s is not implemented as a mixing method',noise_mixing_data.mixing_type)
     end
 
