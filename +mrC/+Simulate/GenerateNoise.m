@@ -123,7 +123,7 @@ function [noise, pink_noise, alpha_noise,sensor_noise] = GenerateNoise(f_samplin
         error('%s is not implemented as spatial normalization method', spatial_normalization_type)
     end
     
-    sensor_noise = rand(n_samples, size(fwdMatrix,1)) ;
+    sensor_noise = randn(n_samples, size(fwdMatrix,1)) ;
     sensor_noise = sensor_noise/norm(sensor_noise,'fro'); 
 %% --------------------combine different types of noise--------------------
     norm_factor = sqrt(NoiseParams.mu.pink^2+NoiseParams.mu.alpha^2+NoiseParams.mu.sensor^2) ;
