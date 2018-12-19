@@ -192,8 +192,7 @@ x = randn(n_samples,1);
 [b,a] = butter(3, freq_band/sampling_freq*2); 
 y = filter(b,a, x); 
 
-% ensure zero mean value
-y = y - repmat(mean(y),[n_samples,1]) ;
+
 %normalize to unit variance
 y = y./sqrt(mean(abs(y).^2));
 end
