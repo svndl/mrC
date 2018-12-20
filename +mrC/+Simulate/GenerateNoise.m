@@ -93,7 +93,7 @@ function [noise, pink_noise, alpha_noise,sensor_noise] = GenerateNoise(f_samplin
             end
         end
         pink_noise = real(ifft(pink_noise_spec_coh,[],1));
-    else
+    elseif ~strcmp(noise_mixing_data.mixing_type,'none') 
         error('%s is not implemented as a mixing method',noise_mixing_data.mixing_type)
     end
 
@@ -123,7 +123,7 @@ function [noise, pink_noise, alpha_noise,sensor_noise] = GenerateNoise(f_samplin
         error('%s is not implemented as spatial normalization method', spatial_normalization_type)
     end
     
-    sensor_noise = rand(n_samples, size(fwdMatrix,1)) ;
+    sensor_noise = randn(n_samples, size(fwdMatrix,1)) ;
     sensor_noise = sensor_noise/norm(sensor_noise,'fro'); 
 %% --------------------combine different types of noise--------------------
     norm_factor = sqrt(NoiseParams.mu.pink^2+NoiseParams.mu.alpha^2+NoiseParams.mu.sensor^2) ;
@@ -192,8 +192,7 @@ x = randn(n_samples,1);
 [b,a] = butter(3, freq_band/sampling_freq*2); 
 y = filter(b,a, x); 
 
-% ensure zero mean value
-y = y - repmat(mean(y),[n_samples,1]) ;
+
 %normalize to unit variance
 y = y./sqrt(mean(abs(y).^2));
 end

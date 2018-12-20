@@ -74,3 +74,53 @@ for i = 1:length(freq_band_names)
 end
 legend(handles,freq_band_names)
 save('spatial_decay_models_coherence','model_fun','model_params','best_model','band_freqs')
+%%
+% plot best model
+if true
+    close all
+    
+    addpath('../../functionPool/BrewerMap/')
+    set(0,'defaultfigurecolor',[1 1 1])
+
+    plot_dir = fullfile('/Users/bosse/dev/matlab/mrC/Examples/plots') ;
+    if ~exist(plot_dir)
+        mkdir(plot_dir)
+    end
+
+    sorted_freq_band_names = sort(freq_band_names);
+
+    alw = 0.75;    % AxesLineWidth
+    fsz = 11;      % Fontsize
+    lw = 1.5;      % LineWidth
+    msz = 8;       % MarkerSize
+
+    x_temp = 0:0.01:5 ;
+    colors = brewermap(length(freq_band_names),'Set2');
+    fig = figure;
+    legend_entries = {} ;
+
+    for i = 1:length(sorted_freq_band_names )
+        legend_entries{end+1} = sprintf('\\%s-band',sorted_freq_band_names {i});
+        plot(x_temp,best_model.(sorted_freq_band_names {i}).fun(...
+            best_model.(sorted_freq_band_names {i}).model_params ,x_temp),'color',colors(i,:),'linewidth',lw);
+        hold on
+    end
+    xlabel('Spatial Distance [mm]')
+    ylabel('Coherence')
+    ylim([0,1])
+    xlim([0,4])
+    legend(legend_entries,'FontSize',fsz,'location','northeastoutside')
+end
+set(gca, 'FontSize', fsz, 'LineWidth', alw); %<- Set properties
+fig_width = 8.5/2 ;
+fig_height = 5/8*fig_width ;
+fig.PaperPositionMode = 'manual';
+fig.PaperUnits = 'inches';
+fig.Units = 'inches';
+fig.PaperPosition = [0, 0, fig_width,fig_height];
+fig.PaperSize = [fig_width,fig_height];
+fig.Position = [0.0, 0.0, fig_width, fig_height];
+fig.Resize = 'off';
+fig.InvertHardcopy = 'off';
+filename = fullfile(plot_dir,'spatial_decay_coherence');
+print(filename,'-dpdf');
