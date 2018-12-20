@@ -121,7 +121,7 @@ end
 EEGData_signal = sourceTemp*fwdMatrix';
 if size(EEGData_signal,2)==size(noise,2) % add up signal and noise in channel space
     EEGData_signal = EEGData_signal/norm(EEGData_signal,'fro') ;
-    EEGData = sqrt(lambda/(lambda+1)) *EEGData_signal + sqrt(1/(lambda+1)) *noise;
+    EEGData = sqrt(lambda/(lambda+1)) *(EEGData_signal) + sqrt(1/(lambda+1)) *noise;
     sourceData = []; % data in source space is not available
 end
 

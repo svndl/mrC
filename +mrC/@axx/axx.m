@@ -148,6 +148,35 @@ classdef axx
             s.Cov = obj.Cov ;
             s.Wave  = obj.Wave;
         end
+        
+      function outAxx = SelectTrials(obj,TIdx)
+        % Select the trials indicated uin TIdx vector.
+        if max(TIdx)>obj.nTrl || min(TIdx)<=0
+            error('Wrong trial indexes');
+        end
+
+        obj.nTrl = numel(TIdx);
+        obj.Amp = obj.Amp(:,:,TIdx);
+        obj.Cos = obj.Cos(:,:,TIdx);
+        obj.Sin = obj.Sin(:,:,TIdx);
+        obj.Wave = obj.Wave(:,:,TIdx);
+        outAxx = obj;
+      end
+      
+      function outAxx = MergeTrials(obj1,obj2)
+        % Select the trials indicated uin TIdx vector.
+        if obj1.nT~=obj2.nT || obj1.nCh~=obj2.nCh || obj1.dTms~=obj2.dTms || obj1.dFHz~=obj2.dFHz
+            error('Axx classes do not match: Time and frequency features should be the same...');
+        end
+
+        outAxx = obj1;
+        outAxx.nTrl = obj1.nTrl+obj2.nTrl;
+        outAxx.Amp = cat(3,obj1.Amp,obj2.Amp);
+        outAxx.Cos = cat(3,obj1.Cos,obj2.Cos);
+        outAxx.Sin = cat(3,obj1.Cos,obj2.Sin);
+        outAxx.Wave = cat(3,obj1.Wave,obj2.Wave);
+
+    end
     end
     
       
