@@ -91,7 +91,7 @@ for nLambda_idx = 1:numel(Lambda_list)
     % define SNR in a narrow frequency bands on first forth harmonics
     lambda = Lambda_list(nLambda_idx);
     disp(['Generating EEG by adding signal and noise: SNR = ' num2str(lambda)]);
-    for subj_idx = 1:length(EEGData_signal)
+    for subj_idx = 1:length(subIDs)
         [Sig] = mean(EEGAxx_signal{subj_idx}.Amp(F1+1,:).^2,2);
         Noi = mean(mean(EEGAxx_noise{subj_idx}.Amp(F1:F1+1,:).^2,2));
         EEGData{subj_idx} = sqrt(Noi/Sig)*sqrt(lambda/(1+lambda))*EEGData_signal{subj_idx} + sqrt(1/(1+lambda)) * EEGData_noise{subj_idx} ;
