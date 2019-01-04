@@ -85,16 +85,29 @@ for sub = 1:numel(subs)
     end
 end
 
-for nLambda_idx = 1:numel(Lambda_list)
+% narrow-band normalization
+% harmonics considered for normalization
+snr_harmonics = [1,2,3,4] ;
 
-    
-    % define SNR in a narrow frequency bands on first forth harmonics
+f = [0:length(EEGData_signal{1})-1] *SF/length(EEGData_signal{1}) ;
+[~,snr_freq_idxs]=intersect(f,snr_harmonics*thisFundFreq) ;
+
+for subj_idx = 1:length(subIDs)
+    %%
+    spec_noise = fft(EEGData_noise{subj_idx},[],1);
+    spec_signal = fft(EEGData_signal{subj_idx},[],1);
+    power_noise = mean(mean(abs(spec_noise(snr_freq_idxs,:,:)).^2)) ; % mean noise power per trial
+    power_signal= mean(mean(abs(spec_signal(snr_freq_idxs,:,:)).^2)) ; 
+    EEGData_noise{subj_idx} = EEGData_noise{subj_idx}./sqrt(power_noise);
+    EEGData_signal{subj_idx} = EEGData_signal{subj_idx}./sqrt(power_signal);
+end
+
+
+for nLambda_idx = 1:numel(Lambda_list)
     lambda = Lambda_list(nLambda_idx);
     disp(['Generating EEG by adding signal and noise: SNR = ' num2str(lambda)]);
     for subj_idx = 1:length(subIDs)
-        [Sig] = mean(EEGAxx_signal{subj_idx}.Amp(F1+1,:).^2,2);
-        Noi = mean(mean(EEGAxx_noise{subj_idx}.Amp(F1:F1+1,:).^2,2));
-        EEGData{subj_idx} = sqrt(Noi/Sig)*sqrt(lambda/(1+lambda))*EEGData_signal{subj_idx} + sqrt(1/(1+lambda)) * EEGData_noise{subj_idx} ;
+        EEGData{subj_idx} = sqrt(lambda/(1+lambda))*EEGData_signal{subj_idx} + sqrt(1/(1+lambda)) * EEGData_noise{subj_idx} ;
         EEGAxx{subj_idx} = mrC.Simulate.CreateAxx(EEGData{subj_idx},opt) ;
     end
 
