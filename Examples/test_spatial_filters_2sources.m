@@ -2,11 +2,24 @@
 clear;clc
 mrCFolder = fileparts(fileparts(mfilename('fullpath')));%'/Users/kohler/code/git';
 addpath(genpath(mrCFolder));
-addpath('../../../BrewerMap/')
-%%
-DestPath = 'ExampleData2';
-AnatomyPath = fullfile(DestPath,'anatomy');
-ProjectPath = fullfile(DestPath,'FwdProject');
+if true % SBs setup
+    addpath('../tools/BrewerMap/')
+    %%
+    DataPath = '/export/data/';
+
+    DestPath = fullfile(DataPath,'eeg_simulation');
+    AnatomyPath = fullfile(DestPath,'anatomy');
+    
+    ProjectPath = fullfile(DestPath,'FwdProject2');
+else
+    addpath('../../../BrewerMap/')
+
+    %%
+    DestPath = 'ExampleData2';
+
+    AnatomyPath = fullfile(DestPath,'anatomy');
+    ProjectPath = fullfile(DestPath,'FwdProject');
+end
 
 % Pre-select ROIs
 [RoiList,subIDs] = mrC.Simulate.GetRoiClass(ProjectPath,AnatomyPath);% 13 subjects with Wang atlab 
@@ -56,8 +69,8 @@ nDraws = 20 ;
 n_comps = 3 ;
 thisFundFreq = FundFreq(fund_freq_idx) ;
 
-subs = num2cell(1:10) ; %%%%%% SUBJECTS TO SELECT
-subNames = cellfun(@num2str,subs(1:10),'uni',false);
+subs = num2cell(1:min(length(subIDs),10)) ; %%%%%% SUBJECTS TO SELECT
+subNames = cellfun(@num2str,subs(1:min(length(subIDs),10)),'uni',false);
 
 EEGData_noise = cellfun(@(x) x(:,:,1:200),EEGData_noise,'uni',false); % reduce data size
 EEGAxx_noise = cellfun(@(x) x.SelectTrials(1:200),EEGAxx_noise,'uni',false);
