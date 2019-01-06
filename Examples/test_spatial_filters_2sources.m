@@ -172,7 +172,7 @@ for nLambda_idx = 1:numel(Lambda_list)
                         thisDecompAxx=theseDecompAxxs{1};
                     end
                     for i = 1:size(thisA,2)
-                        if source_pattern(:,i)'*thisA(:,i)<0
+                        if source_pattern(:,1)'*thisA(:,i)<0
                             thisA(:,i) = thisA(:,i)*-1 ;
                         end
                     end
@@ -303,13 +303,13 @@ for decomp_method_idx=1:2%length(decomp_methods)
     hold on
 end
 end
-%[~, hobj, ~, ~] = legend(decomp_methods(1:2));
+[~, hobj, ~, ~] = legend(decomp_methods(1:2));
 hl = findobj(hobj,'type','line');
 set(hl,'LineWidth',1.5);
 ht = findobj(hobj,'type','text');
 set(ht,'FontSize',12);
 set(gca,'xtick',10*log10(Lambda_list),'xticklabel',arrayfun(@num2str,round(log10(Lambda_list)*10),'uni',false));
-xlim(10*[0-.1 1.1]);
+xlim(10*log10([min(Lambda_list),max(Lambda_list)]));
 xlabel('SNR (dB)')
 ylabel('Error Angle')
 
@@ -335,7 +335,7 @@ set(ht,'FontSize',12);
 xlabel('SNR (dB)')
 ylabel('Output SNR (dB)')
 set(gca,'xtick',10*log10(Lambda_list),'xticklabel',arrayfun(@num2str,round(log10(Lambda_list)*10),'uni',false));
-xlim(10*[0-.1 1.1]);
+xlim(10*log10([min(Lambda_list),max(Lambda_list)]));
 set(gca,'fontsize',FS)
 
 % plot residual
@@ -359,7 +359,7 @@ xlabel('SNR (dB)')
 ylabel('Residuals')
 set(gca,'fontsize',FS)
 set(gca,'xtick',10*log10(Lambda_list),'xticklabel',arrayfun(@num2str,round(log10(Lambda_list)*10),'uni',false));
-xlim(10*[0-.1 1.1]);
+xlim(10*log10([min(Lambda_list),max(Lambda_list)]));
 
 set(FIG2,'Unit','Inch','position',[5, 5, 18, 5],'color','w');
 export_fig(FIG2,['ErrorPlots_Averaged'],'-pdf');
