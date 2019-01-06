@@ -60,7 +60,9 @@ opt.cndNum = 1;
 % narrowbanded
 % SNR parameters
 F1 = EEGAxx_signal{1,1}.i1F1;
-Lambda_list = 1:2:10;
+
+Db_list = [-20:5:10] ; 
+Lambda_list = 10.^(Db_list/10) ;
 
 % spatial filter test parameters
 fund_freq_idx = 1 ;            
