@@ -199,7 +199,7 @@ for nLambda_idx = 1:numel(Lambda_list)
 %                     end
 
                     %calculate snrs assuming ssveps, mean over all trials
-                    snrs.(this_decomp_method){s}(1:size(thisA,2),nLambda_idx,draw_idx)=mean(2*mean(thisDecompAxx.Amp(signal_freq_idxs,:,:).^2)./mean(thisDecompAxx.Amp(noise_freq_idxs,:,:).^2),3);
+                    snrs.(this_decomp_method){s}(1:size(thisA,2),nLambda_idx,draw_idx)=mean(mean(thisDecompAxx.Amp(signal_freq_idxs,:,:).^2)./mean(thisDecompAxx.Amp(noise_freq_idxs,:,:).^2),3);
                     % calculate residuals as mse over samples and trials
                     % TODO: needs some sort of normalization!!
                     est_signal = squeeze(thisDecompAxx.Wave );               
