@@ -187,7 +187,7 @@ for nLambda_idx = 1:numel(Lambda_list)
                     % calculate error angles
                     freqs = [0:thisDecompAxx.nFr]*thisDecompAxx.dFHz;
                     signal_freq_idxs = find(ismember(freqs,thisFundFreq*considered_harms));
-                    noise_freq_idxs = [signal_freq_idxs-1,signal_freq_idxs+1] ;
+                    noise_freq_idxs = reshape([signal_freq_idxs-1;signal_freq_idxs+1],1,[]) ;
 
                     %err_angles.(this_decomp_method)(comp_idx,nTrial_idx,draw_idx) = 180/pi* acos(abs(source_pattern(:,1)'*thisA(:,comp_idx))/sqrt(sum(source_pattern(:,1).^2)*sum(thisA(:,comp_idx).^2))) ;
                     err_angles.(this_decomp_method){s}(:,1:size(thisA,2),nLambda_idx,draw_idx) = 180/pi* acos(abs(source_pattern'*thisA)./sqrt(repmat(sum(source_pattern.^2)',[1 size(thisA,2)]).*repmat(sum(thisA.^2),[size(source_pattern,2) 1]))) ;
