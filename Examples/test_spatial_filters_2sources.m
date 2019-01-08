@@ -121,7 +121,7 @@ for nLambda_idx = 1:numel(Lambda_list)
         source_pattern = Source_pattern(:,:,subj_idx );
 
         decomp_methods = {'pca','ssd','csp','rca'} ;
-        considered_harms=[1,2] ;
+        considered_harms = snr_harmonics ;
 
         for nTrial_idx = 1:length(numTrials_list)
             nUsedTrials = numTrials_list(nTrial_idx);
