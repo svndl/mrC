@@ -200,21 +200,24 @@ for nLambda_idx = 1:numel(Lambda_list)
 
                     %calculate snrs assuming ssveps, mean over all trials
                     snrs.(this_decomp_method){s}(1:size(thisA,2),nLambda_idx,draw_idx)=mean(mean(thisDecompAxx.Amp(signal_freq_idxs,:,:).^2)./mean(thisDecompAxx.Amp(noise_freq_idxs,:,:).^2),3);
+                    
+                    % residual (mse over sampmles averaged and trials)
                     % calculate residuals as mse over samples and trials
-                    % TODO: needs some sort of normalization!!
-                    est_signal = squeeze(thisDecompAxx.Wave );               
-                    ref_signal = outSignal(1:100,:);%squeeze(repmat(EEGAxx_signal{1}.Wave(:,1,:),1,1,size(thisDecompAxx.Wave,3))) ;
+                    est_signal = thisDecompAxx.Wave ;               
+                    ref_signal = outSignal(1:100,:);
                     % normalize to equal power before calculating residual
                     est_signal = est_signal./sqrt(mean(est_signal.^2,1));
-                    est_signal = repmat(mean(est_signal,3),[1 1 size(ref_signal,2)]);
-
                     ref_signal = ref_signal./sqrt(mean(ref_signal.^2,1));
-                    ref_signal = permute(repmat(ref_signal,[1 1 size(est_signal,2)]),[1 3 2]);
-
-                    residuals.(this_decomp_method){s}(:,1:size(thisA,2),nLambda_idx,draw_idx) =...
-                        squeeze(min(...
-                        mean((ref_signal-est_signal).^2),...
-                        mean((ref_signal+est_signal).^2)))';
+                    
+                    ref_signal = permute(repmat(ref_signal,[1,1,thisDecompAxx.nCh,thisDecompAxx.nTrl]),[1,3,4,2]) ;
+                    est_signal = repmat(est_signal,[1,1,1, size(outSignal,2)]);
+                    
+                    trialwise_res_pos = mean((ref_signal-est_signal).^2) ;
+                    trialwise_res_neg = mean((ref_signal+est_signal).^2) ; % in case the sign is flipped
+                    trialwise_res = squeeze(min([trialwise_res_neg; trialwise_res_pos])) ;
+                    
+                    residuals.(this_decomp_method){s}(:,1:size(thisA,2),nLambda_idx,draw_idx) =squeeze(mean(trialwise_res,2))'; % average residual over trials
+                    
                 end
             end
         end
