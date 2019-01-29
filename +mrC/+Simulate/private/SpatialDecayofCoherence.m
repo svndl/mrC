@@ -4,20 +4,23 @@
 % micro-scale electrocorticography')
 clear all
 
-model_fun.gauss = @(p,x)(p(4)+p(1)*exp(-((x-p(3))/2*p(2)^2)));
-model_fun.expo   =  @(p,x)(p(4)+p(1)*exp(-p(2)*(x-p(3))));
-model_fun.lorentzian   =  @(p,x)(p(4)+p(1)* ((p(2)^2)./(p(2)^2+(x-p(3)).^2)));
-model_fun.power_law =  @(p,x)(p(4)+p(1)* (x+p(3)).^(-p(2)));
+% model_fun.gauss = @(p,x)(p(4)+p(1)*exp(-((x-p(3))/2*p(2)^2)));
+% model_fun.expo   =  @(p,x)(p(4)+p(1)*exp(-p(2)*(x-p(3))));
+% model_fun.lorentzian   =  @(p,x)(p(4)+p(1)* ((p(2)^2)./(p(2)^2+(x-p(3)).^2)));
+% model_fun.power_law =  @(p,x)(p(4)+p(1)* (x+p(3)).^(-p(2)));
 
+model_fun.expo = @(p,x)( (1-p(1)) *exp(-p(2)*x) );
+model_fun.lorentzian = @(p,x)( (1-p(1))*(p(2)^2./(p(2)^2+x.^2))    ) ;
+model_fun.gauss = @(p,x) ( (1-p(1)) * exp(-(x.^2) )/p(2)  ) ;
+model_fun.power_law = @(p,x) ( (p(2)*x+1).^-p(1)) ;
 
-
-% data taken from Fig. 4
-x = [0,0.38,0.5,0.54,1:0.5:3] ;% in mm
-y.delta = [7., 6.3, 6.1, 6.05, 5.5,  5.3,  5,    4.9,  4.8]/7; % strange number where read from print in cm
-y.theta = [7., 6.1, 5.8, 5.7,  5.1,  4.8,  4.5,  4.4,  4.3]/7;
-y.beta =  [7., 6.3, 6.1, 6.05, 5.75, 5.5,  5.25, 5.1,  5]/7;
-y.alpha = [7., 5.1, 4.9, 4.8,  4.45, 4.2,  3.9,  3.8,  3.6]/7;
-y.gamma = [7., 3.2, 2.9, 2.75, 2.3,  2.05, 1.9,  1.75, 1.6]/7;
+% % data taken from Fig. 4
+% x = [0,0.38,0.5,0.54,1:0.5:3] ;% in mm
+% y.delta = [7., 6.3, 6.1, 6.05, 5.5,  5.3,  5,    4.9,  4.8]/7; % strange number where read from print in cm
+% y.theta = [7., 6.1, 5.8, 5.7,  5.1,  4.8,  4.5,  4.4,  4.3]/7;
+% y.beta =  [7., 6.3, 6.1, 6.05, 5.75, 5.5,  5.25, 5.1,  5]/7;
+% y.alpha = [7., 5.1, 4.9, 4.8,  4.45, 4.2,  3.9,  3.8,  3.6]/7;
+% y.gamma = [7., 3.2, 2.9, 2.75, 2.3,  2.05, 1.9,  1.75, 1.6]/7;
 
 
 x =       [0., 0.38, 0.5,   0.54, 1.,   1.5,  2.,   2.5,  3.,   3.5,  4.,   4.5,  5.] ;% in mm
@@ -33,12 +36,12 @@ band_freqs.theta = [4,8];
 band_freqs.alpha = [8,12];
 band_freqs.beta = [12,30];
 band_freqs.gamma = [30,80];
-%%
+%
 fig=figure ;
 freq_band_names = fieldnames(y) ;
 model_names = fieldnames(model_fun) ;
 
-x_temp = [min(x):0.1:100*max(x)];
+x_temp = [min(x):0.1:2000*max(x)];
 
 colors = {'r','g','b','k','c','m','y'};
 linestyles = {'-','--',':','-.'};
@@ -65,9 +68,10 @@ for i = 1:length(freq_band_names)
             [this_p,R,J,CovB,MSE,ErrorModelInfo] =nlinfit(x(1:end),y.(this_band_name)(1:end),model_fun.(this_model_name),[1.,1.,0  ,0.]);
             end
         end
-        
+        sprintf('band: %s, model: %s, MSE=%f, mean(R)= %f',this_band_name,this_model_name, MSE,mean(R.^2))
         model_params.(this_band_name).(this_model_name) = this_p;
         h=plot(x_temp,model_fun.(this_model_name)( model_params.(this_band_name).(this_model_name) ,x_temp),colors{i});
+        xlim([0,15])
         if this_model_idx==1
             handles = [handles,h];
         end
