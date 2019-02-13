@@ -129,6 +129,83 @@ classdef axx
             end
             save(FilePath,'-struct','Sstruct');
         end
+        function s = saveobj(obj)
+            s.cndNmb = obj.cndNmb ;
+            s.nTrl = obj.nTrl ;
+            s.nT = obj.nT ;
+            s.nCh = obj.nCh ;
+            s.dTms = obj.dTms ;
+            s.dFHz = obj.dFHz ;
+            s.nFr   = obj.nFr ;
+            s.i1F1  = obj.i1F1 ;
+            s.i1F2  = obj.i1F2 ;
+            s.DataUnitStr = obj.DataUnitStr;
+            s.Amp  = obj.Amp ;
+            s.Cos  = obj.Cos ;
+            s.Sin  = obj.Sin ;
+            s.SpecPValue = obj.SpecPValue ;
+            s.SpecStdErr = obj.SpecStdErr ;
+            s.Cov = obj.Cov ;
+            s.Wave  = obj.Wave;
+        end
+        
+      function outAxx = SelectTrials(obj,TIdx)
+        % Select the trials indicated uin TIdx vector.
+        if max(TIdx)>obj.nTrl || min(TIdx)<=0
+            error('Wrong trial indexes');
+        end
+
+        obj.nTrl = numel(TIdx);
+        obj.Amp = obj.Amp(:,:,TIdx);
+        obj.Cos = obj.Cos(:,:,TIdx);
+        obj.Sin = obj.Sin(:,:,TIdx);
+        obj.Wave = obj.Wave(:,:,TIdx);
+        outAxx = obj;
+      end
+      
+      function outAxx = MergeTrials(obj1,obj2)
+        % Select the trials indicated uin TIdx vector.
+        if obj1.nT~=obj2.nT || obj1.nCh~=obj2.nCh || obj1.dTms~=obj2.dTms || obj1.dFHz~=obj2.dFHz
+            error('Axx classes do not match: Time and frequency features should be the same...');
+        end
+
+        outAxx = obj1;
+        outAxx.nTrl = obj1.nTrl+obj2.nTrl;
+        outAxx.Amp = cat(3,obj1.Amp,obj2.Amp);
+        outAxx.Cos = cat(3,obj1.Cos,obj2.Cos);
+        outAxx.Sin = cat(3,obj1.Cos,obj2.Sin);
+        outAxx.Wave = cat(3,obj1.Wave,obj2.Wave);
+
     end
+    end
+    
+      
+  methods(Static)
+      function obj = loadobj(s)
+            if isstruct(s)
+                newObj = mrC.axx() ;
+                newObj.cndNmb = s.cndNmb ;
+                newObj.nTrl = s.nTrl ;
+%                 newObj.set.nT(s.nT) ;
+%                 newObj.set.nCh(s.nCh) ;
+                newObj.dTms = s.dTms ;
+                newObj.dFHz = s.dFHz ;
+                newObj.nFr   = s.nFr ;
+                newObj.i1F1  = s.i1F1 ;
+                newObj.i1F2  = s.i1F2 ;
+                newObj.DataUnitStr = s.DataUnitStr;
+                newObj.Amp  = s.Amp ;
+                newObj.Cos  = s.Cos ;
+                newObj.Sin  = s.Sin ;
+                newObj.SpecPValue = s.SpecPValue ;
+                newObj.SpecStdErr = s.SpecStdErr ;
+                newObj.Cov = s.Cov ;
+                newObj.Wave  = s.Wave;
+                obj = newObj ;
+            else
+                obj = s ;
+            end
+      end
+  end
     
 end

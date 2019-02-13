@@ -13,7 +13,7 @@ function [Roi,subIDs] = GetRoiClass(projectPath,anatDir)
 %       subIDs: A NSx1 array of strings, 
 %% Set defaults
 
-if ~exist('anatDir','var') || isempty(anatDir)
+if ~exist('anatDir','var') || isempty(anatDir),
     anatDir = getpref('mrCurrent','AnatomyFolder');
 end
 
