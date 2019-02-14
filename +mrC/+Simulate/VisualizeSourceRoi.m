@@ -1,17 +1,17 @@
-function [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction,hemi)
+function [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction,hemi,cmap,RoiLeg)
 % gets the subject ID and anatomy folder and plots the
 % ROIs on the subjects default cortex...
+% [Fhandler,RoiList] = VisualizeSourceRoi(subID,anatDir,RoiType,RoiIdx,direction,hemi,cmap,RoiLeg)
 % Elham Barzegaran, 5.25.2018
 %% default variables
 
-if ~exist('anatDir','var')||isempty(anatDir),
+if ~exist('anatDir','var')||isempty(anatDir)
     anatDir = getpref('mrCurrent','AnatomyFolder');
 end
 
-if ~exist('direction','var')||isempty(direction),
+if ~exist('direction','var')||isempty(direction)
     direction = 'anterior';
 end
-
 
 if ~exist('hemi','var')
     hemi = 'B';
@@ -47,15 +47,15 @@ elseif hemi=='R'
 end
 
 
-Fhandler= figure;
+%Fhandler= figure;
 
 patch('faces',faces,'vertices',vertices,'edgecolor','none','facecolor','interp','facevertexcdata',repmat([.7,.7,.7],size(vertices,1),1),...
-     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.55,'facelighting','gouraud');
+     'Diffusestrength',.45,'AmbientStrength',.3,'specularstrength',.1,'FaceAlpha',.50,'facelighting','gouraud');
 
 %colormap(cmap);
 
 shading interp
-lighting flat
+lighting gouraud
 lightangle(50,120)
 lightangle(50,0)
 
@@ -74,35 +74,56 @@ set(gcf, 'Units', 'Normalized', 'OuterPosition', [0.2, 0.24, .45, 0.65]);
 % RoiDir = fullfile(anatDir,subID,'Standard','meshes',[RoiType '_ROIs']); 
 % [chunks,RoiList] = mrC.ChunkFromMesh(RoiDir,size(vertices,1),1);
 
-Rois = mrC.ROIs(subID,anatDir);
+Rois = mrC.ROIs([],anatDir);
+Rois = Rois.loadROIs(subID,anatDir);
 Rois = Rois.getAtlasROIs(RoiType);
 Rois = Rois.searchROIs('all',[],hemi);
 chunks = Rois.ROI2mat(length(vertices));
-RoiList = Rois.getFullNames('noatlas');
+RoiList = Rois.getFullNames('noatlashemi');
 
-if ~exist('RoiIdx','var')||isempty(RoiIdx),
+if ~exist('RoiIdx','var')||isempty(RoiIdx)
     RoiIdx = 1:size(chunks,2);
-% else
-%     RoiList = RoiList(RoiIdx);
 end
 
+if iscell(RoiIdx) && (ischar(RoiIdx{1}) || isstring(RoiIdx{1}))
+    RoiIdx = find(contains(RoiList,RoiIdx));
+end
 
-cmap = hsv(Rois.ROINum);
-%cmap = lines(Rois.ROINum);
-cmap = cmap(randperm(Rois.ROINum),:);
+if ~exist('RoiLeg','var')% which ROI to present in legend: index of RoiIdx
+    RoiLeg = 1:numel(RoiIdx);
+end
+if ~exist('cmap','var') || isempty(cmap)
+    cmap = distinguishable_colors(numel(RoiIdx),[.7 .7 .7]);
+end
+%cmap = distinguishable_colors(Rois.ROINum);
+
 isem = zeros(1,numel(RoiIdx));
+pind = 1;
 for i = 1:numel(RoiIdx)
     [RoiV, RoiF] = SurfSubsample(vertices, faces,find(chunks(:,RoiIdx(i))),'union');  
     C = cmap(i,:);
-    if ~isempty(RoiF),
-        hold on; patch('faces',RoiF,'vertices',RoiV,'edgecolor','k','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
-            'Diffusestrength',.55,'AmbientStrength',.7,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
-        %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
+    if ~isempty(RoiF)
+        hold on; 
+        if ismember(i,RoiLeg)
+            leg(pind) = patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
+                 'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+             pind = pind+1;
+        else
+            patch('faces',RoiF,'vertices',RoiV,'edgecolor','none','facecolor','interp','facevertexcdata',repmat(C,size(RoiV,1),1),...
+                'Diffusestrength',.55,'AmbientStrength',.8,'specularstrength',.2,'FaceAlpha',1,'facelighting','gouraud');
+            %scatter3(RoiV(:,1),RoiV(:,2),RoiV(:,3),30,C,'filled');
+        end
     else
         isem(i) = 1;
     end
 end
-legend([{''}, RoiList(RoiIdx(~isem))]);
+if exist('leg','var') && ~isempty(leg)
+    l = legend(leg,RoiList(RoiIdx(RoiLeg)),'location','west');
+    set(gca,'fontsize',10)
+    lp = get(l,'position');
+    set(l,'position',[0.0134    0.2423    0.1384    0.5504])
+   % set(gca, 'position', get(gca,'position')+[0 0 lp(3:4)]);
+end
 end
 
 function [nvertices, nfaces,vertIdx2] = SurfSubsample(vertices, faces,vertIdx,type)

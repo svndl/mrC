@@ -1,0 +1,181 @@
+﻿Number,ROI_Name,Description
+1,V1 ,Primary Visual Cortex 
+2,MST ,Medial Superior Temporal Area 
+3,V6 ,Sixth Visual Area 
+4,V2 ,Second Visual Area 
+5,V3 ,Third Visual Area 
+6,V4 ,Fourth Visual Area 
+7,V8 ,Eighth Visual Area 
+8,4,Primary Motor Cortex 
+9,3b ,Primary Sensory Cortex 
+10,FEF ,Frontal Eye Fields 
+11,PEF ,Premotor Eye Field 
+12,55b ,Area 55b 
+13,V3A ,Area V3A 
+14,RSC ,RetroSplenial Complex 
+15,POS2 ,Parieto-Occipital Sulcus Area 2 
+16,V7 ,Seventh Visual Area 
+17,IPS1 ,IntraParietal Sulcus Area 1 
+18,FFC ,Fusiform Face Complex 
+19,V3B ,Area V3B 
+20,LO1 ,Area Lateral Occipital 1 
+21,LO2 ,Area Lateral Occipital 2 
+22,PIT ,Posterior InferoTemporal Complex
+23,MT ,Middle Temporal Area 
+24,A1 ,Primary Auditory Cortex 
+25,PSL ,PeriSylvian Language Area 
+26,SFL ,Superior Frontal Language Area 
+27,PCV ,PreCuneus Visual Area 
+28,STV ,Superior Temporal Visual Area 
+29,7Pm ,Medial Area 7P 
+30,7m ,Area 7m 
+31,POS1 ,Parieto-Occipital Sulcus Area 1 
+32,23d ,Area 23d 
+33,v23ab ,Area ventral 23 a+b 
+34,d23ab ,Area dorsal 23 a+b 
+35,31pv ,Area 31p ventral 
+36,5m ,Area 5m 
+37,5mv ,Area 5m ventral 
+38,23c ,Area 23c 
+39,5L ,Area 5L 
+40,24dd ,Dorsal Area 24d 
+41,24dv ,Ventral Area 24d 
+42,7AL ,Lateral Area 7A 
+43,SCEF ,Supplementary and Cingulate Eye Field 
+44,6ma ,Area 6m anterior 
+45,7Am ,Medial Area 7A 
+46,7Pl ,Lateral Area 7P 
+47,7PC ,Area 7PC 
+48,LIPv ,Area Lateral IntraParietal ventral 
+49,VIP ,Ventral IntraParietal Complex 
+50,MIP ,Medial IntraParietal Area 
+51,1,Area 1 
+52,2,Area 2 
+53,3a ,Area 3a 
+54,6d ,Dorsal area 6 
+55,6mp ,Area 6mp 
+56,6v ,Ventral Area 6 
+57,p24pr ,Area Posterior 24 prime 
+58,33pr ,Area 33 prime 
+59,a24pr ,Anterior 24 prime 
+60,p32pr ,Area p32 prime 
+61,a24 ,Area a24 
+62,d32 ,Area dorsal 32 
+63,8BM ,Area 8BM 
+64,p32 ,Area p32 
+65,10r ,Area 10r 
+66,47m ,Area 47m 
+67,8Av ,Area 8Av 
+68,8Ad ,Area 8Ad 
+69,9m ,Area 9 Middle 
+70,8BL ,Area 8B Lateral 
+71,9p ,Area 9 Posterior 
+72,10d ,Area 10d 
+73,8C ,Area 8C 
+74,44,Area 44 
+75,45,Area 45 
+76,47l ,Area 47l (47 lateral) 
+77,a47r ,Area anterior 47r 
+78,6r ,Rostral Area 6 
+79,IFJa ,Area IFJa 
+80,IFJp ,Area IFJp 
+81,IFSp ,Area IFSp 
+82,IFSa ,Area IFSa 
+83,p9-46v ,Area posterior 9-46v 
+84,46,Area 46 
+85,a9-46v ,Area anterior 9-46v 
+86,9-46d,Area 9-46d 
+87,9a ,Area 9 anterior 
+88,10v ,Area 10v 
+89,a10p ,Area anterior 10p 
+90,10pp ,Polar 10p 
+91,11l ,Area 11l 
+92,13l ,Area 13l 
+93,OFC ,Orbital Frontal Complex 
+94,47s ,Area 47s 
+95,LIPd ,Area Lateral IntraParietal dorsal 
+96,6a ,Area 6 anterior 
+97,i6-8 ,Inferior 6-8 Transitional Area 
+98,s6-8 ,Superior 6-8 Transitional Area 
+99,43,Area 43 
+100,OP4 ,Area OP4/PV 
+101,OP1 ,Area OP1/SII 
+102,OP2-3 ,Area OP2-3/VS 
+103,52,Area 52 
+104,RI ,RetroInsular Cortex 
+105,PFcm ,Area PFcm 
+106,PoI2 ,Posterior Insular Area 2 
+107,TA2 ,Area TA2 
+108,FOP4 ,Frontal OPercular Area 4 
+109,MI ,Middle Insular Area 
+110,Pir ,Pirform Cortex 
+111,AVI ,Anterior Ventral Insular Area 
+112,AAIC ,Anterior Agranular Insula Complex 
+113,FOP1 ,Frontal OPercular Area 1 
+114,FOP3 ,Frontal OPercular Area 3 
+115,FOP2 ,Frontal OPercular Area 2 
+116,PFt ,Area PFt 
+117,AIP ,Anterior IntraParietal Area 
+118,EC ,Entorhinal Cortex 
+119,PreS ,PreSubiculum 
+120,H ,Hippocampus 
+121,ProS ,ProStriate Area 
+122,PeEc ,Perirhinal Ectorhinal Cortex 
+123,STGa ,Area STGa 
+124,PBelt ,ParaBelt Complex 
+125,A5 ,Auditory 5 Complex 
+126,PHA1 ,ParaHippocampal Area 1 
+127,PHA3 ,ParaHippocampal Area 3 
+128,STSda ,Area STSd anterior 
+129,STSdp ,Area STSd posterior 
+130,STSvp ,Area STSv posterior 
+131,TGd ,Area TG dorsal 
+132,TE1a ,Area TE1 anterior 
+133,TE1p ,Area TE1 posterior 
+134,TE2a ,Area TE2 anterior 
+135,TF ,Area TF 
+136,TE2p ,Area TE2 posterior 
+137,PHT ,Area PHT 
+138,PH ,Area PH 
+139,TPOJ1 ,Area TemporoParietoOcci pital Junction 1 
+140,TPOJ2 ,Area TemporoParietoOcci pital Junction 2 
+141,TPOJ3 ,Area TemporoParietoOcci pital Junction 3 
+142,DVT ,Dorsal Transitional Visual Area 
+143,PGp ,Area PGp 
+144,IP2 ,Area IntraParietal 2 
+145,IP1 ,Area IntraParietal 1 
+146,IP0 ,Area IntraParietal 0 
+147,PFop ,Area PF opercular 
+148,PF ,Area PF Complex 
+149,PFm ,Area PFm Complex 
+150,PGi ,Area PGi 
+151,PGs ,Area PGs 
+152,V6A ,Area V6A 
+153,VMV1 ,VentroMedial Visual Area 1 
+154,VMV3 ,VentroMedial Visual Area 3 
+155,PHA2 ,ParaHippocampal Area 2 
+156,V4t ,Area V4t 
+157,FST ,Area FST 
+158,V3CD ,Area V3CD 
+159,LO3 ,Area Lateral Occipital 3 
+160,VMV2 ,VentroMedial Visual Area 2 
+161,31pd ,Area 31pd 
+162,31a ,Area 31a 
+163,VVC ,Ventral Visual Complex 
+164,25,Area 25 
+165,s32 ,Area s32 
+166,pOFC ,posterior OFC Complex 
+167,PoI1 ,Area Posterior Insular 1 
+168,Ig ,Insular Granular Complex 
+169,FOP5 ,Area Frontal Opercular 5 
+170,p10p ,Area posterior 10p 
+171,p47r ,Area posterior 47r 
+172,TGv ,Area TG Ventral 
+173,MBelt ,Medial Belt Complex 
+174,LBelt ,Lateral Belt Complex 
+175,A4 ,Auditory 4 Complex 
+176,STSva ,Area STSv anterior 
+177,TE1m ,Area TE1 Middle 
+178,PI ,Para-Insular Area 
+179,a32pr ,Area anterior 32 prime 
+180,p24 ,Area posterior 24 

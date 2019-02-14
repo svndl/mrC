@@ -19,6 +19,10 @@ classdef ROIs
     methods
         %-----------------------Initializing-------------------------------
         function obj = ROIs(subID,anatDir)
+            if nargin == 0
+                % just  loading
+                return
+            end
             % gets subject IDs and Anatomy Path and generate ROIs class
             % with all ROIs available for that subject
             %%%%%%%%%%%%%%%%%%%%%%%%this function should be later updated
@@ -303,6 +307,8 @@ classdef ROIs
                 NameList = cellfun(@(x,y,z) [x '_' y '_' z],{obj.ROIList.Type},{obj.ROIList.Name},{obj.ROIList.Hemi},'UniformOutput',false);
             elseif strcmp(mode,'noatlas')
                 NameList = cellfun(@(y,z) [y '_' z],{obj.ROIList.Name},{obj.ROIList.Hemi},'UniformOutput',false);
+            elseif strcmp(mode,'noatlashemi')
+                NameList = cellfun(@(y,z) [y],{obj.ROIList.Name},'UniformOutput',false);
             else
                 warning('The defined mode is wrong, use atlas or noatlas');
                 NameList=[];
@@ -355,7 +361,24 @@ classdef ROIs
                 obj = mrC.ROIs(subID,anatDir);
                 obj.saveROIs(anatDir);
             end
-         end
+        end
+        function s = saveobj(obj)
+            s.ROIList = obj.ROIList ;
+            s.subID = obj.subID ;
+        end
     end
+         
+    methods(Static)
+      function obj = loadobj(s)
+            if isstruct(s)
+                newObj = mrC.ROIs() ;
+                newObj.ROIList = s.ROIList ;
+                newObj.subID = s.subID ;
+                obj = newObj ;
+            else
+                obj = s ;
+            end
+      end
+  end
     
 end

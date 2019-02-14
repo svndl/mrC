@@ -1,4 +1,4 @@
-function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
+function [EEGData,EEGAxx,EEGData_signal,EEGAxx_signal,sourceDataOrigin,masterList,subIDs,allSubjFwdMatrices,allSubjRois] = SimulateProject(projectPath,varargin)
     
     % Syntax: [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(projectPath,varargin)
     % Description:	This function gets the path for a mrc project and simulate
@@ -17,11 +17,9 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
   %   <options>:
     %
   % (Source Signal Parameters)
-    %       signalArray:    a NS x seedNum matrix, where NS is the number of
+    %       signalArray:    a NS x nTrials x seedNum matrix, where NS is the number of
     %                       time samples and seedNum is the number of seed sources
-    %                       [NS x 2 SSVEP sources] -> for these two, the
-    %                       random ROIs in functional
-    %                       roitype is selected
+    %                       [NS x 1 x 2 SSVEP sources]
     %
     %       signalsf:       sampling frequency of the input source signal
     %
@@ -30,6 +28,13 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %       
     %       signalFF:       a seedNum x 1 vector: determines the fundamental
     %                       frequencis of sources
+    %       nTrials:        Number of trials. Noise is redrawn for each trial.
+    %
+    %       originsource    If true, the original source signal will be
+    %                       returned in the output, otherwise it will be
+    %                       empty. Be careful about using it, if too many
+    %                       trials are requested, you might run out of
+    %                       memory.
   
   % (ROI Parameters)
     %       rois            a cell array of roi structure that can be
@@ -74,11 +79,6 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %
     %       distanceType: how to calculate source distances ['Euclidean']/'Geodesic', Geodesic is not implemented yet
     
-  % (Plotting Parametes)
-    %       sensorFig:      logical indicating whether to draw topo plots of
-    %                       the simulated ROI data in sensor space. [true]/false
-    %       figFolder:        string specifying folder in which to save sensor
-    %                       figs. [Users' Desktop]
     
 
   % (Save Parameters)
@@ -109,6 +109,17 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
     %                       subject's simulated EEG. This output is
     %                       available if the signal type is SSVEP
     %
+    %       EEGData_signal: a NS x e matrix, containing simulated EEG
+    %                       signal without the noise components,
+    %                       where NSs is number of time samples and e is the
+    %                       number of the electrodes
+    %
+    %
+    %       EEGAxx_signal:  A cell array containing Axx structure of each
+    %                       subject's simulated EEG signal without the
+    %                       noise components. This output is
+    %                       available if the signal type is SSVEP
+    %
     %       sourceDataOrigin: a NS x srcNum matrix, containing simulated
     %                           EEG in source space before converting to
     %                           sensor space EEG, where srcNum is the
@@ -122,12 +133,14 @@ function [EEGData,EEGAxx,sourceDataOrigin,masterList,subIDs] = SimulateProject(p
 %--------------------------------------------------------------------------
  % The function was originally written by Peter Kohler, ...
  % Latest modification: Elham Barzegaran, 03.26.2018
- % NOTE: This function is a part of mrC toolboxs
-
+ % Modifications: Sebastian Bosse 8/2/2018
+ 
 %% =====================Prepare input variables============================
  
 %--------------------------set up default values---------------------------
 opt	= ParseArgs(varargin,...
+    'anatomyPath'   , [],...   
+    'subSelect'        ,[],...
     'inverse'		, [], ...
     'rois'          , [], ...
     'roiType'       , 'wang',...
@@ -137,14 +150,15 @@ opt	= ParseArgs(varargin,...
     'signalsf'      , 100 ,... 
     'signalType'    , 'SSVEP',...
     'signalFF'      , [],...
+    'signalSNRFreqBand' ,[],...
     'NoiseParams'   , struct,...
-    'sensorFig'     , true,...
-    'doSource'      , false,...
-    'figFolder'     , [],...
-    'anatomyPath'   , [],...   
-    'plotting'      , 0 ,...
+    'doFwdProjectNoise' ,true, ...
+    'OptimizeNoiseParam' ,true,...
+    'RedoMixingMatrices', false,...
     'Save'          ,true,...
-    'cndNum'        ,1 ...
+    'cndNum'        ,1, ...
+    'nTrials'       ,1, ...
+    'originsource'  ,false...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
@@ -166,14 +180,6 @@ if ~strcmp(opt.roiType,'main')% THIS SHOUDL BE CORRECTED
 else
 end
 
-
-%-------Set folder for saving the results if not defined (default is desktop)----------
-if isempty(opt.figFolder)
-    if ispc,home = [getenv('HOMEDRIVE') getenv('HOMEPATH')];
-    else home = getenv('HOME');end
-    opt.figFolder = fullfile(home,'Desktop');
-else
-end
 
 %------------------set anatomy data path if not defined ---------------------
 if isempty(opt.anatomyPath)
@@ -214,12 +220,21 @@ end
 
 %% ===========================GENERATE EEG signal==========================
 projectPathfold = projectPath;
+subIDs = subfolders(projectPathfold,0);
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
 
+if isempty(opt.subSelect)
+    opt.subSelect = subIDs;
+end
+
+Inds = ismember(subIDs,opt.subSelect);
+subIDs = subIDs(Inds);
+projectPath = cellfun(@(x) fullfile(projectPathfold,x),subIDs,'uni',false);
+
+allFwdMatrices = {} ;
 for s = 1:length(projectPath)
     %--------------------------READ FORWARD SOLUTION---------------------------  
     % Read forward
-    [~,subIDs{s}] = fileparts(projectPath{s});
     disp (['Simulating EEG for subject ' subIDs{s}]);
     
     fwdPath = fullfile(projectPath{s},'_MNE_',[subIDs{s}]);
@@ -239,17 +254,7 @@ for s = 1:length(projectPath)
         warning(['Skip subject ' subIDs{s} '... ROIs can not be found for this subject! '])
         continue;
     end
-    
-    
-    % To avoid repeatition for subjects with several sessions
-    if s>1, 
-        SUBEXIST = strcmpi(subIDs,subIDs{s});
-        if sum(SUBEXIST(1:end-1))==1,
-            disp('EEG simulation for this subject has been run before');
-            continue
-        end
-    end
-    
+     
     if exist([fwdPath '-fwd.mat'],'file') % if the forward matrix have been generated already for this subject
         load([fwdPath '-fwd.mat']);
     else
@@ -262,6 +267,7 @@ for s = 1:length(projectPath)
         srcStrct = readDefaultSourceSpace(subIDs{s}); % Read source structure from freesurfer
         fwdMatrix = makeForwardMatrixFromMne(fwdStrct ,srcStrct); % Generate Forward matrix
     end
+    allSubjFwdMatrices{s} = fwdMatrix ;
     
     % ---------------------------Default ROIs----------------------------------
     seedNum = size(opt.signalArray,2); % Number of seed sources
@@ -285,8 +291,8 @@ for s = 1:length(projectPath)
     NS = size(opt.signalArray,1); % Number of time samples
     Noise = opt.NoiseParams;
     Noisefield = fieldnames(Noise);
-    
-    if ~any(strcmp(Noisefield, 'mu')),Noise.mu = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
+    % TODO: update tests
+    if ~any(strcmp(Noisefield, 'mu')),Noise.mu.pink = 1;Noise.mu.alpha = 1;Noise.mu.sensor = 1;end % power distribution between alpha noise and pink noise ('noise-to-noise ratio')
     if ~any(strcmp(Noisefield, 'lambda')),Noise.lambda = 1/NS/2;end % power distribution between signal and 'total noise' (SNR)
     if ~any(strcmp(Noisefield, 'spatial_normalization_type')),Noise.spatial_normalization_type = 'all_nodes';end% 'active_nodes'/['all_nodes']
     if ~any(strcmp(Noisefield, 'distanceType')),Noise.distanceType = 'Euclidean';end
@@ -296,7 +302,7 @@ for s = 1:length(projectPath)
     % -----Determine alpha nodes: This is temporary?-----
     %alphaRoiDir = fullfile(anatDir,subIDs{s},'Standard','meshes','wang_ROIs');% alpha noise is always placed in wang ROIs
         alpharoiChunk = alphaRoi.ROI2mat(length(fwdMatrix));
-    if strcmp(Noise.alpha_nodes,'all'), AlphaSrc = find(sum(alpharoiChunk,2)); end % for now: all nodes will show the same alpha power over whole visual cortex  
+    if strcmp(Noise.alpha_nodes,'all'), Noise.AlphaSrc = find(sum(alpharoiChunk,2)); end % for now: all nodes will show the same alpha power over whole visual cortex  
 
     disp ('Generating noise signal ...');
     
@@ -304,37 +310,72 @@ for s = 1:length(projectPath)
     load(fullfile(anatDir,subIDs{s},'Standard','meshes','defaultCortex.mat'));
     surfData = msh.data; surfData.VertexLR = msh.nVertexLR;
     clear msh;
-    spat_dists = mrC.Simulate.CalculateSourceDistance(surfData,Noise.distanceType);
+    
     
     % -----This part calculate mixing matrix for coherent noise-----
     if strcmp(Noise.mixing_type_pink_noise,'coh')
         mixDir = fullfile(anatDir,subIDs{s},'Standard','meshes',['noise_mixing_data_' Noise.distanceType '.mat']);
-        if ~exist(mixDir,'file')% if the mixing data is not calculated already
+        
+        if ~exist(mixDir,'file') || opt.RedoMixingMatrices% if the mixing data is not calculated already
+            spat_dists = mrC.Simulate.CalculateSourceDistance(surfData,Noise.distanceType);
+            disp(['Calculating mixing matrix for coherent pink noise ...'])
             noise_mixing_data = mrC.Simulate.GenerateMixingData(spat_dists);
-            save(mixDir,'noise_mixing_data');
+            save(mixDir,'noise_mixing_data','-v7.3');
         else
-            load(mixDir);
+            disp(['Reading mixing matrix for coherent pink noise ...'])
+            load(mixDir,'noise_mixing_data');
         end
     end
     
+    band_names = fieldnames(noise_mixing_data.matrices) ;
+    nSources = size(noise_mixing_data.matrices.(band_names{1}),2);
     % ----- Generate noise-----
-    % this noise is NS x srcNum matrix, where srcNum is the number of source points on the cortical  meshe
-    [noiseSignal, pink_noise,~, alpha_noise] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, size(spat_dists,1), Noise.mu, AlphaSrc, noise_mixing_data,Noise.spatial_normalization_type);   
+    % calculate coherence in channel space to reduced computational effort
+    % in every trial
+    for band_idx = 1:length(band_names)
+        this_band_name = band_names{band_idx} ;
+        C = noise_mixing_data.matrices.(this_band_name); 
+        
+        % normalize along column (per hemisphere) 
+        % see ?Generating nonstationary multisensor signals under a spatial coherence constraint
+        %C = C./sqrt(sum((C.^2),1));
+        noise_mixing_data.matrices.(this_band_name) = C;
+        C_chan = zeros(size(fwdMatrix'));
+        for hemi = 1:2 % hemisphere by hemisphere
+            source_idxs = (hemi-1)*size(C,1)+1:hemi*size(C,1) ;
+            C(:,source_idxs) = C(:,source_idxs)./sqrt(sum((C(:,source_idxs).^2),1));
+            C_chan(source_idxs,:) =  C(:,source_idxs)*fwdMatrix(:,source_idxs)'; 
+        end
+        noise_mixing_data.matrices_chanSpace.(this_band_name) = C_chan;
+    end
     
-    %visualizeNoise(noiseSignal, spat_dists, surfData,opt.signalsf) % Just to visualize noise on the cortical surface 
-    %visualizeNoise(alpha_noise, spat_dists, surfData,opt.signalsf)
-    % 
+    %noise = zeros(NS, size(fwdMatrix,1), opt.nTrials) ;
+    for trial_id =1:opt.nTrials 
+        disp(['Trial # ' num2str(trial_id)])
+        [PinkNoise(:,:,trial_id),AlphaNoise(:,:,trial_id),SensorNoise(:,:,trial_id)] = mrC.Simulate.GenerateNoise(opt.signalsf, NS, nSources, Noise, noise_mixing_data,Noise.spatial_normalization_type,fwdMatrix,opt.doFwdProjectNoise);   
+    end
+
+[noise_sig,Noise,SensorNoise] = mrC.Simulate.FitNoise(opt.signalsf, NS, Noise, PinkNoise,AlphaNoise, SensorNoise,fwdMatrix,opt.doFwdProjectNoise,opt.OptimizeNoiseParam);   
+
 %------------------------ADD THE SIGNAL IN THE ROIs--------------------------
     
     disp('Generating EEG signal ...'); 
  
     subInd = strcmp(cellfun(@(x) x.subID,opt.rois,'UniformOutput',false),subIDs{s});
-    [EEGData{s},sourceDataOrigin{s}] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt.signalArray,noiseSignal,Noise.lambda,'active_nodes',opt.roiSize,opt.roiSpatfunc);%Noise.spatial_normalization_type);% ROIsig % NoiseParams
+    allSubjRois{s} = opt.rois{find(subInd)} ;
+    [EEGData{s},EEGData_signal{s},sourceData] = mrC.Simulate.SrcSigMtx(opt.rois{find(subInd)},fwdMatrix,surfData,opt,noise_sig,SensorNoise,Noise.lambda,'active_nodes');%Noise.spatial_normalization_type);% ROIsig % NoiseParams
        
+    if (opt.nTrials==1) || (opt.originsource) % this is to avoid memory problem
+        sourceDataOrigin{s} = sourceData;
+    else
+        sourceDataOrigin{s} = [];
+    end
+    
     %visualizeSource(sourceDataOrigin{s}, surfData,opt.signalsf,0)
     %% convert EEG to axx format
     if strcmp(opt.signalType,'SSVEP')
         EEGAxx{s}= mrC.Simulate.CreateAxx(EEGData{s},opt);% Converts the simulated signal to Axx format  
+        EEGAxx_signal{s}= mrC.Simulate.CreateAxx(EEGData_signal{s},opt);% Converts the simulated signal to Axx format  
     end
     
 %% write output to file 
@@ -368,53 +409,6 @@ end
 
 save(fullfile(projectPathfold,sprintf('SimulatedEEG_c0%02d.mat',opt.cndNum)),'EEGData','EEGAxx','subIDs','masterList');
 
-%% =======================PLOT FIGURES=====================================
-if (opt.plotting==1) && strcmp(opt.signalType,'SSVEP')
-    %-------------------Calculate EEG spectrum---------------------------------
-    sub1 = find(~cellfun(@isempty,EEGAxx),1);
-    freq = 0:EEGAxx{sub1}.dFHz:EEGAxx{sub1}.dFHz*(EEGAxx{sub1}.nFr-1); % frequncy labels, based on fft
-
-    for s = 1:length(projectPath)
-        if ~isempty(EEGData{s})
-            ASDEEG{s} = EEGAxx{s}.Amp;% it is important which n is considered for fft
-
-            % ------------------------FIRST PLOT: EEG and source spectra---------------
-            WL = 1000/(EEGAxx{sub1}.dTms*EEGAxx{sub1}.dFHz); % window length for FFT, based on AXX file
-            freq2 = (-0.5:1/(WL*4):0.5-1/(WL*4))*opt.signalsf;
-            figure,
-            subplot(3,1,1); % Plot signal ASD
-            plot(freq2,abs(fftshift(fft(opt.signalArray,WL*4),1)));
-            xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-            ylabel('Source signal','Fontsize',14);
-
-            subplot(3,1,2); % Plot noise ASD
-            plot(freq2,abs(fftshift(fft(noiseSignal(:,1:500:end),WL*4),1)));
-            xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-            ylabel('Noise signal','Fontsize',14);
-
-            subplot(3,1,3); % plot EEG ASD
-            %plot(freq2,abs(fftshift(fft(EEGData,WL*4),1)));
-            plot(freq,ASDEEG{s});
-            xlim([0,max(freq2)]);xlabel('Frequency(Hz)');
-            ylabel('EEG signal','Fontsize',14);
-
-            input('Press enter to continue....');
-            close all;
-            % --------------SECOND PLOT: interactive head and spectrum plots-----------
-            if isempty(opt.signalFF)
-                opt.signalFF = 1;
-            end
-
-             % Plot individuals
-             mrC.Simulate.PlotEEG(ASDEEG{s},freq,opt.figFolder,subIDs{s},masterList,opt.signalFF);
-        end 
-    end
-    
-    % Plot average over individuals
-    MASDEEG = mean(cat(4,ASDEEG{:}),4);
-    mrC.Simulate.PlotEEG(MASDEEG,freq,opt.figFolder,'average over all  ',masterList,opt.signalFF);
-
-end
 end
 
 function [ROIsArr,FullroiNames,RSubID] = CheckROIsArray(ROIsArr)

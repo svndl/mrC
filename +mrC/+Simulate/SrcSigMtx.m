@@ -1,4 +1,4 @@
-function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalArray,noise,lambda,spatial_normalization_type,RoiSize,funcType)% ROIsig %NoiseParams
+function [EEGData,EEGData_signal, sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,opt,noise,noiseSensor,lambda,spatial_normalization_type)% ROIsig %NoiseParams
 
     % Description:	Generate Seed Signal within specified ROIs
     %
@@ -17,7 +17,7 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
     %   
     %   signalArray: ns x n matrix: Containing the signals for the ROIs
     %   
-    %   noise: ns x nsrc matrix: Containing the noises signal in source space
+    %   noise: ns x nsrc x ntrls matrix: Containing the noises signal in source space
     %   
     %   lambda: Parameter for defining of SNR: How to add noise and signal
     %   
@@ -25,6 +25,9 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
     %
     % OUTPUT:
     % 	EEGData: ns x ne matrix: simulated EEG signal
+    %
+    %   EEGData_signal: fwd projection of the signal only (without noise
+    %   components)
     %   
     %   sourceData: ns x nsrc Matrix: simulated signal in source space
     %
@@ -34,12 +37,19 @@ function [EEGData,sourceData,roiSet] = SrcSigMtx(rois,fwdMatrix,surfData,signalA
   % Elham Barzegaran 2.27.2018
     
   % Updated EB, 6.5.2018
-%%
+  % Modified SB, 8/2/2018
+%% Organize the inputs
+signalArray = opt.signalArray;
+RoiSize = opt.roiSize;
+funcType = opt.roiSpatfunc;
+signalsf = opt.signalsf;
+SNRFreqBand = opt.signalSNRFreqBand;
 
 if ~exist('RoiSize','var'), RoiSize = [];end
 if ~exist('funcType','var'), funcType = [];end
 
-if isempty(rois),% if roi is empty ofr this subject
+
+if isempty(rois)% if roi is empty ofr this subject
     EEGData=[];sourceData=[];roiSet=[];
     warning('No ROI found, no simulated EEG is generated');
     return
@@ -50,7 +60,8 @@ for r = 1:rois.ROINum % Read each Roi and check if they exist
     roiChunk(rois.ROIList(r).meshIndices,r)=1;
 end
 
-if size(roiChunk,2)~= size(signalArray,2)
+
+if size(roiChunk,2)~= size(signalArray,3)
         EEGData=[]; 
         sourceData=[];
         roiSet=[];
@@ -59,9 +70,9 @@ if size(roiChunk,2)~= size(signalArray,2)
         % error('Number of ROIs is not equal to number of source signals');
 end
 
-%
+%%
 if ~isempty(roiChunk)
-    %% seed ROIs
+    % seed ROIs
     % Note: I consider here that the ROI labels in shortList are unique (L or R are considered separetly)
     % Adjust Roi size, prepare spatial function (weights) and plot ROIs
 
@@ -70,35 +81,89 @@ if ~isempty(roiChunk)
     spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,[],funcType,plotRoi);
 
     % place seed signal array in source space
-    sourceTemp = zeros(size(noise));
-    for s = 1: size(signalArray,2)% place the signal for each seed 
-        sourceTemp = sourceTemp + repmat (signalArray(:,s),[1 size(sourceTemp,2)]).*(repmat(spatfunc(:,s),[1 size(sourceTemp,1)])');
+    
+    sourceTemp = zeros(size(noise,1),size(fwdMatrix,2),size(signalArray,2));
+    for s = 1: size(signalArray,3)% place the signal for each seed 
+        sourceTemp(:,find(spatfunc(:,s)),:) = sourceTemp(:,find(spatfunc(:,s)),:) + permute(repmat(signalArray(:,:,s), [1,1,sum(spatfunc(:,s))]),[1,3,2]) ;
     end
-
+    
+    
+    
     % Normalize the source signal
-    if strcmp(spatial_normalization_type,'active_nodes')
-    n_active_nodes_signal = sum(sum(abs(sourceTemp))~=0) ;
-        sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
-    elseif strcmp(spatial_normalization_type,'all_nodes')
-        sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
-    else
-        error('%s is not implemented as spatial normalization method', spatial_normalization_type)
+    if size(sourceTemp,2)==size(noise,2)
+        if strcmp(spatial_normalization_type,'active_nodes')
+            n_active_nodes_signal = squeeze(sum(sum(abs(sourceTemp))~=0) ) ;
+            sourceTemp = n_active_nodes_signal * sourceTemp/norm(sourceTemp,'fro') ;
+        elseif strcmp(spatial_normalization_type,'all_nodes')
+            sourceTemp = sourceTemp/norm(sourceTemp,'fro') ;
+        else
+            error('%s is not implemented as spatial normalization method', spatial_normalization_type)
+        end
     end
-        
-        
+    %else: we normalize in channel space
 else
     sourceTemp = zeros(size(noise));
 end
 
-% Adds noise to source signal
-pow = 1;
-sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
-sourceData = sourceData/norm(sourceData,'fro') ;% signal and noise are correlated randomly (not on average!). dirty hack: normalize sum
+%% Adjust sensor level SNR according to the frequency band of interest, for each ROI(active sources)
 
-% Generate EEG data by multiplication to forward matrix
-EEGData = sourceData*fwdMatrix';
+if ~isempty(roiChunk)
+    F = 0:signalsf/size(sourceTemp,1):(signalsf/2-signalsf/size(sourceTemp,1));
+    if ~exist('SNRFreqBand','var') || isempty(SNRFreqBand)
+        % do the brod band
+        SNRFreqBand = [min(F) max(F)];
+    end
+    FInds = (F>=SNRFreqBand(1)) & (F<=SNRFreqBand(2));
+       
+     % fft of signal
+    sig = permute(reshape(reshape(permute(sourceTemp,[1,3,2]),[],size(sourceTemp,2))*fwdMatrix',size(sourceTemp,1),size(sourceTemp,3),[] ),[1,3,2]);
+    Fsig = abs(fft(sig)).^2;
+    signalM = max(mean(mean(Fsig(FInds,:,:)),3));% max of signal with average over trials (for unreliable sources)
 
-% there should be another step: add measurement noise to EEG?
+    % fft of noise
+    if size(noise,2)==size(fwdMatrix,1)
+        noi = noise;
+    else
+        noi = noise*fwdMatrix'+noiseSensor;
+    end
+    Fnoi = abs(fft(noi)).^2;
+    noiM = mean(mean(Fnoi(FInds,:)));% % mean of noise
+
+    SRatio = noiM/signalM;
+    sourceTemp = sourceTemp.*SRatio;
+end
+
+%% Adds noise to source signal
+if size(sourceTemp,2)==size(noise,2)
+    pow = 1/2;
+    sourceData = ((lambda/(lambda+1))^pow)*sourceTemp + ((1/(lambda+1))^pow) *noise;
+    % TODO: reasonable addition of signal and noise
+    if ndims(sourceData) == 3
+        EEGData = zeros(size(sourceData,1),size(fwdMatrix,1),size(sourceData,3)) ;
+        for trial_idx = 1:size(sourceData,3)
+            %sourceData(:,:,trial_idx) = sourceData(:,:,trial_idx)/norm(sourceData(:,:,trial_idx),'fro') ;% signal and noise are correlated randomly (not on average!). dirty workaround: normalize sum
+            % Generate EEG data by multiplication to forward matrix
+            EEGData(:,:,trial_idx) = sourceData(:,:,trial_idx)*fwdMatrix'+noiseSensor(:,:,trial_idx);
+
+        end
+    else
+        %sourceData = sourceData/norm(sourceData,'fro');
+        % Generate EEG data by multiplication to forward matrix
+        EEGData = sourceData*fwdMatrix'+noiseSensor;
+    end
+end
+% else: we add up in channel space
+if exist('sig','var') && exist('sourceTemp','var')% reuse variable to save time
+    EEGData_signal = sig*SRatio;
+else
+    EEGData_signal = permute(reshape(reshape(permute(sourceTemp,[1,3,2]),[],size(sourceTemp,2))*fwdMatrix',size(sourceTemp,1),size(sourceTemp,3),[] ),[1,3,2]);
+end
+if size(EEGData_signal,2)==size(noise,2) % add up signal and noise in channel space
+    % EEGData_signal = EEGData_signal/norm(EEGData_signal,'fro') ;%%%%????????????????????????????
+    EEGData = sqrt(lambda/(lambda+1)) *(EEGData_signal) + sqrt(1/(lambda+1)) *noise;
+    sourceData = []; % data in source space is not available
+end
+
 end
 
 function spatfunc = RoiSpatFunc(roiChunk,surfData,RoiSize,Hem,funcType,plotRoi)
@@ -131,7 +196,10 @@ spatfunc = zeros(size(roiChunk,1),numel(RoiIdx));
 for i = 1:numel(RoiIdx)
     vertIdx_orig = find(roiChunk(:,RoiIdx(i)));
     [RoiV, RoiF,vertIdx] = SurfSubsample(vertices, faces,vertIdx_orig,'union');
-    [RoiVertices{i}, RoiFaces{i},vertIdxR,~,RoiDist,radius] = ResizeRoi(RoiV,RoiF,vertIdx,RoiSize,'geodesic');
+    %[RoiVertices{i}, RoiFaces{i},vertIdxR,~,RoiDist,radius] = ResizeRoi(RoiV,RoiF,vertIdx,RoiSize,'geodesic');
+    % TODO: just a quick hack by sb, since surfing (and thus geodesic distance
+    % type) is not available on my machine
+    [RoiVertices{i}, RoiFaces{i},vertIdxR,~,RoiDist,radius] = ResizeRoi(RoiV,RoiF,vertIdx,RoiSize,'euclidean');
     if (~isempty(vertIdx)) && (~isempty(vertIdxR))
         switch funcType
             case 'uniform'
@@ -208,7 +276,7 @@ if isempty(distanceType), distanceType='geodesic';end
 if ~exist('RoiC','var'),RoiC = [];end
 
 if RoiSize>numel(vertIdx)
-    warning('RoiSize is bigger than the number of vertices in this ROI');
+    %warning('RoiSize is bigger than the number of vertices in this ROI');
     RoiSize = numel(vertIdx);
 end
 if isempty(RoiSize)
