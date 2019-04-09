@@ -74,8 +74,8 @@ function RoiFromSuma(subId,varargin)
         end
     elseif strcmp(opt.mode,'wang')
         %roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Wang2015_cluster.niml.dset',fsDir),1);
-        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*Wang*.dset',fsDir),1);
-        if ~roiFile{1}, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*wang*.dset',fsDir),1); end
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*Wang*cluster.niml.dset',fsDir),1);
+        if ~roiFile{1}, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*wang*cluster.niml.dset',fsDir),1); end
         
         if roiFile{1} == 0
             warning('\n ... using unclustered ROI-file ...\n');
@@ -88,8 +88,8 @@ function RoiFromSuma(subId,varargin)
         eccComment = 'atlas, generated based on Wang et al., 2015';
     elseif strcmp(opt.mode,'glass')
         %roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*h.Glasser2016.niml.dset',fsDir),1);
-        roiFile{1} = subfiles(sprintf('%s/TEMPLATE_ROIs/*Glasser*.dset',fsDir),1);
-        if ~roiFile, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*glass*.dset',fsDir),1); end
+        roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*Glasser*.dset',fsDir),1);
+        if ~roiFile{1}, roiFile = subfiles(sprintf('%s/TEMPLATE_ROIs/*glass*.dset',fsDir),1); end
         
         roiNames = arrayfun(@(x) sprintf('roi%03d',x),1:180,'uni',false); 
         % true names can be found on pgs. 81-85 of the supplementary material.
