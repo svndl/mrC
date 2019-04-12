@@ -46,8 +46,8 @@ classdef axx
              % class constructor
             if nargin > 0
                 % unchanged values, use first strct (will also work if oldStrct is just one 
-                obj.dTms = axxStrct(1).dTms;
-                obj.dFHz = axxStrct(1).dFHz; 
+                obj.dTms = round(axxStrct(1).dTms,5);
+                obj.dFHz = round(axxStrct(1).dFHz,5); 
                 obj.i1F1 = axxStrct(1).i1F1;
                 obj.i1F2 = axxStrct(1).i1F2;
                 obj.DataUnitStr = axxStrct(1).DataUnitStr;
@@ -81,7 +81,7 @@ classdef axx
                     else
                         obj.SpecStdErr = [];
                     end
-                elseif AVR==0,
+                elseif AVR==0
                     obj.Wave = axxStrct.Wave;
                     obj.Amp = axxStrct.Amp(1:obj.nFr,:,:);
                     obj.Cos = axxStrct.Cos(1:obj.nFr,:,:);
@@ -173,7 +173,7 @@ classdef axx
         outAxx.nTrl = obj1.nTrl+obj2.nTrl;
         outAxx.Amp = cat(3,obj1.Amp,obj2.Amp);
         outAxx.Cos = cat(3,obj1.Cos,obj2.Cos);
-        outAxx.Sin = cat(3,obj1.Cos,obj2.Sin);
+        outAxx.Sin = cat(3,obj1.Sin,obj2.Sin);
         outAxx.Wave = cat(3,obj1.Wave,obj2.Wave);
 
     end
@@ -182,14 +182,14 @@ classdef axx
       
   methods(Static)
       function obj = loadobj(s)
-            if isstruct(s)
+            %if isstruct(s) 
                 newObj = mrC.axx() ;
                 newObj.cndNmb = s.cndNmb ;
                 newObj.nTrl = s.nTrl ;
 %                 newObj.set.nT(s.nT) ;
 %                 newObj.set.nCh(s.nCh) ;
-                newObj.dTms = s.dTms ;
-                newObj.dFHz = s.dFHz ;
+                newObj.dTms = round(s.dTms,5);
+                newObj.dFHz = round(s.dFHz,5) ;
                 newObj.nFr   = s.nFr ;
                 newObj.i1F1  = s.i1F1 ;
                 newObj.i1F2  = s.i1F2 ;
@@ -197,14 +197,16 @@ classdef axx
                 newObj.Amp  = s.Amp ;
                 newObj.Cos  = s.Cos ;
                 newObj.Sin  = s.Sin ;
-                newObj.SpecPValue = s.SpecPValue ;
-                newObj.SpecStdErr = s.SpecStdErr ;
-                newObj.Cov = s.Cov ;
+                if size(s.Wave,3)==1
+                    newObj.SpecPValue = s.SpecPValue ;
+                    newObj.SpecStdErr = s.SpecStdErr ;
+                    newObj.Cov = s.Cov ;
+                end
                 newObj.Wave  = s.Wave;
                 obj = newObj ;
-            else
-                obj = s ;
-            end
+%             else
+%                 obj = s ;
+%             end
       end
   end
     
