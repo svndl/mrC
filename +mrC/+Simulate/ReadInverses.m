@@ -1,7 +1,8 @@
-function Inverses = ReadInverses(ProjectPath,InvName)
+function [Inverses,SubIDs] = ReadInverses(ProjectPath,InvName)
    % Read inverse solutions of a mrC project
 
     projectPaths = subfolders(ProjectPath,1); % find subjects in the main folder
+    SubIDs = subfolders(ProjectPath,0);
     if ~exist('InvName','var') || isempty(InvName)
         warning('Indicate the type of inverse')
         Inverses = [];
