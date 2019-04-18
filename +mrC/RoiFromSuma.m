@@ -302,7 +302,7 @@ function RoiFromSuma(subId,varargin)
     opt.ROIs = ROIs; % add ROIs to opt struct
     
     %% PLOT ROIs
-    if opt.plotting,
+    if opt.plotting
         kFr = find(ctx.triangles(:,1) > msh.nVertexLR(1),1,'first');		% 1st RH face index
         figH = figure('name',sprintf('%s ',opt.mode));
         subplot(121)
