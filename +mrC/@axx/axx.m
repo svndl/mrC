@@ -197,7 +197,7 @@ classdef axx
                 newObj.Amp  = s.Amp ;
                 newObj.Cos  = s.Cos ;
                 newObj.Sin  = s.Sin ;
-                if isfield(s,SpecPValue)
+                if isfield(s,'SpecPValue')
                     newObj.SpecPValue = s.SpecPValue ;
                     newObj.SpecStdErr = s.SpecStdErr ;
                     newObj.Cov = s.Cov ;
