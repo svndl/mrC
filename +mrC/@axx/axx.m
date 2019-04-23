@@ -188,8 +188,8 @@ classdef axx
                 newObj.nTrl = s.nTrl ;
 %                 newObj.set.nT(s.nT) ;
 %                 newObj.set.nCh(s.nCh) ;
-                newObj.dTms = s.dTms ;
-                newObj.dFHz = s.dFHz ;
+                newObj.dTms = round(s.dTms,5) ;
+                newObj.dFHz = round(s.dFHz,5) ;
                 newObj.nFr   = s.nFr ;
                 newObj.i1F1  = s.i1F1 ;
                 newObj.i1F2  = s.i1F2 ;
