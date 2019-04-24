@@ -39,7 +39,6 @@ function [rotationMtx, movedPoints] = FitPointsToScalp(scalp,electrodes,headshap
     end
     % get vertex normals
     fig = figure;
-    %plot(1:10,1:10)
    L = lightangle(50,120);
    hold on;
     P = patch('vertices',scalp.rr,'faces',scalp.tris(:,[3 2 1]),'edgecolor','none',... 

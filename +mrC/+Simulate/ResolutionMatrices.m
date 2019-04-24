@@ -28,7 +28,7 @@ opt	= ParseArgs(varargin,...
     'inverse'		, [], ...
     'subSelect'     ,[],...
     'rois'          , [], ...
-    'roiType'       , 'wang',...
+    'roiType'       , [],...
     'eccRange'      , [],...
     'figFolder'     , [],...
     'plotting'      , false,...
@@ -39,7 +39,7 @@ opt	= ParseArgs(varargin,...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
-if ~strcmp(opt.roiType,'main')% THIS SHOUDL BE CORRECTED
+if ~strcmp(opt.roiType,'main') && ~isempty(opt.roiType)% THIS SHOUDL BE CORRECTED
     switch(opt.roiType)
         case{'func','functional'} 
             opt.roiType = 'functional';
@@ -50,7 +50,9 @@ if ~strcmp(opt.roiType,'main')% THIS SHOUDL BE CORRECTED
         case{'kgs','kalanit'}
             opt.roiType = 'kgs';
         case{'benson'}
-            opt.roiType = 'benson';
+             opt.roiType = 'benson';
+        case[]
+            
         otherwise
             error('unknown ROI type: %s',opt.roiType);
     end
@@ -146,12 +148,16 @@ for s = 1:length(projectPath)
 
     subInd = strcmp(cellfun(@(x) x.subID,Rois,'UniformOutput',false),subIDs{s});
     SROI = Rois{find(subInd)};
-    if strcmpi(opt.roiType,'benson') && ~isempty(opt.eccRange)
-        SROICent = SROI.getAtlasROIs('benson',[0 opt.eccRange(1)]);
-        SROISurr = SROI.getAtlasROIs('benson',opt.eccRange);
-        SROICS = SROICent.mergROIs(SROISurr);
+    if ~isempty(opt.roiType)
+        if strcmpi(opt.roiType,'benson') && ~isempty(opt.eccRange)
+            SROICent = SROI.getAtlasROIs('benson',[0 opt.eccRange(1)]);
+            SROISurr = SROI.getAtlasROIs('benson',opt.eccRange);
+            SROICS = SROICent.mergROIs(SROISurr);
+        else
+            SROICS = SROI.getAtlasROIs(opt.roiType);
+        end
     else
-        SROICS = SROI.getAtlasROIs(opt.roiType);
+        SROICS = SROI;
     end
     [roiChunk, NameList] = SROICS.ROI2mat(size(fwdMatrix,2));
       

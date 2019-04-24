@@ -26,7 +26,7 @@ subIds = subfolders(ProjectPath,0);
       
     
 for sub =1:numel(subIds)    
-    
+    disp(['Calculating source depth for ' subIds{sub}]);
     meshDir = fullfile( anatDir,subIds{sub}, 'Standard', 'meshes' );
     if ~isdir( meshDir )
         error( 'Subject %s has no /Standard/meshes directory.', subId )
@@ -91,7 +91,7 @@ for sub =1:numel(subIds)
         end
     end
 end    
-    
+    close all;
 end
 
 
