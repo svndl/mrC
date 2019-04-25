@@ -39,9 +39,17 @@ function [rotationMtx, movedPoints] = FitPointsToScalp(scalp,electrodes,headshap
     end
     % get vertex normals
     fig = figure;
-    N = get(patch('vertices',scalp.rr,'faces',scalp.tris(:,[3 2 1])),'vertexnormals')';
-    close(fig)
+   L = lightangle(50,120);
+   hold on;
+    P = patch('vertices',scalp.rr,'faces',scalp.tris(:,[3 2 1]),'edgecolor','none',... 
+     'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.1,'facelighting','gouraud','FaceAlpha',.2);
+
+    %N = get(patch('vertices',scalp.rr,'faces',scalp.tris(:,[3 2 1])),'vertexnormals')';
+    L = lightangle(50,120);
+    pause(1);
+    N = double(get(P,'vertexnormals'))';
     N = N ./ repmat(sqrt(sum(N.^2)),3,1);
+    close(fig)
     
     % unconstrained uses line-search
     optns = optimset(@lsqnonlin);

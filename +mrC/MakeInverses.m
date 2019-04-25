@@ -6,7 +6,7 @@ function params = MakeInverses( projectDir,params )
     % params.useROIs = boolean specifying whether to constrain
     % params.areaExp = area weighting exponent.
     % localization to fuctiona ROIs
-    
+%%   
     if nargin < 1
         projectDir = uigetdir('.','Pick your project directory');
     else
@@ -17,7 +17,7 @@ function params = MakeInverses( projectDir,params )
     end
     
     % check inputs
-    if ~any(ismember([1,2,3],params.Style))
+    if ~any(ismember([1,2,3,4],params.Style))
         msg = sprintf('\nUnknown value for Inverse Style: %0.0f!\n',params.Style);
         error(msg);
     else
@@ -151,9 +151,11 @@ function params = MakeInverses( projectDir,params )
                 [sol] = mrC.MakeInvJma(mneFwdFile,lambda2,srcSpace,srcCov);
                 optionString = [optionString 'nonorm_jma_'];
             end
-        elseif params.Style == 3
+        elseif (params.Style == 3) || (params.Style == 4)
             % DO GCV STYLE
-            
+            if params.Style ==4
+                params.dodepthweight = true;
+            end
             pdExportDir = subfolders(fullfile(projectDir,subjId,'Exp_MATL_*'),1);
             if length(pdExportDir) > 1
                 error('\n More than one Exp_MATL directory in %s',fullfile(projectDir,subjId));
@@ -170,7 +172,7 @@ function params = MakeInverses( projectDir,params )
             end
             
             idx = 1;
-            for iFile = 1:length(exportFileList),
+            for iFile = 1:length(exportFileList)
                 
                 condNmbr = split_string(exportFileList{iFile},'_',2,'.',1);
                 condNmbr = str2num(condNmbr(2:end));
@@ -194,6 +196,29 @@ function params = MakeInverses( projectDir,params )
                 params.GCV = get_gcv_params( Axx(1) );
             end
             
+            %% Add depth weighting, added by EB
+            truedepth = false;
+            if params.dodepthweight
+                 %[ fwd ] = mrC.AddDepthWeight(fwd , subjId, projectDir);
+                if truedepth
+                    % use the true depth of sources, calculated as the
+                    % distance of each source to closest electrode
+                    if exist(fullfile(projectDir,subjId,'Inverses','SourceDepth.mat'),'file')
+                        load(fullfile(projectDir,subjId,'Inverses','SourceDepth.mat'));
+                    else
+                        disp('SourceDepth file not found, Calculating dource depths for this project...');
+                        mrC.SourceDepth(projectDir);
+                    end
+                else
+                    % use the inverse of norms of forward columns as the weights
+                    W = sqrt(mean(fwd.^2,1));
+                    SourceDepths = 1./W;
+                end
+                fwd = fwd.*SourceDepths;
+            end
+            
+            %%
+            
             if params.GCV.roiCorrelation == 1
                 [ fwd ] = mrC.AddCorr( fwd , subjId );
             elseif params.GCV.roiCorrelation == 2
@@ -212,6 +237,12 @@ function params = MakeInverses( projectDir,params )
             [ sol_tmp , inverse_name ] = mrC.MakeInvGCV( fwd( : , find( activated_sources ) ) , Axx , params.GCV );
             sol( find( activated_sources ) , : ) = sol_tmp;
             
+            
+            %%
+            if params.dodepthweight
+                sol = sol.*SourceDepths'; 
+            end
+            %%
             if params.GCV.roiCorrelation == 1
                 [ sol ] = mrC.AddCorr( sol , subjId );
                 inverse_name = strcat(inverse_name , '_funcROIsCorr');
@@ -246,7 +277,8 @@ function params = MakeInverses( projectDir,params )
                 % if JMA or MNE inverse
                 optionString =  [optionString 'snr_' num2str(params.SNR)];
             end
-            invOutFile = fullfile(projectDir,subjId,'Inverses',['mneInv_' optionString '.inv']);
+            %invOutFile = fullfile(projectDir,subjId,'Inverses',['mneInv_' optionString '.inv']);
+            invOutFile = fullfile(projectDir,subjId,'Inverses',['mneInv_' optionString '_DepthWeight.inv']);
             mrC.WriteInverse(sol,invOutFile);
         end
 
@@ -271,7 +303,7 @@ function params = get_general_params
     f_labels = f;
     for fIdx = 1:length(f_labels)
         if fIdx == 1
-            f_labels{fIdx} = sprintf('\nInverse Style\n ( 1 = MNE, 2 = JMA, 3 = GCV  )');
+            f_labels{fIdx} = sprintf('\nInverse Style\n ( 1 = MNE, 2 = JMA, 3 = GCV, 4 = WMN  )');
         elseif fIdx == 2
             f_labels{fIdx} = sprintf('\nSNR ( if GCV, always = 1 )');
         elseif fIdx == 3
@@ -333,7 +365,7 @@ function [ gcv_params ] = get_gcv_params( Axx )
         end
         gcv_params.roiCorrelation = 0;
         gcv_params.Quadrants = [1 2 3 4];
-        f_labels{end+1} = sprintf('\nROI correlation \n( 0 = no, 1 = func ROIs, 2 = wang ROIs, 3 = wand and kgs ROIs)');
+        f_labels{end+1} = sprintf('\nROI correlation \n( 0 = no, 1 = func ROIs, 2 = wang ROIs, 3 = wang and kgs ROIs)');
         f_labels{end+1} = sprintf('\nActivated Quadrants\n( 1 = upL, 2 = upR, 3 = lowL, 4 = lowR )');
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%

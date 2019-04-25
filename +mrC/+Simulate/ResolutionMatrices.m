@@ -26,8 +26,9 @@ function [CrossTalk,Errors,ROISource,ScalpData,LIST,subIDs] = ResolutionMatrices
 %--------------------------set up default values---------------------------
 opt	= ParseArgs(varargin,...
     'inverse'		, [], ...
+    'subSelect'     ,[],...
     'rois'          , [], ...
-    'roiType'       , 'wang',...
+    'roiType'       , [],...
     'eccRange'      , [],...
     'figFolder'     , [],...
     'plotting'      , false,...
@@ -38,7 +39,7 @@ opt	= ParseArgs(varargin,...
     );
 
 % Roi Type, the names should be according to folders in (svdnl/anatomy/...)
-if ~strcmp(opt.roiType,'main')% THIS SHOUDL BE CORRECTED
+if ~strcmp(opt.roiType,'main') && ~isempty(opt.roiType)% THIS SHOUDL BE CORRECTED
     switch(opt.roiType)
         case{'func','functional'} 
             opt.roiType = 'functional';
@@ -49,7 +50,9 @@ if ~strcmp(opt.roiType,'main')% THIS SHOUDL BE CORRECTED
         case{'kgs','kalanit'}
             opt.roiType = 'kgs';
         case{'benson'}
-            opt.roiType = 'benson';
+             opt.roiType = 'benson';
+        case[]
+            
         otherwise
             error('unknown ROI type: %s',opt.roiType);
     end
@@ -82,6 +85,13 @@ end
 %% ===========================GENERATE EEG signal==========================
 projectPathfold = projectPath;
 projectPath = subfolders(projectPath,1); % find subjects in the main folder
+subIDs = subfolders(projectPathfold,0); 
+if ~isempty(opt.subSelect)
+    Inds = ismember(subIDs,opt.subSelect);
+    subIDs = subIDs(Inds);
+    projectPath = cellfun(@(x) fullfile(projectPathfold,x),subIDs,'uni',false);
+end
+
 if isempty(opt.rois)
     Rois = mrC.Simulate.GetRoiClass(projectPathfold);
 else
@@ -102,14 +112,6 @@ for s = 1:length(projectPath)
         subIDs{s} = subIDs{s}(1:SI-2);% -2 because there is a _ before session number
     end
     
-    % To avoid repeatition for subjects with several sessions
-    if s>1
-        SUBEXIST = strcmpi(subIDs,subIDs{s});
-        if sum(SUBEXIST(1:end-1))==1
-            disp('EEG simulation for this subject has been run before');
-            continue
-        end
-    end
     
     if exist([fwdPath '-fwd.mat'],'file') % if the forward matrix have been generated already for this subject
         load([fwdPath '-fwd.mat']);
@@ -146,12 +148,16 @@ for s = 1:length(projectPath)
 
     subInd = strcmp(cellfun(@(x) x.subID,Rois,'UniformOutput',false),subIDs{s});
     SROI = Rois{find(subInd)};
-    if strcmpi(opt.roiType,'benson') && ~isempty(opt.eccRange)
-        SROICent = SROI.getAtlasROIs('benson',[0 opt.eccRange(1)]);
-        SROISurr = SROI.getAtlasROIs('benson',opt.eccRange);
-        SROICS = SROICent.mergROIs(SROISurr);
+    if ~isempty(opt.roiType)
+        if strcmpi(opt.roiType,'benson') && ~isempty(opt.eccRange)
+            SROICent = SROI.getAtlasROIs('benson',[0 opt.eccRange(1)]);
+            SROISurr = SROI.getAtlasROIs('benson',opt.eccRange);
+            SROICS = SROICent.mergROIs(SROISurr);
+        else
+            SROICS = SROI.getAtlasROIs(opt.roiType);
+        end
     else
-        SROICS = SROI.getAtlasROIs(opt.roiType);
+        SROICS = SROI;
     end
     [roiChunk, NameList] = SROICS.ROI2mat(size(fwdMatrix,2));
       
