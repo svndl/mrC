@@ -111,10 +111,14 @@ function steadyStateWaveMovie(varargin)
             im = frame2im(frame); 
             A = rgb2ind(im,256);
             A = A(5:(end-5),5:(end-5)); % crop outer edges
+         
             bgIdx = mode(A); 
             lineIdx = mode(A(A ~= bgIdx)); % assume that second most often value is line
             curA = uint8(zeros( size(A) ));
-            curA(  A == lineIdx ) = f;
+            if ~isempty(lineIdx)
+                curA(  A == lineIdx ) = f;
+            else
+            end
             movieFrames(:,:,f,z) = curA;
             delete(plotH);
         end
