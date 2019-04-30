@@ -52,11 +52,37 @@ classdef ROIs
 
                 roiDir = fullfile(anatDir,subID,'Standard','meshes'); % where matlab files are stored
                 roiFolders = subfolders(roiDir);
-                
                 roifoldind = cellfun(@(x) ~isempty(x),strfind(roiFolders,'benson')) |...
                     cellfun(@(x) ~isempty(x),strfind(lower(roiFolders),'wang')) |...
                     cellfun(@(x) ~isempty(x),strfind(lower(roiFolders),'kgs')) | ...
                     cellfun(@(x) ~isempty(x),strfind(lower(roiFolders),'glass'));
+
+                
+                if ~(roifoldind)
+                    try
+                        mrC.RoiFromSuma(subID,'mode','benson','plotting',false,'ecc_range',[0 80]);
+                    catch
+                    end
+                    try 
+                        mrC.RoiFromSuma(subID,'mode','wang','plotting',false);
+                    catch
+                    end
+                    try
+                        mrC.RoiFromSuma(subID,'mode','kgs','plotting',false);
+                    catch
+                    end
+                    try
+                        mrC.RoiFromSuma(subID,'mode','glasser','plotting',false);
+                    catch
+                    end
+                    roiFolders = subfolders(roiDir);
+                    roifoldind = cellfun(@(x) ~isempty(x),strfind(roiFolders,'benson')) |...
+                    cellfun(@(x) ~isempty(x),strfind(lower(roiFolders),'wang')) |...
+                    cellfun(@(x) ~isempty(x),strfind(lower(roiFolders),'kgs')) | ...
+                    cellfun(@(x) ~isempty(x),strfind(lower(roiFolders),'glass'));
+                end
+                
+                
                 
                 roiFolders = roiFolders(roifoldind);
                 
