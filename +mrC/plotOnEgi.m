@@ -60,6 +60,12 @@ if datSz(1)<datSz(2)
     data = data';
 end
 
+if size(data,2) > 1
+    msg = sprintf('data must be n x 1, where n is the number of electrodes\n');
+    error(msg);
+else
+end
+
 if size(data,1) == 128
     tEpos = load('defaultFlatNet.mat');
     tEpos = [ tEpos.xy, zeros(128,1) ];
@@ -123,7 +129,7 @@ if sensorROI{1} ~= 0
 end
 
 
-colormap(jmaColors('coolhotcortex'));
+colormap(gca, jmaColors('coolhotcortex'));
 %colormap coolhot
 %colormap gray
 if showColorbar
