@@ -29,7 +29,7 @@ function [scf,fidError] = CoregisterElectrodes( elpFile, fiducialFile, outputDir
     %% read in electrode locations (can be either elp or elc format)
     if ~isempty(strfind(elpFile,'elp')) % if elp format
         % read the elp file
-        if exist('readelp')==2,
+        if exist('readelp')==2
             try
                 eloc = readelp(elpFile); %
                 elcFormat = false;
@@ -189,6 +189,9 @@ function [scf,fidError] = CoregisterElectrodes( elpFile, fiducialFile, outputDir
     else
     end
     
+    
+    % Save coregistered electrode locations
+    save(fullfile(fileparts(outputDir),'Polhemus','CoregisteredElectrodesPostion'),'transElectrodes');
     %% DISPLAY THE ELECTRODE LOCATIONS
     if display == 1
         fig = gcf;  

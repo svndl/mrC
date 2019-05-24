@@ -261,6 +261,10 @@ function params = MakeInverses( projectDir,params )
                 end
                 inverse_name = strcat( 'Quads_' , inverse_name );
             end
+            if params.dodepthweight
+                inverse_name = [inverse_name '_DepthWeight'];
+            end
+            
         else
             error('unknown inverse index %0.0f',params.Style)
         end
@@ -270,15 +274,15 @@ function params = MakeInverses( projectDir,params )
             invOutFile = fullfile(projectDir,subjId,'Inverses',[optionString 'fwd' '.mat']);
             save(invOutFile, 'subjId','u','s','v');
         else
-            if params.Style == 3
+            if (params.Style == 3)||(params.Style == 4)
                 % if GCV inverse
-                optionString =  [optionString inverse_name ];
+                optionString =  [optionString inverse_name];
             else
                 % if JMA or MNE inverse
                 optionString =  [optionString 'snr_' num2str(params.SNR)];
             end
             %invOutFile = fullfile(projectDir,subjId,'Inverses',['mneInv_' optionString '.inv']);
-            invOutFile = fullfile(projectDir,subjId,'Inverses',['mneInv_' optionString '_DepthWeight.inv']);
+            invOutFile = fullfile(projectDir,subjId,'Inverses',['mneInv_' optionString '.inv']);
             mrC.WriteInverse(sol,invOutFile);
         end
 

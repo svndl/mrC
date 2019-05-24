@@ -55,8 +55,8 @@ for sub =1:numel(subIds)
     surf =  mne_read_bem_surfaces(headSurfFullFile);
     surf.rr = surf.rr*1000;
 
-    Fhandler = patch('vertices',surf.rr,'faces',surf.tris(:,[3 2 1]),'edgecolor','none',... 
-     'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.1,'facelighting','gouraud','FaceAlpha',.2);
+    Fhandler = patch('vertices',surf.rr,'faces',surf.tris(:,[3 2 1]),'edgecolor','none','facecolor',[.8 .8 .8],... 
+     'Diffusestrength',.55,'AmbientStrength',.3,'specularstrength',.1,'facelighting','gouraud','FaceAlpha',1);
 
     lightangle(50,120)
     lightangle(50,0)
