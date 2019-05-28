@@ -198,7 +198,7 @@ function params = MakeInverses( projectDir,params )
             
             %% Add depth weighting, added by EB
             truedepth = false;
-            if params.dodepthweight
+            if (params.Style ==4)%params.dodepthweight
                  %[ fwd ] = mrC.AddDepthWeight(fwd , subjId, projectDir);
                 if truedepth
                     % use the true depth of sources, calculated as the
@@ -239,7 +239,7 @@ function params = MakeInverses( projectDir,params )
             
             
             %%
-            if params.dodepthweight
+            if params.Style ==4%params.dodepthweight
                 sol = sol.*SourceDepths'; 
             end
             %%
@@ -261,7 +261,7 @@ function params = MakeInverses( projectDir,params )
                 end
                 inverse_name = strcat( 'Quads_' , inverse_name );
             end
-            if params.dodepthweight
+            if params.Style ==4%params.dodepthweight
                 inverse_name = [inverse_name '_DepthWeight'];
             end
             
