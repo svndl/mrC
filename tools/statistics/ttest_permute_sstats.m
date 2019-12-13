@@ -1,5 +1,5 @@
-function [realH,realP,realT,corrH,critVal,supraTh,randDist]= ttest_permute_sstats( inData,maxPerms,testStat,timeMask,permMatrix,deletePool,tParams)
-        % [realH,realP,corrH,critVal,clustDistrib]= ttest_permute_sstat( inData,maxPerms,timeMask,permMatrix,deletePool,tParams )
+function [realH, realP, realT, corrH, critVal, supraTh, randDist]= ttest_permute_sstats( inData,maxPerms,testStat,timeMask,permMatrix,deletePool,tParams)
+        % [realH,realP,realT,corrH,critVal,supraTh, randDist= ttest_permute_sstat( inData, maxPerms, testStat, timeMask, permMatrix, deletePool, tParams )
         %
         % 
         % input:
