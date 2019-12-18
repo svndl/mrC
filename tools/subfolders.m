@@ -9,12 +9,19 @@ function folderlist = subfolders(inputName,incl_path)
         incl_path = false;
     else
     end
-    if strcmp(inputName(end),'/')
-        inputName = [inputName,'*']; % if it ends on slash, add *
-    elseif isempty(strfind(inputName,'*'))
-        inputName = [inputName,'/*']; % otherwise add /* if it is not already there
+    
+    if ispc
+        file_sep = '\';
     else
+        file_sep = '/';
     end 
+    
+    if strcmp(inputName(end), file_sep)
+        inputName = [inputName,'*']; % if it ends on slash, add *
+    elseif ~contains(inputName,'*')
+        inputName = [inputName, file_sep, '*']; % otherwise add /* if it is not already there
+    else
+    end
         
     curDir = fileparts(inputName);
     if isempty(curDir)
@@ -27,7 +34,7 @@ function folderlist = subfolders(inputName,incl_path)
             if templist(t).isdir ==1 && ~strcmp(templist(t).name,'.') && ~strcmp(templist(t).name,'..')  
                 num_folders = num_folders+1;
                 if incl_path
-                    folderlist(num_folders,:) = {[curDir,'/',templist(t).name]};
+                    folderlist(num_folders,:) = {[curDir, file_sep, templist(t).name]};
                 else
                     folderlist(num_folders,:) = {templist(t).name};
                 end
