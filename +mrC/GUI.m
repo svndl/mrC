@@ -672,7 +672,19 @@ function GUI(initPath)
 				if isempty( dir( tSbjROIFilesPFN ) ) || recompute		% faster than exist( tSbjROIFilesPFN, 'file' )
 					tSbjROIsPN = GetSbjROIsPN( tSbjNm );
 					if ~isdir( tSbjROIsPN )
-						SetMessage( [ tSbjROIsPN ' does not exist.' ], 'error' )
+                        if gProjVer == 1
+                            SetMessage( [ tSbjROIsPN ' does not exist.' ], 'error' )
+                        else
+                            SetMessage( [ tSbjROIsPN ' does not exist. Generating symbolic link' ], 'warning' )
+                            old_path = split_string(GetSbjROIsPN( 'headless01' ), '/Standard', 1);
+                            new_path = split_string(GetSbjROIsPN( tSbjNm ), '/Standard', 1);
+                            cmd_txt = sprintf("ln -s %s %s", old_path, new_path);
+                            [status,cmdout] = system(cmd_txt);
+                            if status > 0
+                                SetMessage( [ 'Failed to generate symbolic link. Error: ', cmdout ], 'error' )
+                            else 
+                            end
+                        end
 					end
 					tSbjROIFiles = DirCell( fullfile( tSbjROIsPN, '*.mat' ), 'files' );
 					tNROIs = numel( tSbjROIFiles );
@@ -4347,17 +4359,17 @@ function GUI(initPath)
 		tDomain = 'Wave';
 		tFlts = fieldnames( gD.(replaceChar(GetChartSelx('Sbjs',1,true),'-','_')).(GetChartSelx('Cnds',1,true)).(GetChartSelx('Mtgs',1,true)).Wave );
 		uiH = zeros(1,11);
-		uiH(1) = dialog('defaultuipanelunits','pixels','Name','Workspace Export','Position',[400 400 uiSize*[2 0;0 5;7 10]]); %,'Color',[0.9 0.9 0]); %,'defaultuipaneltitleposition','centertop');
-		uiH(2) = uibuttongroup('Parent',uiH(1),'Position',uiSize*[0 0 1 0;0 2 0 3;1 6 2 3],'Title','Space');
-		uiH(3) = uibuttongroup('Parent',uiH(1),'Position',uiSize*[1 0 1 0;0 2 0 3;4 6 2 3],'Title','Domain','SelectionChangeFcn',@ButtonGroup_CB);
-		uiH(4) =       uipanel('Parent',uiH(1),'Position',uiSize*[0 0 2 0;0 1 0 1;1 2 5 3],'Title','Filter');
+		uiH(1) = dialog('units','pixels','Name','Workspace Export','Position',[400 400 uiSize*[2 0;0 5;7 10]], 'windowstyle', 'normal'); %,'Color',[0.9 0.9 0]); %,'defaultuipaneltitleposition','centertop');
+		uiH(2) = uibuttongroup('Parent',uiH(1),'Title','Space','units','pixels', 'position',uiSize*[0 0 1 0;0 2 0 3;1 6 2 3]);
+		uiH(3) = uibuttongroup('Parent',uiH(1),'units','pixels','Position',uiSize*[1 0 1 0;0 2 0 3;4 6 2 3],'Title','Domain','SelectionChangeFcn',@ButtonGroup_CB);
+		uiH(4) =       uipanel('Parent',uiH(1),'units','pixels','Position',uiSize*[0 0 2 0;0 1 0 1;1 2 5 3],'Title','Filter');
 		uiH(5)  = uicontrol(uiH(2),'Position',uiSize*[0 0 1 0;0 2 0 1;1 1 0 0],'Style','radiobutton','String','Source','Value',1);
 		uiH(6)  = uicontrol(uiH(2),'Position',uiSize*[0 0 1 0;0 1 0 1;1 1 0 0],'Style','radiobutton','String','Sensor');
 		uiH(7)  = uicontrol(uiH(3),'Position',uiSize*[0 0 1 0;0 2 0 1;1 1 0 0],'Style','radiobutton','String','Wave','Value',1);
 		uiH(8)  = uicontrol(uiH(3),'Position',uiSize*[0 0 1 0;0 1 0 1;1 1 0 0],'Style','radiobutton','String','Spec');
 		uiH(9)  = uicontrol(uiH(3),'Position',uiSize*[0 0 1 0;0 0 0 1;1 1 0 0],'Style','radiobutton','String','Harm');
 		uiH(10) = uicontrol(uiH(4),'Position',uiSize*[0 0 2 0;0 0 0 1;1 1 3 0],'Style','popup','String',tFlts);
-		uiH(11) = uicontrol(uiH(1),'Position',uiSize*[0 0 2 0;0 0 0 1;1 1 5 0],'Style','pushbutton','String','GO','Callback','uiresume');
+		uiH(11) = uicontrol(uiH(1),'units','pixels','Position',uiSize*[0 0 2 0;0 0 0 1;1 1 5 0],'Style','pushbutton','String','GO','Callback','uiresume');
 		uiwait
 		tFlt = tFlts{ get(uiH(10),'Value') };
 		[Y,Ydim] = gD2array( gD, gVEPInfo, gSbjROIFiles, get(uiH(5),'Value')==1, tDomain, tFlt );
