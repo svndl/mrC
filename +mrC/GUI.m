@@ -2009,10 +2009,11 @@ function GUI(initPath)
 			for iOCIT = 1:numel( tOCITs )
 				aSD.(tOCIFNm).Items{ aSD.(tOCIFNm).Sel } = tOCITs{iOCIT};			% modify slice descr struct to use this Calc Item Term
 				tOCITSM.( tOCITv{iOCIT} ) = feval( tCaller, aSD, tDomain, tValidFields, tFlags, tIndex, tRC );		% recursively drills from outer to inner CalcItems
-				tExpr = strrep( tExpr, tOCITs{iOCIT}, [ 'tOCITSM.', tOCITv{iOCIT} ] );
+                tExpr = strrep( tExpr, tOCITs{iOCIT}, [ 'tOCITSM.', tOCITv{iOCIT} ] );
 % 				tExpr = strrep( tExpr, [ tOCITs{iOCIT}, ' ' ], [ 'tOCITSM.', tOCITv{iOCIT}, ' ' ] );
 			end
 			tExpr = ReplaceWithArrayOps( tExpr );
+            tExpr = replace(tExpr,'tOCITSM.tOCITSM','tOCITSM');
 			try
 	% 			eval( [ tExpr ';' ] ); % now rSM is a slice correspoding to the CalcItem
 				rSM = eval( tExpr );
