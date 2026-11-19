@@ -1,4 +1,4 @@
-function [realH, realP, realT, corrH, critVal, supraTh, randDist]= ttest_permute_sstats( inData,maxPerms,testStat,timeMask,permMatrix,deletePool,tParams)
+function [realH, realP, realT, corrH, critVal, supraTh, randDist]= ttest_permute_sstats( inData,maxPerms,testStat, alpha, timeMask,permMatrix,deletePool,tParams)
         % [realH,realP,realT,corrH,critVal,supraTh, randDist= ttest_permute_sstat( inData, maxPerms, testStat, timeMask, permMatrix, deletePool, tParams )
         %
         % 
@@ -65,8 +65,13 @@ function [realH, realP, realT, corrH, critVal, supraTh, randDist]= ttest_permute
         else
         end
         
+        if ~exist('alpha','var') || isempty(alpha)
+            alpha = 0.05;
+        else
+        end
+        
         if ~exist('testStat','var') || isempty(testStat)
-            testStat = {'size'};
+            testStat = 'size';
         else
             if sum(strcmpi(testStat,{'size','height','mass'}))==0
                 warning(['No summary statistic as ' testStat ' is implemented...']);
@@ -111,7 +116,7 @@ function [realH, realP, realT, corrH, critVal, supraTh, randDist]= ttest_permute
         % extract the significant clusters
         eval(['randDist = clust_' testStat ';']);
         eval(['realStat = realCluster_' testStat ';']);
-        critVal = prctile(randDist,95); % 95 % of values are below this    
+        critVal = prctile(randDist, (100-alpha*100)); % 95 % of values are below this    
         corrIdx = find(realStat > critVal); % find clusters in real data bigger than 95% of null distribution
         corrH = ismember(realLocs,corrIdx);
  
